@@ -12,14 +12,14 @@ interface Props {
   orgId: string;
 }
 
-function ApprovalCard({ message, currentUser, selected, onSelect }: {
+function ApprovalCard({ message, currentUser, selected, onSelect, deleteMode }: {
   message: PortalMessage;
   currentUser: { id: string; name: string };
   selected: boolean;
   onSelect: (id: string, checked: boolean) => void;
+  deleteMode: boolean;
 }) {
   const [reply, setReply] = useState('');
-  const [hovered, setHovered] = useState(false);
   const approvalState = (message.metadata?.approval_state as string) ?? 'pending';
   const supabase = createClient();
 
@@ -36,14 +36,12 @@ function ApprovalCard({ message, currentUser, selected, onSelect }: {
   return (
     <div
       style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       <input
         type="checkbox"
         checked={selected}
         onChange={e => onSelect(message.id, e.target.checked)}
-        style={{ opacity: (hovered || selected) ? 1 : 0, marginTop: '14px', cursor: 'pointer', accentColor: '#C49A0F', flexShrink: 0 }}
+        style={{ opacity: selected ? 1 : 0.3, marginTop: '14px', cursor: 'pointer', accentColor: '#C49A0F', flexShrink: 0, display: deleteMode ? 'block' : 'none' }}
       />
       <div className="feed-card" style={{ flex: 1, minWidth: 0 }}>
         <div className="feed-card-meta">
@@ -67,14 +65,14 @@ function ApprovalCard({ message, currentUser, selected, onSelect }: {
 
 export default function ApprovalWindow({ channel, initialMessages, currentUser }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
+  const [deleteMode, setDeleteMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => { if (!deleteMode) setSelected(new Set()); }, [deleteMode]);
 
   useEffect(() => {
     const sub = supabase
@@ -102,8 +100,11 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
     setMessages(prev => prev.filter(m => !ids.includes(m.id)));
     setSelected(new Set());
     setConfirming(false);
+    setDeleteMode(false);
     for (const id of ids) await supabase.from('portal_messages').delete().eq('id', id);
   }
+
+  const allSelected = selected.size === messages.length && messages.length > 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -120,12 +121,27 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
         </div>
       )}
 
-      <div className="channel-header">
-        <span style={{ fontSize: '18px' }}>{channel.icon}</span>
-        <div>
-          <div style={{ fontWeight: 600, fontSize: '14px' }}>{channel.display_name}</div>
-          <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Approval queue</div>
-        </div>
+      <div className="channel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {deleteMode ? (
+          <>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--muted)' }}>
+              <input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(messages.map(m => m.id)))} style={{ accentColor: '#C49A0F', cursor: 'pointer' }} />
+              {allSelected ? 'Deselect all' : 'Select all'}
+            </label>
+            <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px' }}>Cancel</button>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '18px' }}>{channel.icon}</span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '14px' }}>{channel.display_name}</div>
+                <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Approval queue</div>
+              </div>
+            </div>
+            <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>
+          </>
+        )}
       </div>
 
       <div className="feed-list">
@@ -136,12 +152,12 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
           </div>
         )}
         {messages.map(msg => (
-          <ApprovalCard key={msg.id} message={msg} currentUser={currentUser} selected={selected.has(msg.id)} onSelect={handleSelect} />
+          <ApprovalCard key={msg.id} message={msg} currentUser={currentUser} selected={selected.has(msg.id)} onSelect={handleSelect} deleteMode={deleteMode} />
         ))}
         <div ref={bottomRef} />
       </div>
 
-      {selected.size > 0 && (
+      {deleteMode && (
         <div style={{ padding: '10px 16px', background: '#161b22', borderTop: '1px solid #30363d', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{selected.size} selected</span>
           <div style={{ display: 'flex', gap: '8px' }}>
