@@ -26,7 +26,15 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supabase = createClient();
+
+  // Clear typing timer on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -35,6 +43,25 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   useEffect(() => {
     if (!deleteMode) setSelected(new Set());
   }, [deleteMode]);
+
+  // Refresh messages on mount to catch any that arrived while away (Next.js router cache issue)
+  useEffect(() => {
+    async function refresh() {
+      const { data } = await supabase
+        .from('portal_messages')
+        .select('*')
+        .eq('channel_id', channel.id)
+        .order('created_at', { ascending: true })
+        .limit(50);
+      if (data) {
+        setMessages(data as PortalMessage[]);
+        // If agent already replied, clear typing indicator
+        const hasAgentReply = data.some((m: PortalMessage) => m.sender_type !== 'user');
+        if (hasAgentReply) setAgentTyping(false);
+      }
+    }
+    refresh();
+  }, [channel.id]);
 
   useEffect(() => {
     const sub = supabase
@@ -117,7 +144,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     setSending(false);
     setAgentTyping(true);
     // Clear typing indicator after 90s as fallback
-    setTimeout(() => setAgentTyping(false), 90000);
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
   }
 
   const allSelected = selected.size === messages.length && messages.length > 0;
