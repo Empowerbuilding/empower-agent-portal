@@ -293,15 +293,18 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                       )}
                     </Link>
 
-                    {/* Gear — always visible on hover, opens delete menu */}
-                    {hoveredChannel === ch.id && currentUser.role === 'owner' && (
+                    {/* Gear — visible on hover (desktop) or always (mobile), opens delete menu */}
+                    {currentUser.role === 'owner' && (
                       <div style={{ position: 'relative', flexShrink: 0 }}>
                         <button
                           onClick={e => { e.preventDefault(); setGearOpen(gearOpen === ch.id ? null : ch.id); }}
                           style={{
                             background: 'none', border: 'none', cursor: 'pointer',
                             color: 'var(--muted)', fontSize: '13px', padding: '4px 6px',
-                            lineHeight: 1, opacity: 0.7,
+                            lineHeight: 1,
+                            opacity: hoveredChannel === ch.id ? 0.9 : 0.3,
+                            transition: 'opacity 0.15s',
+                            minWidth: '28px', textAlign: 'center',
                           }}
                           title="Channel settings"
                         >⚙</button>
