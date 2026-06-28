@@ -161,18 +161,24 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
     if (stored) setLastSeen(JSON.parse(stored));
   }, []);
 
-  // Mark current channel as seen when pathname changes
+  // Track previous channel so we can mark it as seen when leaving
+  const prevChId = useRef<string | null>(null);
+
+  // Mark channels as seen when pathname changes (stamp both the one we're leaving and arriving at)
   useEffect(() => {
     const parts = pathname.split('/');
     const chId = parts[parts.length - 1];
-    if (chId && chId !== orgSlug) {
-      const now = new Date().toISOString();
-      setLastSeen(prev => {
-        const updated = { ...prev, [chId]: now };
-        localStorage.setItem('portal_last_seen', JSON.stringify(updated));
-        return updated;
-      });
-    }
+    const now = new Date().toISOString();
+    setLastSeen(prev => {
+      const updated = { ...prev };
+      // Mark the channel we're arriving at as seen
+      if (chId && chId !== orgSlug) updated[chId] = now;
+      // Also mark the channel we just left as seen (clears the dot)
+      if (prevChId.current && prevChId.current !== chId) updated[prevChId.current] = now;
+      localStorage.setItem('portal_last_seen', JSON.stringify(updated));
+      return updated;
+    });
+    prevChId.current = (chId && chId !== orgSlug) ? chId : null;
   }, [pathname, orgSlug]);
 
   // Subscribe to new messages to track unread
