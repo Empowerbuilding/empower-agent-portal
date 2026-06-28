@@ -21,14 +21,7 @@ function StatusDot({ status }: { status: string }) {
   return <span className="status-dot" style={{ background: color }} />;
 }
 
-function TypeBadge({ type }: { type: string }) {
-  if (type === 'chat') return null;
-  return (
-    <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#484f58', background: '#21262d', padding: '1px 5px', borderRadius: '4px' }}>
-      {type === 'approval' ? '⚡' : '📌'}
-    </span>
-  );
-}
+
 
 interface AddChannelModalProps {
   agentId: string;
@@ -240,11 +233,10 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                       onClick={onClose}
                       style={{ flex: 1, paddingRight: hoveredChannel === ch.id ? '28px' : undefined }}
                     >
-                      <span>{ch.icon ?? '#'}</span>
                       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {ch.display_name}
                       </span>
-                      <TypeBadge type={ch.channel_type} />
+                      <span style={{ fontSize: '12px', color: '#484f58', opacity: 0.5 }}>⚙️</span>
                     </Link>
                     {hoveredChannel === ch.id && currentUser.role === 'owner' && (
                       <button
