@@ -22,6 +22,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [agentTyping, setAgentTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -41,6 +42,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages', filter: `channel_id=eq.${channel.id}` },
         (payload) => {
           const msg = payload.new as PortalMessage;
+          if (msg.sender_type !== 'user') setAgentTyping(false);
           setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         })
       .subscribe();
@@ -113,6 +115,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       processed: false,
     });
     setSending(false);
+    setAgentTyping(true);
+    // Clear typing indicator after 90s as fallback
+    setTimeout(() => setAgentTyping(false), 90000);
   }
 
   const allSelected = selected.size === messages.length && messages.length > 0;
@@ -169,6 +174,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           <MessageBubble key={msg.id} message={msg} currentUserId={currentUser.id}
             deleteMode={deleteMode} selected={selected.has(msg.id)} onSelect={handleSelect} />
         ))}
+        {agentTyping && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
+            <div className="msg-avatar" style={{ background: '#1a3a2a', color: '#fff', flexShrink: 0 }}>🤖</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#161b22', borderRadius: '12px', padding: '10px 14px' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#56d364', display: 'inline-block', animation: 'typing-bounce 1s infinite' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#56d364', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.2s' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#56d364', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.4s' }} />
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
