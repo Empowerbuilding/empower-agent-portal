@@ -25,13 +25,17 @@ export default function SettingsPage() {
   const installPrompt = useRef<any>(null);
   const [canInstall, setCanInstall] = useState(false);
   const [installed, setInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
+    const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    setIsIOS(ios);
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setInstalled(true);
       return;
     }
+    if (ios) return; // iOS doesn't support beforeinstallprompt
     const handler = (e: any) => {
       e.preventDefault();
       installPrompt.current = e;
@@ -100,8 +104,13 @@ export default function SettingsPage() {
               padding: '7px 14px', background: 'var(--accent)', border: 'none', borderRadius: '6px',
               color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px', flexShrink: 0,
             }}>Install</button>
+          ) : isIOS ? (
+            <span style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'right', lineHeight: 1.5 }}>
+              Tap <strong style={{ color: 'var(--text)' }}>Share</strong> {'('}📤{')'}<br />
+              then <strong style={{ color: 'var(--text)' }}>Add to Home Screen</strong>
+            </span>
           ) : (
-            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Use Share → Add to Home Screen</span>
+            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Open in Chrome to install</span>
           )}
         </div>
       </section>
