@@ -38,6 +38,31 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
   const isMine = message.sender_id === currentUserId;
   const isSystem = message.sender_type === 'system';
 
+  const approvalState = isSystem ? (message.metadata?.approval_state as string | undefined) : undefined;
+
+  if (isSystem && approvalState) {
+    const stateColor = approvalState === 'sent' ? '#2ea043' : approvalState === 'approved' ? '#56d364' : '#C49A0F';
+    const stateLabel = approvalState === 'sent' ? '✓ Sent' : approvalState === 'approved' ? '⏳ Queued' : '⏸ Pending';
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', margin: '6px 0' }}>
+        {deleteMode && (
+          <input type="checkbox" checked={selected} onChange={e => onSelect(message.id, e.target.checked)}
+            style={{ cursor: 'pointer', flexShrink: 0, accentColor: '#C49A0F', marginTop: '14px' }} />
+        )}
+        <div style={{
+          flex: 1, background: '#0d1117', border: '1px solid #30363d', borderRadius: '10px',
+          padding: '12px 14px', maxWidth: '560px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--muted)' }}>{message.sender_name ?? 'System'}</span>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: stateColor }}>{stateLabel}</span>
+          </div>
+          <Markdown content={message.content} />
+        </div>
+      </div>
+    );
+  }
+
   if (isSystem) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0' }}>
@@ -45,7 +70,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
           <input type="checkbox" checked={selected} onChange={e => onSelect(message.id, e.target.checked)}
             style={{ cursor: 'pointer', flexShrink: 0, accentColor: '#C49A0F' }} />
         )}
-        <div className="msg-bubble system" style={{ flex: 1 }}>{message.content}</div>
+        <div className="msg-bubble system" style={{ flex: 1 }}><Markdown content={message.content} /></div>
       </div>
     );
   }
