@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
@@ -21,8 +21,6 @@ function StatusDot({ status }: { status: string }) {
   return <span className="status-dot" style={{ background: color }} />;
 }
 
-
-
 interface AddChannelModalProps {
   agentId: string;
   orgId: string;
@@ -34,23 +32,22 @@ interface AddChannelModalProps {
 function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChannelModalProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'chat' | 'feed' | 'approval'>('chat');
-  const [icon, setIcon] = useState('💬');
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
 
   async function handleCreate() {
     if (!name.trim()) return;
     setSaving(true);
-    const id = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    const channelId = `${agent.name}-${id}`;
+    const slug = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const channelId = `${agent.name}-${slug}`;
     const { data, error } = await supabase.from('portal_channels').insert({
       id: channelId,
       org_id: orgId,
       agent_id: agentId,
-      name: id,
+      name: slug,
       display_name: name.trim(),
       channel_type: type,
-      icon,
+      icon: null,
       position: 99,
       active: true,
     }).select().single();
@@ -68,46 +65,32 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
     }} onClick={onClose}>
       <div style={{
         background: '#161b22', border: '1px solid #30363d', borderRadius: '12px',
-        padding: '24px', width: '320px', display: 'flex', flexDirection: 'column', gap: '16px',
+        padding: '24px', width: '300px', display: 'flex', flexDirection: 'column', gap: '16px',
       }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>Add Channel</div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input
-            value={icon}
-            onChange={e => setIcon(e.target.value)}
-            style={{
-              width: '48px', textAlign: 'center', background: '#0d1117', border: '1px solid #30363d',
-              borderRadius: '6px', color: 'var(--text)', padding: '8px', fontSize: '18px',
-            }}
-          />
-          <input
-            autoFocus
-            placeholder="Channel name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleCreate()}
-            style={{
-              flex: 1, background: '#0d1117', border: '1px solid #30363d',
-              borderRadius: '6px', color: 'var(--text)', padding: '8px 12px', fontSize: '14px',
-            }}
-          />
-        </div>
+        <input
+          autoFocus
+          placeholder="Channel name"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleCreate()}
+          style={{
+            background: '#0d1117', border: '1px solid #30363d',
+            borderRadius: '6px', color: 'var(--text)', padding: '10px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box',
+          }}
+        />
 
         <div style={{ display: 'flex', gap: '8px' }}>
           {(['chat', 'feed', 'approval'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setType(t)}
-              style={{
-                flex: 1, padding: '6px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
-                border: type === t ? '1px solid var(--accent)' : '1px solid #30363d',
-                background: type === t ? 'rgba(196,154,15,0.15)' : '#0d1117',
-                color: type === t ? 'var(--accent)' : 'var(--muted)',
-                fontWeight: type === t ? 600 : 400,
-              }}
-            >
-              {t === 'chat' ? '💬 Chat' : t === 'feed' ? '📌 Feed' : '⚡ Approval'}
+            <button key={t} onClick={() => setType(t)} style={{
+              flex: 1, padding: '6px 4px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+              border: type === t ? '1px solid var(--accent)' : '1px solid #30363d',
+              background: type === t ? 'rgba(196,154,15,0.15)' : '#0d1117',
+              color: type === t ? 'var(--accent)' : 'var(--muted)',
+              fontWeight: type === t ? 600 : 400,
+            }}>
+              {t === 'chat' ? 'Chat' : t === 'feed' ? 'Feed' : 'Approval'}
             </button>
           ))}
         </div>
@@ -116,15 +99,46 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
           <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>
             Cancel
           </button>
-          <button
-            onClick={handleCreate}
-            disabled={!name.trim() || saving}
-            style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: '6px', color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px', opacity: !name.trim() || saving ? 0.5 : 1 }}
-          >
+          <button onClick={handleCreate} disabled={!name.trim() || saving} style={{
+            padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: '6px',
+            color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px',
+            opacity: !name.trim() || saving ? 0.5 : 1,
+          }}>
             {saving ? 'Creating…' : 'Create'}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ChannelGearMenu({ onDelete, onClose }: { onDelete: () => void; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [onClose]);
+
+  return (
+    <div ref={ref} style={{
+      position: 'absolute', right: 0, top: '100%', zIndex: 100,
+      background: '#161b22', border: '1px solid #30363d', borderRadius: '6px',
+      padding: '4px', minWidth: '130px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+    }}>
+      <button onClick={() => { onDelete(); onClose(); }} style={{
+        display: 'block', width: '100%', textAlign: 'left', background: 'none',
+        border: 'none', color: '#da3633', cursor: 'pointer', padding: '6px 10px',
+        fontSize: '13px', borderRadius: '4px',
+      }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(218,54,51,0.1)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+      >
+        Delete channel
+      </button>
     </div>
   );
 }
@@ -135,7 +149,55 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
   const supabase = createClient();
   const [channels, setChannels] = useState(initialChannels);
   const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
+  const [gearOpen, setGearOpen] = useState<string | null>(null);
   const [addingForAgent, setAddingForAgent] = useState<{ agentId: string; agent: Agent } | null>(null);
+
+  // Unread tracking via localStorage
+  const [lastSeen, setLastSeen] = useState<Record<string, string>>({});
+  const [latestMsg, setLatestMsg] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const stored = localStorage.getItem('portal_last_seen');
+    if (stored) setLastSeen(JSON.parse(stored));
+  }, []);
+
+  // Mark current channel as seen when pathname changes
+  useEffect(() => {
+    const parts = pathname.split('/');
+    const chId = parts[parts.length - 1];
+    if (chId && chId !== orgSlug) {
+      const now = new Date().toISOString();
+      setLastSeen(prev => {
+        const updated = { ...prev, [chId]: now };
+        localStorage.setItem('portal_last_seen', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [pathname, orgSlug]);
+
+  // Subscribe to new messages to track unread
+  useEffect(() => {
+    const activeChannelIds = channels.map(c => c.id);
+    if (activeChannelIds.length === 0) return;
+    const sub = supabase
+      .channel('sidebar_unread')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages' }, (payload) => {
+        const msg = payload.new as { channel_id: string; created_at: string; sender_type: string };
+        if (msg.sender_type === 'user') return; // don't flag own messages as unread
+        if (!activeChannelIds.includes(msg.channel_id)) return;
+        setLatestMsg(prev => ({ ...prev, [msg.channel_id]: msg.created_at }));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(sub); };
+  }, [channels]);
+
+  function hasUnread(chId: string) {
+    const latest = latestMsg[chId];
+    if (!latest) return false;
+    const seen = lastSeen[chId];
+    if (!seen) return true;
+    return latest > seen;
+  }
 
   const grouped = channels.reduce<Record<string, { agent: Agent; channels: (PortalChannel & { agents: Agent })[] }>>(
     (acc, ch) => {
@@ -143,8 +205,7 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
       if (!acc[key]) acc[key] = { agent: ch.agents, channels: [] };
       acc[key].channels.push(ch);
       return acc;
-    },
-    {}
+    }, {}
   );
 
   async function handleSignOut() {
@@ -157,7 +218,6 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
     setChannels(prev => prev.filter(c => c.id !== chId));
     await supabase.from('portal_messages').delete().eq('channel_id', chId);
     await supabase.from('portal_channels').delete().eq('id', chId);
-    // Navigate away if we're on the deleted channel
     if (pathname.includes(chId)) router.push(`/${orgSlug}`);
   }
 
@@ -176,7 +236,6 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
       )}
 
       <nav className={`sidebar${isOpen ? ' open' : ''}`}>
-        {/* Org header */}
         <div className="sidebar-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -186,17 +245,10 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                 <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Agent Portal</div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '20px', padding: '4px', lineHeight: 1 }}
-              aria-label="Close menu"
-            >
-              ✕
-            </button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '20px', padding: '4px', lineHeight: 1 }} aria-label="Close menu">✕</button>
           </div>
         </div>
 
-        {/* Channel list */}
         <div className="sidebar-nav">
           {Object.entries(grouped).map(([agentName, { agent, channels: agentChannels }]) => (
             <div key={agentName} className="agent-group">
@@ -206,49 +258,60 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                   <StatusDot status={agent?.container_status ?? 'stopped'} />
                 </div>
                 {currentUser.role === 'owner' && (
-                  <button
-                    onClick={() => setAddingForAgent({ agentId: agent.id, agent })}
-                    title="Add channel"
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: 'var(--muted)', fontSize: '16px', padding: '0 4px', lineHeight: 1,
-                      opacity: 0.6,
-                    }}
-                  >+</button>
+                  <button onClick={() => setAddingForAgent({ agentId: agent.id, agent })} title="Add channel" style={{
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)',
+                    fontSize: '16px', padding: '0 4px', lineHeight: 1, opacity: 0.6,
+                  }}>+</button>
                 )}
               </div>
+
               {agentChannels.map(ch => {
                 const href = `/${orgSlug}/${ch.id}`;
                 const isActive = pathname === href;
+                const unread = hasUnread(ch.id) && !isActive;
                 return (
                   <div
                     key={ch.id}
                     style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
                     onMouseEnter={() => setHoveredChannel(ch.id)}
-                    onMouseLeave={() => setHoveredChannel(null)}
+                    onMouseLeave={() => { setHoveredChannel(null); }}
                   >
                     <Link
                       href={href}
                       className={`channel-link${isActive ? ' active' : ''}`}
                       onClick={onClose}
-                      style={{ flex: 1, paddingRight: hoveredChannel === ch.id ? '28px' : undefined }}
+                      style={{ flex: 1 }}
                     >
                       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {ch.display_name}
                       </span>
-                      <span style={{ fontSize: '12px', color: '#484f58', opacity: 0.5 }}>⚙️</span>
+                      {unread && (
+                        <span style={{
+                          width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)',
+                          flexShrink: 0, display: 'inline-block',
+                        }} />
+                      )}
                     </Link>
+
+                    {/* Gear — always visible on hover, opens delete menu */}
                     {hoveredChannel === ch.id && currentUser.role === 'owner' && (
-                      <button
-                        onClick={() => deleteChannel(ch.id)}
-                        title="Delete channel"
-                        style={{
-                          position: 'absolute', right: 4,
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: '#da3633', fontSize: '13px', padding: '2px 4px',
-                          lineHeight: 1, zIndex: 1,
-                        }}
-                      >×</button>
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <button
+                          onClick={e => { e.preventDefault(); setGearOpen(gearOpen === ch.id ? null : ch.id); }}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: 'var(--muted)', fontSize: '13px', padding: '4px 6px',
+                            lineHeight: 1, opacity: 0.7,
+                          }}
+                          title="Channel settings"
+                        >⚙</button>
+                        {gearOpen === ch.id && (
+                          <ChannelGearMenu
+                            onDelete={() => deleteChannel(ch.id)}
+                            onClose={() => setGearOpen(null)}
+                          />
+                        )}
+                      </div>
                     )}
                   </div>
                 );
@@ -257,7 +320,6 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
           ))}
         </div>
 
-        {/* User footer */}
         <div className="sidebar-footer">
           <div style={{
             width: 30, height: 30, borderRadius: '50%', background: 'var(--accent)',
@@ -267,18 +329,11 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
             {currentUser.name.charAt(0)}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {currentUser.name}
-            </div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentUser.name}</div>
             <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{currentUser.role}</div>
           </div>
-          <button
-            onClick={handleSignOut}
-            title="Sign out"
-            style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px', flexShrink: 0 }}
-          >
-            ↪
-          </button>
+          <Link href={`/${orgSlug}/settings`} onClick={onClose} title="Settings" style={{ color: 'var(--muted)', fontSize: '16px', padding: '4px', flexShrink: 0, textDecoration: 'none' }}>⚙</Link>
+          <button onClick={handleSignOut} title="Sign out" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px', flexShrink: 0 }}>↪</button>
         </div>
       </nav>
     </>

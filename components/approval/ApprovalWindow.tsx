@@ -11,8 +11,9 @@ interface Props {
   orgId: string;
 }
 
-function ApprovalCard({ message, currentUser }: { message: PortalMessage; currentUser: { id: string; name: string } }) {
+function ApprovalCard({ message, currentUser, onDelete }: { message: PortalMessage; currentUser: { id: string; name: string }; onDelete: (id: string) => void }) {
   const [reply, setReply] = useState('');
+  const [hovered, setHovered] = useState(false);
   const approvalState = (message.metadata?.approval_state as string) ?? 'pending';
   const supabase = createClient();
 
@@ -27,7 +28,13 @@ function ApprovalCard({ message, currentUser }: { message: PortalMessage; curren
   const stateLabel = approvalState === 'sent' ? '✓ Sent' : approvalState === 'approved' ? '⏳ Queued' : '⏸ Pending';
 
   return (
-    <div className="feed-card">
+    <div className="feed-card" style={{ position: 'relative' }} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      {hovered && (
+        <button onClick={() => onDelete(message.id)} title="Delete" style={{
+          position: 'absolute', top: 8, right: 8, background: 'none', border: 'none',
+          cursor: 'pointer', color: '#da3633', fontSize: '14px', padding: '2px 4px', opacity: 0.8,
+        }}>🗑</button>
+      )}
       <div className="feed-card-meta">
         <span style={{ fontWeight: 600 }}>{message.sender_name ?? 'System'}</span>
         <span>{new Date(message.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
@@ -55,6 +62,11 @@ function ApprovalCard({ message, currentUser }: { message: PortalMessage; curren
 
 export default function ApprovalWindow({ channel, initialMessages, currentUser }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
+
+  async function deleteMessage(id: string) {
+    setMessages(prev => prev.filter(m => m.id !== id));
+    await supabase.from('portal_messages').delete().eq('id', id);
+  }
   const bottomRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -97,7 +109,7 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
           </div>
         )}
         {messages.map(msg => (
-          <ApprovalCard key={msg.id} message={msg} currentUser={currentUser} />
+          <ApprovalCard key={msg.id} message={msg} currentUser={currentUser} onDelete={deleteMessage} />
         ))}
         <div ref={bottomRef} />
       </div>
