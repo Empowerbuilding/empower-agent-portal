@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useParams } from 'next/navigation';
 
@@ -22,6 +22,34 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [orgId, setOrgId] = useState('');
+  const installPrompt = useRef<any>(null);
+  const [canInstall, setCanInstall] = useState(false);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setInstalled(true);
+      return;
+    }
+    const handler = (e: any) => {
+      e.preventDefault();
+      installPrompt.current = e;
+      setCanInstall(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  async function handleInstall() {
+    if (!installPrompt.current) return;
+    installPrompt.current.prompt();
+    const { outcome } = await installPrompt.current.userChoice;
+    if (outcome === 'accepted') {
+      setInstalled(true);
+      setCanInstall(false);
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -56,6 +84,27 @@ export default function SettingsPage() {
   return (
     <div style={{ padding: '32px', maxWidth: '560px', margin: '0 auto' }}>
       <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', marginBottom: '32px' }}>Settings</div>
+
+      {/* Install App */}
+      <section style={{ marginBottom: '40px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>App</div>
+        <div style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>Install to Home Screen</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Add the portal as an app on your device</div>
+          </div>
+          {installed ? (
+            <span style={{ fontSize: '12px', color: '#2ea043', fontWeight: 600 }}>✓ Installed</span>
+          ) : canInstall ? (
+            <button onClick={handleInstall} style={{
+              padding: '7px 14px', background: 'var(--accent)', border: 'none', borderRadius: '6px',
+              color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px', flexShrink: 0,
+            }}>Install</button>
+          ) : (
+            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Use Share → Add to Home Screen</span>
+          )}
+        </div>
+      </section>
 
       {/* Org name */}
       <section style={{ marginBottom: '40px' }}>
