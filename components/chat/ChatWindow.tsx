@@ -40,6 +40,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     return () => { supabase.removeChannel(sub); };
   }, [channel.id]);
 
+  async function deleteMessage(id: string) {
+    setMessages(prev => prev.filter(m => m.id !== id));
+    await supabase.from('portal_messages').delete().eq('id', id);
+  }
+
   // Auto-resize textarea
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);
@@ -91,7 +96,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           </div>
         )}
         {messages.map(msg => (
-          <MessageBubble key={msg.id} message={msg} currentUserId={currentUser.id} />
+          <MessageBubble key={msg.id} message={msg} currentUserId={currentUser.id} onDelete={deleteMessage} />
         ))}
         <div ref={bottomRef} />
       </div>

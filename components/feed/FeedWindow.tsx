@@ -15,6 +15,7 @@ function formatTime(iso: string) {
 
 export default function FeedWindow({ channel, initialMessages }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -54,12 +55,32 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
           </div>
         )}
         {messages.map(msg => (
-          <div key={msg.id} className="feed-card">
+          <div
+            key={msg.id}
+            className="feed-card"
+            style={{ position: 'relative' }}
+            onMouseEnter={() => setHoveredId(msg.id)}
+            onMouseLeave={() => setHoveredId(null)}
+          >
             <div className="feed-card-meta">
               <span style={{ fontWeight: 600 }}>{msg.sender_name ?? 'System'}</span>
               <span>{formatTime(msg.created_at)}</span>
             </div>
             <div className="feed-card-body">{msg.content}</div>
+            {hoveredId === msg.id && (
+              <button
+                onClick={async () => {
+                  setMessages(prev => prev.filter(m => m.id !== msg.id));
+                  await supabase.from('portal_messages').delete().eq('id', msg.id);
+                }}
+                title="Delete"
+                style={{
+                  position: 'absolute', top: 8, right: 8,
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#da3633', fontSize: '14px', padding: '2px 4px', opacity: 0.8,
+                }}
+              >🗑</button>
+            )}
           </div>
         ))}
         <div ref={bottomRef} />
