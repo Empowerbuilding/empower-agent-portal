@@ -11,7 +11,12 @@ interface Props {
   orgId: string;
 }
 
-function ApprovalCard({ message, currentUser, onDelete }: { message: PortalMessage; currentUser: { id: string; name: string }; onDelete: (id: string) => void }) {
+function ApprovalCard({ message, currentUser, selected, onSelect }: {
+  message: PortalMessage;
+  currentUser: { id: string; name: string };
+  selected: boolean;
+  onSelect: (id: string, checked: boolean) => void;
+}) {
   const [reply, setReply] = useState('');
   const [hovered, setHovered] = useState(false);
   const approvalState = (message.metadata?.approval_state as string) ?? 'pending';
@@ -28,45 +33,41 @@ function ApprovalCard({ message, currentUser, onDelete }: { message: PortalMessa
   const stateLabel = approvalState === 'sent' ? '✓ Sent' : approvalState === 'approved' ? '⏳ Queued' : '⏸ Pending';
 
   return (
-    <div className="feed-card" style={{ position: 'relative' }} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
-      {hovered && (
-        <button onClick={() => onDelete(message.id)} title="Delete" style={{
-          position: 'absolute', top: 8, right: 8, background: 'none', border: 'none',
-          cursor: 'pointer', color: '#da3633', fontSize: '14px', padding: '2px 4px', opacity: 0.8,
-        }}>🗑</button>
-      )}
-      <div className="feed-card-meta">
-        <span style={{ fontWeight: 600 }}>{message.sender_name ?? 'System'}</span>
-        <span>{new Date(message.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
-        <span style={{ marginLeft: 'auto', color: stateColor, fontWeight: 600 }}>{stateLabel}</span>
-      </div>
-      <div className="feed-card-body">{message.content}</div>
-
-      {approvalState === 'pending' && (
-        <div className="approval-reply-area">
-          <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>Reply:</div>
-          <textarea
-            value={reply}
-            onChange={e => setReply(e.target.value)}
-            placeholder="Type your reply..."
-            rows={2}
-          />
-          <button className="approve-btn" onClick={approve} disabled={!reply.trim()}>
-            Approve &amp; Send
-          </button>
+    <div
+      style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={e => onSelect(message.id, e.target.checked)}
+        style={{ opacity: (hovered || selected) ? 1 : 0, marginTop: '14px', cursor: 'pointer', accentColor: '#C49A0F', flexShrink: 0 }}
+      />
+      <div className="feed-card" style={{ flex: 1, minWidth: 0 }}>
+        <div className="feed-card-meta">
+          <span style={{ fontWeight: 600 }}>{message.sender_name ?? 'System'}</span>
+          <span>{new Date(message.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+          <span style={{ marginLeft: 'auto', color: stateColor, fontWeight: 600 }}>{stateLabel}</span>
         </div>
-      )}
+        <div className="feed-card-body">{message.content}</div>
+
+        {approvalState === 'pending' && (
+          <div className="approval-reply-area">
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>Reply:</div>
+            <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Type your reply..." rows={2} />
+            <button className="approve-btn" onClick={approve} disabled={!reply.trim()}>Approve &amp; Send</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 export default function ApprovalWindow({ channel, initialMessages, currentUser }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
-
-  async function deleteMessage(id: string) {
-    setMessages(prev => prev.filter(m => m.id !== id));
-    await supabase.from('portal_messages').delete().eq('id', id);
-  }
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirming, setConfirming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -91,8 +92,33 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
     return () => { supabase.removeChannel(sub); };
   }, [channel.id]);
 
+  function handleSelect(id: string, checked: boolean) {
+    setSelected(prev => { const n = new Set(prev); checked ? n.add(id) : n.delete(id); return n; });
+  }
+
+  async function deleteSelected() {
+    const ids = Array.from(selected);
+    setMessages(prev => prev.filter(m => !ids.includes(m.id)));
+    setSelected(new Set());
+    setConfirming(false);
+    for (const id of ids) await supabase.from('portal_messages').delete().eq('id', id);
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {confirming && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '12px', padding: '24px', width: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>Delete {selected.size} message{selected.size > 1 ? 's' : ''}?</div>
+            <div style={{ fontSize: '13px', color: 'var(--muted)' }}>This can't be undone.</div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirming(false)} style={{ padding: '8px 16px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+              <button onClick={deleteSelected} style={{ padding: '8px 16px', background: '#da3633', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="channel-header">
         <span style={{ fontSize: '18px' }}>{channel.icon}</span>
         <div>
@@ -109,10 +135,20 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
           </div>
         )}
         {messages.map(msg => (
-          <ApprovalCard key={msg.id} message={msg} currentUser={currentUser} onDelete={deleteMessage} />
+          <ApprovalCard key={msg.id} message={msg} currentUser={currentUser} selected={selected.has(msg.id)} onSelect={handleSelect} />
         ))}
         <div ref={bottomRef} />
       </div>
+
+      {selected.size > 0 && (
+        <div style={{ padding: '10px 16px', background: '#161b22', borderTop: '1px solid #30363d', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{selected.size} selected</span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setSelected(new Set())} style={{ padding: '6px 12px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px' }}>Cancel</button>
+            <button onClick={() => setConfirming(true)} style={{ padding: '6px 12px', background: '#da3633', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>Delete {selected.size}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
