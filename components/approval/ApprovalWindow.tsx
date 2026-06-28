@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
+import Markdown from '@/components/ui/Markdown';
 
 interface Props {
   channel: PortalChannel;
@@ -50,7 +51,7 @@ function ApprovalCard({ message, currentUser, selected, onSelect }: {
           <span>{new Date(message.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
           <span style={{ marginLeft: 'auto', color: stateColor, fontWeight: 600 }}>{stateLabel}</span>
         </div>
-        <div className="feed-card-body">{message.content}</div>
+        <div className="feed-card-body"><Markdown content={message.content} /></div>
 
         {approvalState === 'pending' && (
           <div className="approval-reply-area">

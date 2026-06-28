@@ -1,6 +1,7 @@
 'use client';
 
 import { PortalMessage } from '@/lib/types';
+import Markdown from '@/components/ui/Markdown';
 
 interface Props {
   message: PortalMessage;
@@ -65,7 +66,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
           </span>
           <span>{formatTime(message.created_at)}</span>
         </div>
-        <div className={`msg-bubble ${isUser ? 'user' : 'agent'}`}>{message.content}</div>
+        <div className={`msg-bubble ${isUser ? 'user' : 'agent'}`}><Markdown content={message.content} /></div>
         <AttachmentPreview attachments={message.attachments ?? []} />
       </div>
     </div>

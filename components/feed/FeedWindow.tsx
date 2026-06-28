@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
+import Markdown from '@/components/ui/Markdown';
 
 interface Props {
   channel: PortalChannel;
@@ -102,7 +103,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
                 <span style={{ fontWeight: 600 }}>{msg.sender_name ?? 'System'}</span>
                 <span>{formatTime(msg.created_at)}</span>
               </div>
-              <div className="feed-card-body">{msg.content}</div>
+              <div className="feed-card-body"><Markdown content={msg.content} /></div>
             </div>
           </div>
         ))}
