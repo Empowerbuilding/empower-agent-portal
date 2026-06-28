@@ -140,7 +140,7 @@ html, body {
 
 .input-row {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border);
