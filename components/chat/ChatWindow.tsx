@@ -26,6 +26,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [contextPct, setContextPct] = useState<number | null>(null);
   const { setToolbar } = useMobileToolbar();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const allSelected = selected.size === messages.length && messages.length > 0;
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [stagedFile, setStagedFile] = useState<{ file: File; previewUrl: string } | null>(null);
@@ -277,8 +278,6 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
   }
-
-  const allSelected = selected.size === messages.length && messages.length > 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
