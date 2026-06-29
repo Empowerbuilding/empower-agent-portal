@@ -260,7 +260,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           <div key={msg.id} ref={el => { messageRefs.current[msg.id] = el; }} style={{ transition: 'background 0.5s' }}>
             <MessageBubble message={msg} currentUserId={currentUser.id}
               deleteMode={deleteMode} selected={selected.has(msg.id)} onSelect={handleSelect} />
-          </div>)
+          </div>
         ))}
         {agentTyping && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
