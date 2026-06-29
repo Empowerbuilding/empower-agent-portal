@@ -9,7 +9,7 @@ import SearchModal from './SearchModal';
 interface Props {
   channel: PortalChannel;
   initialMessages: PortalMessage[];
-  currentUser: { id: string; name: string };
+  currentUser: { id: string; name: string; role?: string };
   orgId: string;
 }
 
@@ -21,6 +21,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [sending, setSending] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -79,6 +81,38 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       .subscribe();
     return () => { supabase.removeChannel(sub); };
   }, [channel.id]);
+
+  async function handleResetContext() {
+    setResetting(true);
+    try {
+      const res = await fetch('/api/reset-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelName: channel.name }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Insert a local system message so user sees confirmation
+        setMessages(prev => [...prev, {
+          id: `reset-${Date.now()}`,
+          channel_id: channel.id,
+          org_id: orgId,
+          sender_type: 'system',
+          sender_id: null,
+          sender_name: 'System',
+          content: '🔄 Agent context cleared. Fresh session started.',
+          attachments: [],
+          metadata: {},
+          processed: true,
+          created_at: new Date().toISOString(),
+        } as any]);
+      }
+    } catch (e) {
+      console.error('reset failed', e);
+    }
+    setResetting(false);
+    setResetConfirm(false);
+  }
 
   function handleJumpTo(messageId: string) {
     const el = messageRefs.current[messageId];
@@ -205,6 +239,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             </div>
             <div style={{ display: 'flex', gap: '4px' }}>
               <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', opacity: 0.6 }}>🔍</button>
+              {(currentUser as any).role === 'owner' && (
+                <button onClick={() => setResetConfirm(true)} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', opacity: 0.6 }}>🔄</button>
+              )}
               <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>
             </div>
           </>
