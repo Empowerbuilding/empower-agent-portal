@@ -21,7 +21,6 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [sending, setSending] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [resetConfirm, setResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [contextPct, setContextPct] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -131,7 +130,6 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     }
     setContextPct(null);
     setResetting(false);
-    setResetConfirm(false);
   }
 
   function handleJumpTo(messageId: string) {
@@ -265,7 +263,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                     const color = contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043';
                     return <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 6px' }}>{contextPct}%</span>;
                   })()}
-                  <button onClick={() => setResetConfirm(true)} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 4px', opacity: 0.6 }}>🔄</button>
+                  <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', fontSize: '16px', padding: '4px 4px', opacity: resetting ? 0.3 : 0.6 }}>{resetting ? '⏳' : '🔄'}</button>
                 </div>
               )}
               <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>
