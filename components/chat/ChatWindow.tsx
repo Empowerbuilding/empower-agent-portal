@@ -59,12 +59,13 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   // Refresh messages on mount to catch any that arrived while away (Next.js router cache issue)
   useEffect(() => {
     async function refresh() {
-      const { data } = await supabase
+      const { data: rawData } = await supabase
         .from('portal_messages')
         .select('*')
         .eq('channel_id', channel.id)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(100);
+      const data = rawData ? [...rawData].reverse() : null;
       if (data) {
         setMessages(data as PortalMessage[]);
         // If agent already replied, clear typing indicator
