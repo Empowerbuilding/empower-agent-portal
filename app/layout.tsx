@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Agent Portal — Empower Building AI',
+  title: 'Agent Portal',
   description: 'Empower Building AI Agent Portal',
   manifest: '/manifest.json',
   appleWebApp: {
