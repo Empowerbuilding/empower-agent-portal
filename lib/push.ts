@@ -27,7 +27,7 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
 
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as ArrayBuffer,
     });
 
     const res = await fetch('/api/push/subscribe', {
