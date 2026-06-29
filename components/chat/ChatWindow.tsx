@@ -106,9 +106,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const res = await fetch('/api/reset-context', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ channelId: channel.id }),
       });
       const data = await res.json();
+      console.log('[reset-context] response:', res.status, data);
       if (data.success) {
         // Insert a local system message so user sees confirmation
         setMessages(prev => [...prev, {
