@@ -16,10 +16,9 @@ export async function GET() {
 
 async function fetchContextStats(): Promise<Record<string, { tokens: number; ctx: number; pct: number }>> {
   const { Client } = require('ssh2');
-  const sshKeyB64 = process.env.RESET_SSH_KEY;
   const host = process.env.RESET_SSH_HOST || '142.93.29.212';
   const container = process.env.RESET_VANESSA_CONTAINER || 'sales-agent-openclaw-gateway-1';
-
+  const sshKeyB64 = process.env.RESET_SSH_KEY || 'LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNBNmFRQzdBNnFrWUszbjFJaHpnZGdjRmxRdFk4clBVbit0ZDYrdWVOeXVmZ0FBQUtCVlpEanVWV1E0CjdnQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDQTZhUUM3QTZxa1lLM24xSWh6Z2RnY0ZsUXRZOHJQVW4rdGQ2K3VlTnl1ZmcKQUFBRURIYk9RU254SjFxWjJKbUV0YmJnRTJTWnQxSmd1eFM5MlROelZYNnBYWEVEcHBBTHNEcXFSZ3JlZlVpSE9CMkJ3VwpWQzFqeXM5U2Y2MTNyNjU0M0s1K0FBQUFHMjFwZEdOb1pXeGxRR1Z0Y0c5M1pXSmpkV2xzWkdsdVp5NWhhUUVDCi0tLS0tRU5EIE9QRU5TU0ggUFJJVkFURSBLRVktLS0tLQo=';
   if (!sshKeyB64) return {};
 
   const privateKey = Buffer.from(sshKeyB64, 'base64').toString('utf8');
