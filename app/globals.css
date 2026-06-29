@@ -366,8 +366,8 @@ html, body {
 .notif-prompt-text strong { font-size: 13px; color: var(--text); }
 .notif-prompt-text span   { font-size: 12px; color: var(--muted); }
 .notif-prompt-enable {
-  background: var(--gold);
-  color: #000;
+  background: var(--accent);
+  color: #fff;
   border: none;
   border-radius: 8px;
   padding: 6px 14px;
