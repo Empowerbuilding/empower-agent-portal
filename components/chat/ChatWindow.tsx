@@ -22,6 +22,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [stagedFile, setStagedFile] = useState<{ file: File; previewUrl: string } | null>(null);
   const [agentTyping, setAgentTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -97,26 +98,17 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     for (const id of ids) await supabase.from('portal_messages').delete().eq('id', id);
   }
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    const path = `${orgId}/${channel.id}/${Date.now()}-${file.name}`;
-    const { data, error } = await supabase.storage.from('portal-attachments').upload(path, file, { upsert: true });
-    if (error) { setUploading(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from('portal-attachments').getPublicUrl(path);
-    await supabase.from('portal_messages').insert({
-      channel_id: channel.id,
-      org_id: orgId,
-      sender_type: 'user',
-      sender_id: currentUser.id,
-      sender_name: currentUser.name,
-      content: file.name,
-      attachments: [{ url: publicUrl, name: file.name, type: file.type }],
-      processed: false,
-    });
-    setUploading(false);
+    const previewUrl = URL.createObjectURL(file);
+    setStagedFile({ file, previewUrl });
     if (fileRef.current) fileRef.current.value = '';
+  }
+
+  function clearStagedFile() {
+    if (stagedFile) URL.revokeObjectURL(stagedFile.previewUrl);
+    setStagedFile(null);
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -128,22 +120,36 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
 
   async function sendMessage() {
     const content = input.trim();
-    if (!content || sending) return;
+    if (!content && !stagedFile || sending) return;
     setSending(true);
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+    let attachments: { url: string; name: string; type: string }[] = [];
+    if (stagedFile) {
+      setUploading(true);
+      const path = `${orgId}/${channel.id}/${Date.now()}-${stagedFile.file.name}`;
+      const { error } = await supabase.storage.from('portal-attachments').upload(path, stagedFile.file, { upsert: true });
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from('portal-attachments').getPublicUrl(path);
+        attachments = [{ url: publicUrl, name: stagedFile.file.name, type: stagedFile.file.type }];
+      }
+      clearStagedFile();
+      setUploading(false);
+    }
+
     await supabase.from('portal_messages').insert({
       channel_id: channel.id,
       org_id: orgId,
       sender_type: 'user',
       sender_id: currentUser.id,
       sender_name: currentUser.name,
-      content,
+      content: content || (attachments[0]?.name ?? ''),
+      ...(attachments.length ? { attachments } : {}),
       processed: false,
     });
     setSending(false);
     setAgentTyping(true);
-    // Clear typing indicator after 90s as fallback
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
   }
@@ -238,6 +244,22 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '20px', padding: '0 4px', flexShrink: 0, opacity: uploading ? 0.4 : 0.7 }}>
               {uploading ? '⏳' : '📎'}
             </button>
+            {stagedFile && (
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                {stagedFile.file.type.startsWith('image/') ? (
+                  <img src={stagedFile.previewUrl} alt={stagedFile.file.name}
+                    style={{ height: '48px', width: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #30363d' }} />
+                ) : (
+                  <div style={{ height: '48px', display: 'flex', alignItems: 'center', gap: '4px', background: '#21262d', borderRadius: '6px', padding: '0 8px', fontSize: '12px', color: 'var(--muted)', maxWidth: '120px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                    📎 {stagedFile.file.name}
+                  </div>
+                )}
+                <button onClick={clearStagedFile}
+                  style={{ position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', borderRadius: '50%', background: '#30363d', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+                  ✕
+                </button>
+              </div>
+            )}
             <textarea
               ref={textareaRef}
               value={input}
@@ -246,7 +268,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               placeholder={`Message ${channel.display_name}…`}
               rows={1}
             />
-            <button className="send-btn" onClick={sendMessage} disabled={!input.trim() || sending}>
+            <button className="send-btn" onClick={sendMessage} disabled={(!input.trim() && !stagedFile) || sending}>
               {sending ? '…' : '↑'}
             </button>
           </div>
