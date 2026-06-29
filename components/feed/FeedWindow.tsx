@@ -90,6 +90,20 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
         )}
       </div>
 
+      {/* Mobile action toolbar */}
+      <div className="mobile-only" style={{ alignItems: 'center', justifyContent: 'flex-end', gap: '4px', padding: '4px 12px', background: '#0b0f18', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        {!deleteMode && <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>}
+        {deleteMode && (
+          <>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--muted)' }}>
+              <input type="checkbox" checked={allSelected} onChange={selectAll} style={{ accentColor: '#C49A0F', cursor: 'pointer' }} />
+              {allSelected ? 'Deselect all' : 'Select all'}
+            </label>
+            <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px' }}>Cancel</button>
+          </>
+        )}
+      </div>
+
       <div className="feed-list">
         {messages.length === 0 && <div className="empty-state"><span className="icon">{channel.icon}</span><span className="label">No updates yet</span></div>}
         {messages.map(msg => (

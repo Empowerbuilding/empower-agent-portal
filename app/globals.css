@@ -78,6 +78,15 @@ html, body {
 .mobile-header {
   display: none;
 }
+
+.mobile-only {
+  display: none;
+}
+@media (max-width: 767px) {
+  .mobile-only {
+    display: flex;
+  }
+}
 @media (max-width: 767px) {
   .mobile-header {
     display: flex;

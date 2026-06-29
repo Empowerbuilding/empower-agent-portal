@@ -274,6 +274,22 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         )}
       </div>
 
+      {/* Mobile action toolbar — mirrors channel-header controls hidden on mobile */}
+      <div className="mobile-only" style={{ alignItems: 'center', justifyContent: 'flex-end', gap: '4px', padding: '4px 12px', background: '#0b0f18', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', opacity: 0.6 }}>🔍</button>
+        {(currentUser as any).role === 'owner' && (
+          <>
+            {contextPct !== null && (() => {
+              const color = contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043';
+              return <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 6px' }}>{contextPct}%</span>;
+            })()}
+            <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', fontSize: '16px', padding: '4px 4px', opacity: resetting ? 0.3 : 0.6 }}>{resetting ? '⏳' : '🔄'}</button>
+          </>
+        )}
+        {!deleteMode && <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>}
+        {deleteMode && <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px' }}>Cancel</button>}
+      </div>
+
       {/* Messages */}
       <div className="messages-list">
         {messages.length === 0 && (
