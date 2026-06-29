@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     const { data: portalUser } = await supabase
       .from('portal_users')
       .select('role')
-      .eq('id', user.id)
+      .eq('supabase_auth_id', user.id)
       .single();
     if (!portalUser || portalUser.role !== 'owner') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
