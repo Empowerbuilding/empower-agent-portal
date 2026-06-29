@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import NotificationPrompt from '@/components/NotificationPrompt';
@@ -19,6 +19,11 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { toolbar } = useMobileToolbar();
+
+  // Clear app icon badge when user is in the portal
+  useEffect(() => {
+    if ('clearAppBadge' in navigator) (navigator as any).clearAppBadge();
+  }, [pathname]);
 
   // Find active channel name for mobile header
   const activeChannelId = pathname.split('/')[2];
