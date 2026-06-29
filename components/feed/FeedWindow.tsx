@@ -67,7 +67,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
         </div>
       )}
 
-      <div className="channel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="channel-header" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
         {deleteMode ? (
           <>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--muted)' }}>
