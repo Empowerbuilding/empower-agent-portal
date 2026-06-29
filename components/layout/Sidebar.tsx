@@ -161,6 +161,27 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
     if (stored) setLastSeen(JSON.parse(stored));
   }, []);
 
+  // Seed initial unread state from DB — catches messages that arrived before page load
+  useEffect(() => {
+    const activeChannelIds = initialChannels.map(c => c.id);
+    if (activeChannelIds.length === 0) return;
+    supabase
+      .from('portal_messages')
+      .select('channel_id, created_at')
+      .in('channel_id', activeChannelIds)
+      .neq('sender_type', 'user')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data) return;
+        const latest: Record<string, string> = {};
+        for (const row of data) {
+          if (!latest[row.channel_id]) latest[row.channel_id] = row.created_at;
+        }
+        setLatestMsg(latest);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Track previous channel so we can mark it as seen when leaving
   const prevChId = useRef<string | null>(null);
 
