@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import ChatWindow from '@/components/chat/ChatWindow';
 import FeedWindow from '@/components/feed/FeedWindow';
@@ -49,13 +51,13 @@ export default async function ChannelPage({
     .single();
   if (!channel) redirect(`/${orgSlug}`);
 
-  // Load last 50 messages
+  // Load last 100 messages
   const { data: messages } = await supabase
     .from('portal_messages')
     .select('*')
     .eq('channel_id', channelId)
     .order('created_at', { ascending: true })
-    .limit(50);
+    .limit(100);
 
   const ch = channel as PortalChannel;
 

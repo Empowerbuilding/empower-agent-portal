@@ -58,12 +58,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         .select('*')
         .eq('channel_id', channel.id)
         .order('created_at', { ascending: true })
-        .limit(50);
+        .limit(100);
       if (data) {
         setMessages(data as PortalMessage[]);
         // If agent already replied, clear typing indicator
         const hasAgentReply = data.some((m: PortalMessage) => m.sender_type !== 'user');
         if (hasAgentReply) setAgentTyping(false);
+        // Scroll to bottom after fresh fetch so response is visible
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
       }
     }
     refresh();
