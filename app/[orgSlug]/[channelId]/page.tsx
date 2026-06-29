@@ -78,7 +78,7 @@ export default async function ChannelPage({
     <ChatWindow
       channel={ch}
       initialMessages={messages ?? []}
-      currentUser={{ id: portalUser.id, name: portalUser.name }}
+      currentUser={{ id: portalUser.id, name: portalUser.name, role: portalUser.role }}
       orgId={org.id}
     />
   );
