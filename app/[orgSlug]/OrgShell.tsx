@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
+import NotificationPrompt from '@/components/NotificationPrompt';
 import { Organization, PortalChannel, Agent, PortalUser } from '@/lib/types';
 import { MobileToolbarProvider, useMobileToolbar } from '@/context/MobileToolbar';
 
@@ -25,6 +26,7 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
 
   return (
     <div className="app-shell">
+      <NotificationPrompt userId={currentUser.id} />
       <Sidebar
         org={org}
         channels={channels}
