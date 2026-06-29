@@ -23,6 +23,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [searchOpen, setSearchOpen] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [contextPct, setContextPct] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -84,6 +85,21 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     return () => { supabase.removeChannel(sub); };
   }, [channel.id]);
 
+  useEffect(() => {
+    async function fetchPct() {
+      try {
+        const res = await fetch('/api/context-stats');
+        if (res.ok) {
+          const data = await res.json();
+          if (data[channel.name] !== undefined) setContextPct(data[channel.name].pct);
+        }
+      } catch {}
+    }
+    fetchPct();
+    const interval = setInterval(fetchPct, 60000);
+    return () => clearInterval(interval);
+  }, [channel.name]);
+
   async function handleResetContext() {
     setResetting(true);
     try {
@@ -112,6 +128,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     } catch (e) {
       console.error('reset failed', e);
     }
+    setContextPct(null);
     setResetting(false);
     setResetConfirm(false);
   }
@@ -242,7 +259,13 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             <div style={{ display: 'flex', gap: '4px' }}>
               <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', opacity: 0.6 }}>🔍</button>
               {(currentUser as any).role === 'owner' && (
-                <button onClick={() => setResetConfirm(true)} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', opacity: 0.6 }}>🔄</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {contextPct !== null && (() => {
+                    const color = contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043';
+                    return <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 6px' }}>{contextPct}%</span>;
+                  })()}
+                  <button onClick={() => setResetConfirm(true)} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 4px', opacity: 0.6 }}>🔄</button>
+                </div>
               )}
               <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>
             </div>

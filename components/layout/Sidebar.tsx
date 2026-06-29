@@ -149,19 +149,6 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
   const supabase = createClient();
   const [channels, setChannels] = useState(initialChannels);
   const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
-  const [contextStats, setContextStats] = useState<Record<string, { pct: number }>>({});
-
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const res = await fetch('/api/context-stats');
-        if (res.ok) setContextStats(await res.json());
-      } catch {}
-    }
-    fetchStats();
-    const interval = setInterval(fetchStats, 60000);
-    return () => clearInterval(interval);
-  }, []);
   const [gearOpen, setGearOpen] = useState<string | null>(null);
   const [addingForAgent, setAddingForAgent] = useState<{ agentId: string; agent: Agent } | null>(null);
 
@@ -310,17 +297,7 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                           flexShrink: 0, display: 'inline-block',
                         }} />
                       )}
-                      {contextStats[ch.id] !== undefined && (() => {
-                        const pct = contextStats[ch.id].pct;
-                        const color = pct >= 50 ? '#da3633' : pct >= 30 ? '#d29922' : '#2ea043';
-                        return (
-                          <span style={{
-                            fontSize: '10px', fontWeight: 600, color,
-                            background: `${color}22`, borderRadius: '4px',
-                            padding: '1px 5px', flexShrink: 0, lineHeight: 1.6,
-                          }}>{pct}%</span>
-                        );
-                      })()}
+
                     </Link>
 
                     {/* Gear — visible on hover (desktop) or always (mobile), opens delete menu */}
