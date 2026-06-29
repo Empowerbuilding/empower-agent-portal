@@ -83,7 +83,13 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages', filter: `channel_id=eq.${channel.id}` },
         (payload) => {
           const msg = payload.new as PortalMessage;
-          if (msg.sender_type !== 'user') setAgentTyping(false);
+          if (msg.sender_type === 'user') {
+            setAgentTyping(true);
+            if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+            typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
+          } else {
+            setAgentTyping(false);
+          }
           setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         })
       .subscribe();
@@ -426,3 +432,4 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     </div>
   );
 }
+
