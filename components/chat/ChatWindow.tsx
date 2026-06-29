@@ -30,9 +30,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [uploading, setUploading] = useState(false);
   const [stagedFile, setStagedFile] = useState<{ file: File; previewUrl: string } | null>(null);
   const [agentTyping, setAgentTyping] = useState(false);
+  const [listening, setListening] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
@@ -203,6 +205,34 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   function clearStagedFile() {
     if (stagedFile) URL.revokeObjectURL(stagedFile.previewUrl);
     setStagedFile(null);
+  }
+
+  function toggleVoice() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { alert('Voice input is not supported in this browser.'); return; }
+
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = true;
+    rec.continuous = false;
+    recognitionRef.current = rec;
+
+    let baseText = input;
+    rec.onresult = (e: any) => {
+      const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join('');
+      const sep = baseText && !baseText.endsWith(' ') ? ' ' : '';
+      setInput(baseText + sep + transcript);
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    rec.start();
+    setListening(true);
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -383,6 +413,10 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               placeholder={`Message ${channel.display_name}…`}
               rows={1}
             />
+            <button onClick={toggleVoice} title={listening ? 'Stop recording' : 'Voice input'}
+              style={{ background: listening ? 'rgba(196,154,15,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', fontSize: '18px', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
+              {listening ? '🔴' : '🎤'}
+            </button>
             <button className="send-btn" onClick={sendMessage} disabled={(!input.trim() && !stagedFile) || sending}>
               {sending ? '…' : '↑'}
             </button>
