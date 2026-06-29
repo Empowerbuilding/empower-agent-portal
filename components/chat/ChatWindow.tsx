@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useMobileToolbar } from '@/context/MobileToolbar';
+import { IconSearch, IconRefresh, IconTrash, IconMic, IconMicOff, IconPaperclip, IconSend } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import MessageBubble from './MessageBubble';
@@ -164,10 +165,10 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const color = contextPct !== null ? (contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043') : null;
       setToolbar(
         <>
-          <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '15px', padding: '4px 6px', opacity: 0.7 }}>🔍</button>
+          <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}><IconSearch size={15} /></button>
           {color && <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 5px' }}>{contextPct}%</span>}
-          <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Reset context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', fontSize: '15px', padding: '4px 6px', opacity: resetting ? 0.3 : 0.7 }}>{resetting ? '⏳' : '🔄'}</button>
-          <button onClick={() => setDeleteMode(true)} title="Delete" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 6px', opacity: 0.7 }}>🗑</button>
+          <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Reset context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', padding: '4px 6px', opacity: resetting ? 0.3 : 0.7 }}><IconRefresh size={15} /></button>
+          <button onClick={() => setDeleteMode(true)} title="Delete" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}><IconTrash size={15} /></button>
         </>
       );
     }
@@ -315,15 +316,15 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               </div>
             </div>
             <div style={{ display: 'flex', gap: '4px' }}>
-              <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', opacity: 0.6 }}>🔍</button>
+              <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconSearch size={16} /></button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   {contextPct !== null && (() => {
                     const color = contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043';
                     return <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 6px' }}>{contextPct}%</span>;
                   })()}
-                  <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', fontSize: '16px', padding: '4px 4px', opacity: resetting ? 0.3 : 0.6 }}>{resetting ? '⏳' : '🔄'}</button>
+                  <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', padding: '4px 4px', opacity: resetting ? 0.3 : 0.6 }}><IconRefresh size={16} /></button>
                 </div>
-              <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>
+              <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconTrash size={16} /></button>
             </div>
           </>
         )}
@@ -386,7 +387,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           <div className="input-row">
             <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Attach file"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '20px', padding: '0 4px', flexShrink: 0, opacity: uploading ? 0.4 : 0.7 }}>
-              {uploading ? '⏳' : '📎'}
+              <IconPaperclip size={18} />
             </button>
             {stagedFile && (
               <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -414,10 +415,10 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             />
             <button onClick={toggleVoice} title={listening ? 'Stop recording' : 'Voice input'}
               style={{ background: listening ? 'rgba(196,154,15,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', fontSize: '18px', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
-              {listening ? '🔴' : '🎤'}
+              {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
             </button>
             <button className="send-btn" onClick={sendMessage} disabled={(!input.trim() && !stagedFile) || sending}>
-              {sending ? '…' : '↑'}
+              {sending ? '…' : <IconSend size={15} />}
             </button>
           </div>
         </div>

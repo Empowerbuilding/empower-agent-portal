@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useMobileToolbar } from '@/context/MobileToolbar';
+import { IconTrash } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import Markdown from '@/components/ui/Markdown';
@@ -26,7 +27,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
 
   useEffect(() => {
     setToolbar(
-      <button onClick={() => setDeleteMode(d => !d)} title="Delete" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 6px', opacity: 0.7 }}>🗑</button>
+      <button onClick={() => setDeleteMode(d => !d)} title="Delete" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}><IconTrash size={16} /></button>
     );
     return () => setToolbar(null);
   }, []);
@@ -94,7 +95,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
                 <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Feed</div>
               </div>
             </div>
-            <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>
+            <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconTrash size={16} /></button>
           </>
         )}
       </div>
