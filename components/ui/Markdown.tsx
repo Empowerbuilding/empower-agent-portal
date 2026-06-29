@@ -12,16 +12,19 @@ interface Props {
 
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`)/g;
+  const regex = /(\[([^\]]+)\]\(([^)]+)\)|\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`)/g;
   let last = 0;
   let match;
   let key = 0;
 
   while ((match = regex.exec(text)) !== null) {
     if (match.index > last) parts.push(text.slice(last, match.index));
-    if (match[2]) parts.push(<strong key={key++}>{match[2]}</strong>);
-    else if (match[3]) parts.push(<em key={key++}>{match[3]}</em>);
-    else if (match[4]) parts.push(<code key={key++} style={{ background: '#21262d', borderRadius: '3px', padding: '1px 5px', fontSize: '0.9em', fontFamily: 'monospace' }}>{match[4]}</code>);
+    if (match[2] && match[3]) {
+      // [label](url) link
+      parts.push(<a key={key++} href={match[3]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{match[2]}</a>);
+    } else if (match[4]) parts.push(<strong key={key++}>{match[4]}</strong>);
+    else if (match[5]) parts.push(<em key={key++}>{match[5]}</em>);
+    else if (match[6]) parts.push(<code key={key++} style={{ background: '#21262d', borderRadius: '3px', padding: '1px 5px', fontSize: '0.9em', fontFamily: 'monospace' }}>{match[6]}</code>);
     last = match.index + match[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
