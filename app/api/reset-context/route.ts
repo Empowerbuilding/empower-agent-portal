@@ -35,10 +35,21 @@ async function resetSession(sessionKey: string): Promise<string> {
   const { Client } = require('ssh2');
   const host = process.env.RESET_SSH_HOST || '142.93.29.212';
   const container = process.env.RESET_VANESSA_CONTAINER || 'sales-agent-openclaw-gateway-1';
+  let privateKey: string;
+  const keyFile = '/app/portal-reset.key';
   const sshKeyB64 = process.env.RESET_SSH_KEY;
-  if (!sshKeyB64) throw new Error('RESET_SSH_KEY env var not configured');
-
-  const privateKey = Buffer.from(sshKeyB64, 'base64').toString('utf8');
+  try {
+    const fs = require('fs');
+    if (fs.existsSync(keyFile)) {
+      privateKey = fs.readFileSync(keyFile, 'utf8');
+    } else if (sshKeyB64) {
+      privateKey = Buffer.from(sshKeyB64, 'base64').toString('utf8');
+    } else {
+      throw new Error('No SSH key available');
+    }
+  } catch (e: any) {
+    throw new Error('SSH key not available: ' + e.message);
+  }
 
   const script = `
 import json, shutil, os, sys

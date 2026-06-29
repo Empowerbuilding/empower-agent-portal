@@ -20,10 +20,19 @@ async function fetchContextStats(): Promise<Record<string, { tokens: number; ctx
   const { Client } = require('ssh2');
   const host = process.env.RESET_SSH_HOST || '142.93.29.212';
   const container = process.env.RESET_VANESSA_CONTAINER || 'sales-agent-openclaw-gateway-1';
+  const keyFile = '/app/portal-reset.key';
   const sshKeyB64 = process.env.RESET_SSH_KEY;
-  if (!sshKeyB64) return {};
-
-  const privateKey = Buffer.from(sshKeyB64, 'base64').toString('utf8');
+  let privateKey: string;
+  try {
+    const fs = require('fs');
+    if (fs.existsSync(keyFile)) {
+      privateKey = fs.readFileSync(keyFile, 'utf8');
+    } else if (sshKeyB64) {
+      privateKey = Buffer.from(sshKeyB64, 'base64').toString('utf8');
+    } else {
+      return {};
+    }
+  } catch { return {}; }
 
   const command = `docker exec ${container} python3 -c "
 import json
