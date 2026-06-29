@@ -243,7 +243,7 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
 
       <nav className={`sidebar${isOpen ? ' open' : ''}`}>
         <div className="sidebar-header">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Image src="/logo.png" alt="Empower Building" width={28} height={28} style={{ objectFit: 'contain', borderRadius: '4px' }} />
               <div>
