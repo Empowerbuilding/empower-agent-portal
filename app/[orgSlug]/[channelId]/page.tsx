@@ -51,13 +51,14 @@ export default async function ChannelPage({
     .single();
   if (!channel) redirect(`/${orgSlug}`);
 
-  // Load last 100 messages
-  const { data: messages } = await supabase
+  // Load last 100 messages (fetch newest-first, then reverse for chronological display)
+  const { data: rawMessages } = await supabase
     .from('portal_messages')
     .select('*')
     .eq('channel_id', channelId)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
     .limit(100);
+  const messages = (rawMessages ?? []).reverse();
 
   const ch = channel as PortalChannel;
 
