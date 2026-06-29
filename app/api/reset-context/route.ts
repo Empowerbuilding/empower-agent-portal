@@ -17,10 +17,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { channelName } = await req.json();
-    if (!channelName) return NextResponse.json({ error: 'channelName required' }, { status: 400 });
+    const { channelId } = await req.json();
+    if (!channelId) return NextResponse.json({ error: 'channelId required' }, { status: 400 });
 
-    const sessionKey = `agent:main:portal:channel:${channelName}`;
+    const sessionKey = `agent:main:portal:channel:${channelId}`;
     const result = await resetSession(sessionKey);
     return NextResponse.json({ success: true, result });
   } catch (err: any) {

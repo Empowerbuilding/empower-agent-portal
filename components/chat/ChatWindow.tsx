@@ -91,7 +91,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         const res = await fetch('/api/context-stats');
         if (res.ok) {
           const data = await res.json();
-          if (data[channel.name] !== undefined) setContextPct(data[channel.name].pct);
+          // session key uses channel.id (e.g. barnhaus-vanessa-larry)
+          if (data[channel.id] !== undefined) setContextPct(data[channel.id].pct);
         }
       } catch {}
     }
@@ -106,7 +107,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const res = await fetch('/api/reset-context', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelName: channel.name }),
+        body: JSON.stringify({ channelId: channel.id }),
       });
       const data = await res.json();
       if (data.success) {
