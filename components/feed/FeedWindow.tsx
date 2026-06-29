@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useMobileToolbar } from '@/context/MobileToolbar';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import Markdown from '@/components/ui/Markdown';
@@ -21,6 +22,14 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
   const [confirming, setConfirming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+  const { setToolbar } = useMobileToolbar();
+
+  useEffect(() => {
+    setToolbar(
+      <button onClick={() => setDeleteMode(d => !d)} title="Delete" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 6px', opacity: 0.7 }}>🗑</button>
+    );
+    return () => setToolbar(null);
+  }, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { if (!deleteMode) setSelected(new Set()); }, [deleteMode]);
@@ -86,20 +95,6 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
               </div>
             </div>
             <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>
-          </>
-        )}
-      </div>
-
-      {/* Mobile action toolbar */}
-      <div className="mobile-only" style={{ alignItems: 'center', justifyContent: 'flex-end', gap: '4px', padding: '4px 12px', background: '#0b0f18', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        {!deleteMode && <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>}
-        {deleteMode && (
-          <>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--muted)' }}>
-              <input type="checkbox" checked={allSelected} onChange={selectAll} style={{ accentColor: '#C49A0F', cursor: 'pointer' }} />
-              {allSelected ? 'Deselect all' : 'Select all'}
-            </label>
-            <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px' }}>Cancel</button>
           </>
         )}
       </div>

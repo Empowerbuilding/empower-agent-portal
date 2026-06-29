@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import { Organization, PortalChannel, Agent, PortalUser } from '@/lib/types';
+import { MobileToolbarProvider, useMobileToolbar } from '@/context/MobileToolbar';
 
 interface Props {
   org: Organization;
@@ -13,9 +14,10 @@ interface Props {
   children: React.ReactNode;
 }
 
-export default function OrgShell({ org, channels, currentUser, orgSlug, children }: Props) {
+function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const { toolbar } = useMobileToolbar();
 
   // Find active channel name for mobile header
   const activeChannelId = pathname.split('/')[2];
@@ -46,8 +48,8 @@ export default function OrgShell({ org, channels, currentUser, orgSlug, children
           >
             ☰
           </button>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {activeChannel ? `${activeChannel.icon ?? ''} ${activeChannel.display_name}` : org.name}
             </div>
             {activeChannel?.agents?.display_name && (
@@ -56,10 +58,20 @@ export default function OrgShell({ org, channels, currentUser, orgSlug, children
               </div>
             )}
           </div>
+          {/* Channel-specific action buttons injected by child components */}
+          {toolbar && <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>{toolbar}</div>}
         </div>
 
         {children}
       </div>
     </div>
+  );
+}
+
+export default function OrgShell(props: Props) {
+  return (
+    <MobileToolbarProvider>
+      <OrgShellInner {...props} />
+    </MobileToolbarProvider>
   );
 }

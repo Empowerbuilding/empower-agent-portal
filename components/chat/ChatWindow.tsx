@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useMobileToolbar } from '@/context/MobileToolbar';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import MessageBubble from './MessageBubble';
@@ -23,6 +24,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [searchOpen, setSearchOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [contextPct, setContextPct] = useState<number | null>(null);
+  const { setToolbar } = useMobileToolbar();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -142,6 +144,32 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       setTimeout(() => { if (el) el.style.background = ''; }, 2000);
     }
   }
+
+  // Inject action buttons into OrgShell mobile header
+  useEffect(() => {
+    if (deleteMode) {
+      setToolbar(
+        <>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '12px', color: 'var(--muted)' }}>
+            <input type="checkbox" checked={allSelected} onChange={selectAll} style={{ accentColor: '#C49A0F', cursor: 'pointer', width: 15, height: 15 }} />
+            {allSelected ? 'Deselect all' : 'Select all'}
+          </label>
+          <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', padding: '4px 8px' }}>Cancel</button>
+        </>
+      );
+    } else {
+      const color = contextPct !== null ? (contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043') : null;
+      setToolbar(
+        <>
+          <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '15px', padding: '4px 6px', opacity: 0.7 }}>🔍</button>
+          {color && <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 5px' }}>{contextPct}%</span>}
+          <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Reset context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', fontSize: '15px', padding: '4px 6px', opacity: resetting ? 0.3 : 0.7 }}>{resetting ? '⏳' : '🔄'}</button>
+          <button onClick={() => setDeleteMode(true)} title="Delete" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 6px', opacity: 0.7 }}>🗑</button>
+        </>
+      );
+    }
+    return () => setToolbar(null);
+  }, [contextPct, resetting, deleteMode, allSelected]);
 
   function handleSelect(id: string, checked: boolean) {
     setSelected(prev => { const n = new Set(prev); checked ? n.add(id) : n.delete(id); return n; });
@@ -270,18 +298,6 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             </div>
           </>
         )}
-      </div>
-
-      {/* Mobile action toolbar — mirrors channel-header controls hidden on mobile */}
-      <div className="mobile-only" style={{ alignItems: 'center', justifyContent: 'flex-end', gap: '4px', padding: '4px 12px', background: '#0b0f18', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', opacity: 0.6 }}>🔍</button>
-          {contextPct !== null && (() => {
-            const color = contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043';
-            return <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 6px' }}>{contextPct}%</span>;
-          })()}
-          <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', fontSize: '16px', padding: '4px 4px', opacity: resetting ? 0.3 : 0.6 }}>{resetting ? '⏳' : '🔄'}</button>
-        {!deleteMode && <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>}
-        {deleteMode && <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px' }}>Cancel</button>}
       </div>
 
       {/* Messages */}
