@@ -312,7 +312,7 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                       )}
                       {contextStats[ch.id] !== undefined && (() => {
                         const pct = contextStats[ch.id].pct;
-                        const color = pct >= 75 ? '#da3633' : pct >= 40 ? '#d29922' : '#2ea043';
+                        const color = pct >= 50 ? '#da3633' : pct >= 30 ? '#d29922' : '#2ea043';
                         return (
                           <span style={{
                             fontSize: '10px', fontWeight: 600, color,
