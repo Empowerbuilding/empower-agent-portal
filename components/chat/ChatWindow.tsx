@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import MessageBubble from './MessageBubble';
+import SearchModal from './SearchModal';
 
 interface Props {
   channel: PortalChannel;
@@ -19,6 +20,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -28,6 +30,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
 
   // Clear typing timer on unmount
@@ -76,6 +79,15 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       .subscribe();
     return () => { supabase.removeChannel(sub); };
   }, [channel.id]);
+
+  function handleJumpTo(messageId: string) {
+    const el = messageRefs.current[messageId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.background = '#C49A0F22';
+      setTimeout(() => { if (el) el.style.background = ''; }, 2000);
+    }
+  }
 
   function handleSelect(id: string, checked: boolean) {
     setSelected(prev => { const n = new Set(prev); checked ? n.add(id) : n.delete(id); return n; });
@@ -191,7 +203,10 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                 {channel.description && <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{channel.description}</div>}
               </div>
             </div>
-            <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', opacity: 0.6 }}>🔍</button>
+              <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', opacity: 0.6 }}>🗑</button>
+            </div>
           </>
         )}
       </div>
@@ -205,8 +220,10 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           </div>
         )}
         {messages.map(msg => (
-          <MessageBubble key={msg.id} message={msg} currentUserId={currentUser.id}
-            deleteMode={deleteMode} selected={selected.has(msg.id)} onSelect={handleSelect} />
+          <div key={msg.id} ref={el => { messageRefs.current[msg.id] = el; }} style={{ transition: 'background 0.5s' }}>
+            <MessageBubble message={msg} currentUserId={currentUser.id}
+              deleteMode={deleteMode} selected={selected.has(msg.id)} onSelect={handleSelect} />
+          </div>)
         ))}
         {agentTyping && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
@@ -220,6 +237,15 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         )}
         <div ref={bottomRef} />
       </div>
+
+      {searchOpen && (
+        <SearchModal
+          channelId={channel.id}
+          channelName={channel.display_name}
+          onClose={() => setSearchOpen(false)}
+          onJumpTo={handleJumpTo}
+        />
+      )}
 
       {/* Delete action bar */}
       {deleteMode && (
