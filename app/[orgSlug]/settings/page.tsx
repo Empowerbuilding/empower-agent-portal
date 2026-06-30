@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [isIOSDevice, setIsIOSDevice] = useState(false);
   const [notifStatus, setNotifStatus] = useState<'loading' | 'unsupported' | 'blocked' | 'enabled' | 'disabled'>('loading');
   const [notifToggling, setNotifToggling] = useState(false);
+  const [notifError, setNotifError] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
 
   useEffect(() => {
@@ -66,17 +67,7 @@ export default function SettingsPage() {
     checkNotifStatus();
   }, []);
 
-  // Get current user id from supabase auth
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user?.email) {
-        // Look up portal user id by email
-        supabase.from('portal_users').select('id').eq('email', data.user.email).single().then(({ data: u }) => {
-          if (u?.id) setCurrentUserId(u.id);
-        });
-      }
-    });
-  }, []);
+
 
   async function handleInstall() {
     if (!installPrompt.current) return;
@@ -89,20 +80,39 @@ export default function SettingsPage() {
   }
 
   async function handleNotifToggle() {
-    if (!currentUserId || notifToggling) return;
+    if (notifToggling) return;
+    setNotifError('');
     setNotifToggling(true);
     try {
+      if (!('Notification' in window)) {
+        setNotifError('Push notifications not supported in this browser.');
+        return;
+      }
+      if (!currentUserId) {
+        setNotifError('Could not identify your user account. Try refreshing.');
+        return;
+      }
       if (notifStatus === 'enabled') {
         await unsubscribeFromPush(currentUserId);
         setNotifStatus('disabled');
       } else {
+        if (Notification.permission === 'denied') {
+          setNotifStatus('blocked');
+          setNotifError('Notifications are blocked. Allow them in browser settings first.');
+          return;
+        }
         const ok = await subscribeToPush(currentUserId);
         if (ok) {
           setNotifStatus('enabled');
         } else if (Notification.permission === 'denied') {
           setNotifStatus('blocked');
+          setNotifError('Permission denied. Allow notifications in browser settings.');
+        } else {
+          setNotifError('Failed to enable — check browser supports push notifications.');
         }
       }
+    } catch (e: any) {
+      setNotifError(e?.message || 'Unexpected error.');
     } finally {
       setNotifToggling(false);
     }
@@ -117,6 +127,12 @@ export default function SettingsPage() {
         setOrgId(org.id);
         const { data: members } = await supabase.from('portal_users').select('id, name, email, role').eq('org_id', org.id).order('role');
         setUsers(members ?? []);
+        // Derive current user id from auth session matched against portal_users
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user?.email && members) {
+          const me = members.find((u: any) => u.email.toLowerCase() === authData.user!.email!.toLowerCase());
+          if (me?.id) setCurrentUserId(me.id);
+        }
       }
     }
     load();
@@ -194,6 +210,11 @@ export default function SettingsPage() {
           {notifStatus === 'blocked' && (
             <div style={{ marginTop: '10px', padding: '8px 10px', background: 'rgba(218,54,51,0.08)', borderRadius: '6px', fontSize: '12px', color: 'var(--muted)' }}>
               Chrome: click the 🔒 lock icon in the address bar → Notifications → Allow
+            </div>
+          )}
+          {notifError && (
+            <div style={{ marginTop: '10px', padding: '8px 10px', background: 'rgba(218,54,51,0.08)', borderRadius: '6px', fontSize: '12px', color: '#da3633' }}>
+              ⚠️ {notifError}
             </div>
           )}
         </div>
