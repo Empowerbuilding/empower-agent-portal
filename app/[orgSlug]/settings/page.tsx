@@ -108,9 +108,10 @@ export default function SettingsPage() {
           const perm = Notification.permission as string;
           if (perm === 'denied') {
             setNotifStatus('blocked');
-            setNotifError('Permission denied. Allow notifications in browser settings.');
+            setNotifError('Blocked in system settings. On Android: Settings → Apps → Chrome → Notifications → Allow. On iOS: Settings → Chrome/Safari → Notifications → Allow.');
           } else {
-            setNotifError('Failed to enable — try allowing notifications in browser settings.');
+            // permission is 'default' — prompt was dismissed, try again guidance
+            setNotifError('Tap Enable again and look for a system popup asking to allow notifications — tap Allow when it appears.');
           }
         }
       }
