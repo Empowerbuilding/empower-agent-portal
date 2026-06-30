@@ -104,11 +104,14 @@ export default function SettingsPage() {
         const ok = await subscribeToPush(currentUserId);
         if (ok) {
           setNotifStatus('enabled');
-        } else if (Notification.permission === 'denied') {
-          setNotifStatus('blocked');
-          setNotifError('Permission denied. Allow notifications in browser settings.');
         } else {
-          setNotifError('Failed to enable — check browser supports push notifications.');
+          const perm = Notification.permission as string;
+          if (perm === 'denied') {
+            setNotifStatus('blocked');
+            setNotifError('Permission denied. Allow notifications in browser settings.');
+          } else {
+            setNotifError('Failed to enable — try allowing notifications in browser settings.');
+          }
         }
       }
     } catch (e: any) {
