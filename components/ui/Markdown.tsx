@@ -45,6 +45,20 @@ export default function Markdown({ content, className }: Props) {
     const line = lines[i];
 
     if (line.startsWith('```')) {
+      // Single-line fence: ```text``` — open and close on same line
+      const singleLine = line.match(/^```(.+)```$/);
+      if (singleLine) {
+        blocks.push(
+          <pre key={lineKey++} style={{
+            background: '#161b22', border: '1px solid #30363d', borderRadius: '6px',
+            padding: '10px 12px', overflow: 'auto', fontSize: '13px',
+            fontFamily: 'monospace', margin: '6px 0', whiteSpace: 'pre-wrap',
+          }}>
+            {singleLine[1]}
+          </pre>
+        );
+        continue;
+      }
       if (inCode) {
         blocks.push(
           <pre key={lineKey++} style={{
