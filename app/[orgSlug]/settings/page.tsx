@@ -188,7 +188,7 @@ export default function SettingsPage() {
               {(notifStatus === 'enabled' || notifStatus === 'disabled') && (
                 <button
                   onClick={handleNotifToggle}
-                  disabled={notifToggling || !currentUserId}
+                  disabled={notifToggling}
                   style={{
                     padding: '7px 14px', border: 'none', borderRadius: '6px',
                     background: notifStatus === 'enabled' ? '#21262d' : 'var(--accent)',
