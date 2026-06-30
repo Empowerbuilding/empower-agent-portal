@@ -6,6 +6,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import { Organization, PortalChannel, Agent, PortalUser } from '@/lib/types';
 import { MobileToolbarProvider, useMobileToolbar } from '@/context/MobileToolbar';
+import { registerServiceWorker } from '@/lib/push';
 
 interface Props {
   org: Organization;
@@ -19,6 +20,11 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { toolbar } = useMobileToolbar();
+
+  // Register service worker on every load so push infra is always ready
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   // Clear app icon badge when user is in the portal
   useEffect(() => {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useParams } from 'next/navigation';
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, isIOS, isInStandaloneMode } from '@/lib/push';
 
 interface User {
   id: string;
@@ -25,24 +26,56 @@ export default function SettingsPage() {
   const installPrompt = useRef<any>(null);
   const [canInstall, setCanInstall] = useState(false);
   const [installed, setInstalled] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
+  const [isIOSDevice, setIsIOSDevice] = useState(false);
+  const [notifStatus, setNotifStatus] = useState<'loading' | 'unsupported' | 'blocked' | 'enabled' | 'disabled'>('loading');
+  const [notifToggling, setNotifToggling] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState('');
 
   useEffect(() => {
-    const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    setIsIOS(ios);
+    const ios = isIOS();
+    setIsIOSDevice(ios);
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setInstalled(true);
-      return;
     }
-    if (ios) return; // iOS doesn't support beforeinstallprompt
-    const handler = (e: any) => {
-      e.preventDefault();
-      installPrompt.current = e;
-      setCanInstall(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    if (!ios) {
+      const handler = (e: any) => {
+        e.preventDefault();
+        installPrompt.current = e;
+        setCanInstall(true);
+      };
+      window.addEventListener('beforeinstallprompt', handler);
+      return () => window.removeEventListener('beforeinstallprompt', handler);
+    }
+  }, []);
+
+  // Load notification status
+  useEffect(() => {
+    async function checkNotifStatus() {
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        setNotifStatus('unsupported');
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        setNotifStatus('blocked');
+        return;
+      }
+      const subscribed = await isPushSubscribed();
+      setNotifStatus(subscribed && Notification.permission === 'granted' ? 'enabled' : 'disabled');
+    }
+    checkNotifStatus();
+  }, []);
+
+  // Get current user id from supabase auth
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user?.email) {
+        // Look up portal user id by email
+        supabase.from('portal_users').select('id').eq('email', data.user.email).single().then(({ data: u }) => {
+          if (u?.id) setCurrentUserId(u.id);
+        });
+      }
+    });
   }, []);
 
   async function handleInstall() {
@@ -52,6 +85,26 @@ export default function SettingsPage() {
     if (outcome === 'accepted') {
       setInstalled(true);
       setCanInstall(false);
+    }
+  }
+
+  async function handleNotifToggle() {
+    if (!currentUserId || notifToggling) return;
+    setNotifToggling(true);
+    try {
+      if (notifStatus === 'enabled') {
+        await unsubscribeFromPush(currentUserId);
+        setNotifStatus('disabled');
+      } else {
+        const ok = await subscribeToPush(currentUserId);
+        if (ok) {
+          setNotifStatus('enabled');
+        } else if (Notification.permission === 'denied') {
+          setNotifStatus('blocked');
+        }
+      }
+    } finally {
+      setNotifToggling(false);
     }
   }
 
@@ -89,6 +142,63 @@ export default function SettingsPage() {
     <div style={{ padding: '32px', maxWidth: '560px', margin: '0 auto' }}>
       <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', marginBottom: '32px' }}>Settings</div>
 
+      {/* Notifications */}
+      <section style={{ marginBottom: '40px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Notifications</div>
+        <div style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '14px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>Push Notifications</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
+                {notifStatus === 'loading' && 'Checking status…'}
+                {notifStatus === 'enabled' && 'You will receive alerts when agents reply'}
+                {notifStatus === 'disabled' && 'Enable to get alerted when agents reply'}
+                {notifStatus === 'blocked' && 'Notifications are blocked in your browser settings'}
+                {notifStatus === 'unsupported' && 'Not supported in this browser'}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+              {/* Status badge */}
+              {notifStatus === 'enabled' && (
+                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'rgba(46,160,67,0.15)', color: '#2ea043', fontWeight: 700 }}>● ON</span>
+              )}
+              {notifStatus === 'disabled' && (
+                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: '#21262d', color: 'var(--muted)', fontWeight: 700 }}>○ OFF</span>
+              )}
+              {notifStatus === 'blocked' && (
+                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'rgba(218,54,51,0.15)', color: '#da3633', fontWeight: 700 }}>⊘ BLOCKED</span>
+              )}
+              {/* Toggle button */}
+              {(notifStatus === 'enabled' || notifStatus === 'disabled') && (
+                <button
+                  onClick={handleNotifToggle}
+                  disabled={notifToggling || !currentUserId}
+                  style={{
+                    padding: '7px 14px', border: 'none', borderRadius: '6px',
+                    background: notifStatus === 'enabled' ? '#21262d' : 'var(--accent)',
+                    color: notifStatus === 'enabled' ? 'var(--muted)' : '#000',
+                    fontWeight: 700, cursor: notifToggling ? 'wait' : 'pointer', fontSize: '13px',
+                    opacity: notifToggling ? 0.6 : 1,
+                  }}
+                >
+                  {notifToggling ? '…' : notifStatus === 'enabled' ? 'Turn Off' : 'Enable'}
+                </button>
+              )}
+              {notifStatus === 'blocked' && (
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textAlign: 'right', lineHeight: 1.5 }}>
+                  Allow in browser<br />settings to enable
+                </span>
+              )}
+            </div>
+          </div>
+          {notifStatus === 'blocked' && (
+            <div style={{ marginTop: '10px', padding: '8px 10px', background: 'rgba(218,54,51,0.08)', borderRadius: '6px', fontSize: '12px', color: 'var(--muted)' }}>
+              Chrome: click the 🔒 lock icon in the address bar → Notifications → Allow
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Install App */}
       <section style={{ marginBottom: '40px' }}>
         <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>App</div>
@@ -104,7 +214,7 @@ export default function SettingsPage() {
               padding: '7px 14px', background: 'var(--accent)', border: 'none', borderRadius: '6px',
               color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px', flexShrink: 0,
             }}>Install</button>
-          ) : isIOS ? (
+          ) : isIOSDevice ? (
             <span style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'right', lineHeight: 1.5 }}>
               Tap <strong style={{ color: 'var(--text)' }}>Share</strong> {'('}📤{')'}<br />
               then <strong style={{ color: 'var(--text)' }}>Add to Home Screen</strong>
