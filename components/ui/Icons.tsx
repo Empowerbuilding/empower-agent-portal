@@ -99,6 +99,16 @@ export function IconUsers({ size = 15 }: { size?: number }) {
   );
 }
 
+export function IconMore({ size = 15 }: { size?: number }) {
+  return (
+    <svg style={s} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function IconGear({ size = 15 }: { size?: number }) {
   return (
     <svg style={s} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

@@ -9,6 +9,8 @@ interface Props {
   deleteMode: boolean;
   selected: boolean;
   onSelect: (id: string, checked: boolean) => void;
+  showHeader?: boolean;
+  grouped?: boolean;
 }
 
 function formatTime(iso: string) {
@@ -33,7 +35,7 @@ function AttachmentPreview({ attachments }: { attachments: any[] }) {
   );
 }
 
-export default function MessageBubble({ message, currentUserId, deleteMode, selected, onSelect }: Props) {
+export default function MessageBubble({ message, currentUserId, deleteMode, selected, onSelect, showHeader = true, grouped = false }: Props) {
   const isUser = message.sender_type === 'user';
   const isMine = message.sender_id === currentUserId;
   const isSystem = message.sender_type === 'system';
@@ -76,22 +78,29 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
   }
 
   return (
-    <div className={`msg-row${isMine ? ' mine' : ''}`} style={{ paddingLeft: deleteMode ? '28px' : undefined, position: 'relative' }}>
+    <div
+      className={`msg-row${isMine ? ' mine' : ''}${grouped ? ' grouped' : ''}`}
+      style={{ paddingLeft: deleteMode ? '28px' : undefined, position: 'relative' }}
+    >
       {deleteMode && (
         <input type="checkbox" checked={selected} onChange={e => onSelect(message.id, e.target.checked)}
           style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', accentColor: '#C49A0F' }} />
       )}
-      <div className="msg-avatar" style={{ background: isUser ? '#1a3a6a' : '#1a3a2a', color: '#fff' }}>
+      <div className="msg-avatar" style={{ background: isUser ? '#1a3a6a' : '#1a3a2a', color: '#fff', visibility: showHeader ? 'visible' : 'hidden' }}>
         {isUser ? (message.sender_name?.charAt(0) ?? 'U') : '🤖'}
       </div>
       <div className="msg-body">
-        <div className="msg-meta">
-          <span style={{ color: isUser ? '#79c0ff' : '#56d364', fontWeight: 600 }}>
-            {message.sender_name ?? (isUser ? 'User' : 'Agent')}
-          </span>
-          <span>{formatTime(message.created_at)}</span>
+        {showHeader && (
+          <div className="msg-meta">
+            <span style={{ color: isUser ? '#79c0ff' : '#56d364', fontWeight: 600 }}>
+              {message.sender_name ?? (isUser ? 'User' : 'Agent')}
+            </span>
+            <span>{formatTime(message.created_at)}</span>
+          </div>
+        )}
+        <div className={`msg-bubble ${isUser ? 'user' : 'agent'}`} title={!showHeader ? formatTime(message.created_at) : undefined}>
+          <Markdown content={message.content} />
         </div>
-        <div className={`msg-bubble ${isUser ? 'user' : 'agent'}`}><Markdown content={message.content} /></div>
         <AttachmentPreview attachments={message.attachments ?? []} />
       </div>
     </div>

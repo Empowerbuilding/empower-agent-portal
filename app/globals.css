@@ -14,7 +14,7 @@
   --muted: #7d8590;
   --accent: #C49A0F;
   --accent-dim: #8a6a08;
-  --user-bubble: #1a3a6a;
+  --user-bubble: #2a5aa0;
   --agent-bubble: #161b22;
   --radius: 16px;
 }
@@ -199,6 +199,7 @@ html, body {
   padding: 3px 0;
 }
 .msg-row.mine { flex-direction: row-reverse; }
+.msg-row.grouped { padding-top: 1px; margin-top: -2px; }
 
 .msg-avatar {
   width: 30px;
@@ -240,7 +241,7 @@ html, body {
   max-width: 100%;
   overflow-x: hidden;
 }
-.msg-bubble.user { background: var(--user-bubble); border-radius: 18px 18px 4px 18px; }
+.msg-bubble.user { background: var(--user-bubble); border: 1px solid #3d72c4; border-radius: 18px 18px 4px 18px; }
 .msg-bubble.agent { background: var(--agent-bubble); border: 1px solid var(--border); border-radius: 18px 18px 18px 4px; }
 .msg-bubble.system {
   background: var(--surface);

@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useMobileToolbar } from '@/context/MobileToolbar';
-import { IconSearch, IconRefresh, IconTrash, IconMic, IconMicOff, IconPaperclip, IconSend } from '@/components/ui/Icons';
+import { IconSearch, IconMic, IconMicOff, IconPaperclip, IconSend } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import MessageBubble from './MessageBubble';
 import SearchModal from './SearchModal';
+import ChatOverflowMenu from './ChatOverflowMenu';
 import PresenceButton from '@/components/presence/PresenceButton';
 
 interface Props {
@@ -170,14 +171,17 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         </>
       );
     } else {
-      const color = contextPct !== null ? (contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043') : null;
       setToolbar(
         <>
           <PresenceButton orgId={orgId} openDirection="down" align="right" size={15} />
           <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}><IconSearch size={15} /></button>
-          {color && <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 5px' }}>{contextPct}%</span>}
-          <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Reset context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', padding: '4px 6px', opacity: resetting ? 0.3 : 0.7 }}><IconRefresh size={15} /></button>
-          <button onClick={() => setDeleteMode(true)} title="Delete" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}><IconTrash size={15} /></button>
+          <ChatOverflowMenu
+            contextPct={contextPct}
+            resetting={resetting}
+            onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
+            onDeleteMode={() => setDeleteMode(true)}
+            size={15}
+          />
         </>
       );
     }
@@ -327,14 +331,13 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
               <PresenceButton orgId={orgId} openDirection="down" align="right" />
               <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconSearch size={16} /></button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {contextPct !== null && (() => {
-                    const color = contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043';
-                    return <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 6px' }}>{contextPct}%</span>;
-                  })()}
-                  <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Clear agent context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', padding: '4px 4px', opacity: resetting ? 0.3 : 0.6 }}><IconRefresh size={16} /></button>
-                </div>
-              <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconTrash size={16} /></button>
+              <ChatOverflowMenu
+                contextPct={contextPct}
+                resetting={resetting}
+                onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
+                onDeleteMode={() => setDeleteMode(true)}
+                size={16}
+              />
             </div>
           </>
         )}
@@ -348,12 +351,19 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             <span className="label">Start the conversation</span>
           </div>
         )}
-        {messages.map(msg => (
-          <div key={msg.id} ref={el => { messageRefs.current[msg.id] = el; }} style={{ transition: 'background 0.5s' }}>
-            <MessageBubble message={msg} currentUserId={currentUser.id}
-              deleteMode={deleteMode} selected={selected.has(msg.id)} onSelect={handleSelect} />
-          </div>
-        ))}
+        {messages.map((msg, i) => {
+          const prev = messages[i - 1];
+          const sameSender = prev && prev.sender_type === msg.sender_type && prev.sender_id === msg.sender_id;
+          const withinWindow = prev && (new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime()) < 5 * 60 * 1000;
+          const grouped = Boolean(sameSender && withinWindow && msg.sender_type !== 'system');
+          return (
+            <div key={msg.id} ref={el => { messageRefs.current[msg.id] = el; }} style={{ transition: 'background 0.5s' }}>
+              <MessageBubble message={msg} currentUserId={currentUser.id}
+                deleteMode={deleteMode} selected={selected.has(msg.id)} onSelect={handleSelect}
+                showHeader={!grouped} grouped={grouped} />
+            </div>
+          );
+        })}
         {agentTyping && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
             <div className="msg-avatar" style={{ background: '#1a3a2a', color: '#fff', flexShrink: 0 }}>🤖</div>
