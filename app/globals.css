@@ -12,8 +12,8 @@
   --border: #21262d;
   --text: #e6edf3;
   --muted: #7d8590;
-  --accent: #C49A0F;
-  --accent-dim: #8a6a08;
+  --accent: #4c8bf0;
+  --accent-dim: #2f5aa8;
   --user-bubble: #2a5aa0;
   --agent-bubble: #161b22;
   --radius: 16px;
@@ -198,7 +198,6 @@ html, body {
   gap: 10px;
   padding: 3px 0;
 }
-.msg-row.mine { flex-direction: row-reverse; }
 .msg-row.grouped { padding-top: 1px; margin-top: -2px; }
 
 .msg-avatar {
@@ -215,7 +214,6 @@ html, body {
 }
 
 .msg-body { display: flex; flex-direction: column; max-width: 78%; }
-.msg-row.mine .msg-body { align-items: flex-end; }
 
 .msg-meta {
   font-size: 11px;
@@ -241,8 +239,8 @@ html, body {
   max-width: 100%;
   overflow-x: hidden;
 }
-.msg-bubble.user { background: var(--user-bubble); border: 1px solid #3d72c4; border-radius: 18px 18px 4px 18px; }
-.msg-bubble.agent { background: var(--agent-bubble); border: 1px solid var(--border); border-radius: 18px 18px 18px 4px; }
+.msg-bubble.user { background: var(--user-bubble); border: 1px solid #3d72c4; border-radius: 4px 18px 18px 18px; }
+.msg-bubble.agent { background: var(--agent-bubble); border: 1px solid var(--border); border-radius: 4px 18px 18px 18px; }
 .msg-bubble.system {
   background: var(--surface);
   border: 1px solid var(--border);

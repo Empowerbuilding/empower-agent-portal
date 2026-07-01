@@ -37,19 +37,18 @@ function AttachmentPreview({ attachments }: { attachments: any[] }) {
 
 export default function MessageBubble({ message, currentUserId, deleteMode, selected, onSelect, showHeader = true, grouped = false }: Props) {
   const isUser = message.sender_type === 'user';
-  const isMine = message.sender_id === currentUserId;
   const isSystem = message.sender_type === 'system';
 
   const approvalState = isSystem ? (message.metadata?.approval_state as string | undefined) : undefined;
 
   if (isSystem && approvalState) {
-    const stateColor = approvalState === 'sent' ? '#2ea043' : approvalState === 'approved' ? '#56d364' : '#C49A0F';
+    const stateColor = approvalState === 'sent' ? 'var(--accent)' : approvalState === 'approved' ? '#8fb8f5' : 'var(--muted)';
     const stateLabel = approvalState === 'sent' ? '✓ Sent' : approvalState === 'approved' ? '⏳ Queued' : '⏸ Pending';
     return (
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', margin: '6px 0' }}>
         {deleteMode && (
           <input type="checkbox" checked={selected} onChange={e => onSelect(message.id, e.target.checked)}
-            style={{ cursor: 'pointer', flexShrink: 0, accentColor: '#C49A0F', marginTop: '14px' }} />
+            style={{ cursor: 'pointer', flexShrink: 0, accentColor: 'var(--accent)', marginTop: '14px' }} />
         )}
         <div style={{
           flex: 1, background: '#0d1117', border: '1px solid #30363d', borderRadius: '10px',
@@ -70,7 +69,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0' }}>
         {deleteMode && (
           <input type="checkbox" checked={selected} onChange={e => onSelect(message.id, e.target.checked)}
-            style={{ cursor: 'pointer', flexShrink: 0, accentColor: '#C49A0F' }} />
+            style={{ cursor: 'pointer', flexShrink: 0, accentColor: 'var(--accent)' }} />
         )}
         <div className="msg-bubble system" style={{ flex: 1 }}><Markdown content={message.content} /></div>
       </div>
@@ -79,20 +78,20 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
 
   return (
     <div
-      className={`msg-row${isMine ? ' mine' : ''}${grouped ? ' grouped' : ''}`}
+      className={`msg-row${grouped ? ' grouped' : ''}`}
       style={{ paddingLeft: deleteMode ? '28px' : undefined, position: 'relative' }}
     >
       {deleteMode && (
         <input type="checkbox" checked={selected} onChange={e => onSelect(message.id, e.target.checked)}
-          style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', accentColor: '#C49A0F' }} />
+          style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', accentColor: 'var(--accent)' }} />
       )}
-      <div className="msg-avatar" style={{ background: isUser ? '#1a3a6a' : '#1a3a2a', color: '#fff', visibility: showHeader ? 'visible' : 'hidden' }}>
+      <div className="msg-avatar" style={{ background: isUser ? '#2a5aa0' : '#30363d', color: '#fff', visibility: showHeader ? 'visible' : 'hidden' }}>
         {isUser ? (message.sender_name?.charAt(0) ?? 'U') : '🤖'}
       </div>
       <div className="msg-body">
         {showHeader && (
           <div className="msg-meta">
-            <span style={{ color: isUser ? '#79c0ff' : '#56d364', fontWeight: 600 }}>
+            <span style={{ color: isUser ? '#79c0ff' : '#8fb8f5', fontWeight: 600 }}>
               {message.sender_name ?? (isUser ? 'User' : 'Agent')}
             </span>
             <span>{formatTime(message.created_at)}</span>

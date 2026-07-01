@@ -180,7 +180,7 @@ export default function SettingsPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
               {/* Status badge */}
               {notifStatus === 'enabled' && (
-                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'rgba(46,160,67,0.15)', color: '#2ea043', fontWeight: 700 }}>● ON</span>
+                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'rgba(76,139,240,0.15)', color: 'var(--accent)', fontWeight: 700 }}>● ON</span>
               )}
               {notifStatus === 'disabled' && (
                 <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: '#21262d', color: 'var(--muted)', fontWeight: 700 }}>○ OFF</span>
@@ -196,7 +196,7 @@ export default function SettingsPage() {
                   style={{
                     padding: '7px 14px', border: 'none', borderRadius: '6px',
                     background: notifStatus === 'enabled' ? '#21262d' : 'var(--accent)',
-                    color: notifStatus === 'enabled' ? 'var(--muted)' : '#000',
+                    color: notifStatus === 'enabled' ? 'var(--muted)' : '#fff',
                     fontWeight: 700, cursor: notifToggling ? 'wait' : 'pointer', fontSize: '13px',
                     opacity: notifToggling ? 0.6 : 1,
                   }}
@@ -233,11 +233,11 @@ export default function SettingsPage() {
             <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Add the portal as an app on your device</div>
           </div>
           {installed ? (
-            <span style={{ fontSize: '12px', color: '#2ea043', fontWeight: 600 }}>✓ Installed</span>
+            <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600 }}>✓ Installed</span>
           ) : canInstall ? (
             <button onClick={handleInstall} style={{
               padding: '7px 14px', background: 'var(--accent)', border: 'none', borderRadius: '6px',
-              color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px', flexShrink: 0,
+              color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px', flexShrink: 0,
             }}>Install</button>
           ) : isIOSDevice ? (
             <span style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'right', lineHeight: 1.5 }}>
@@ -267,8 +267,8 @@ export default function SettingsPage() {
             onClick={saveOrgName}
             disabled={saving || orgNameEdit === orgName || !orgNameEdit.trim()}
             style={{
-              padding: '9px 16px', background: saved ? '#2ea043' : 'var(--accent)', border: 'none',
-              borderRadius: '6px', color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px',
+              padding: '9px 16px', background: saved ? 'var(--accent)' : 'var(--accent)', border: 'none',
+              borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px',
               opacity: (saving || orgNameEdit === orgName) ? 0.5 : 1, minWidth: '72px',
             }}
           >
@@ -288,7 +288,7 @@ export default function SettingsPage() {
             }}>
               <div style={{
                 width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
-                color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '13px', fontWeight: 700, flexShrink: 0,
               }}>
                 {u.name.charAt(0)}
@@ -299,7 +299,7 @@ export default function SettingsPage() {
               </div>
               <span style={{
                 fontSize: '11px', padding: '2px 8px', borderRadius: '12px',
-                background: u.role === 'owner' ? 'rgba(196,154,15,0.15)' : '#21262d',
+                background: u.role === 'owner' ? 'rgba(76,139,240,0.15)' : '#21262d',
                 color: u.role === 'owner' ? 'var(--accent)' : 'var(--muted)',
                 fontWeight: 600, flexShrink: 0,
               }}>

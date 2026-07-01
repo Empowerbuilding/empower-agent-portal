@@ -23,7 +23,7 @@ export default function ChatOverflowMenu({ contextPct, resetting, onResetContext
     return () => document.removeEventListener('mousedown', handle);
   }, []);
 
-  const color = contextPct !== null ? (contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043') : null;
+  const color = contextPct !== null ? (contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#8b949e' : 'var(--accent)') : null;
 
   return (
     <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>

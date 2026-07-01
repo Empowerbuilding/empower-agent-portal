@@ -18,7 +18,7 @@ interface Props {
 }
 
 function StatusDot({ status }: { status: string }) {
-  const color = status === 'running' ? '#2ea043' : status === 'unhealthy' ? '#d29922' : '#da3633';
+  const color = status === 'running' ? 'var(--accent)' : status === 'unhealthy' ? '#8b949e' : '#da3633';
   return <span className="status-dot" style={{ background: color }} />;
 }
 
@@ -87,7 +87,7 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
             <button key={t} onClick={() => setType(t)} style={{
               flex: 1, padding: '6px 4px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
               border: type === t ? '1px solid var(--accent)' : '1px solid #30363d',
-              background: type === t ? 'rgba(196,154,15,0.15)' : '#0d1117',
+              background: type === t ? 'rgba(76,139,240,0.15)' : '#0d1117',
               color: type === t ? 'var(--accent)' : 'var(--muted)',
               fontWeight: type === t ? 600 : 400,
             }}>
@@ -102,7 +102,7 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
           </button>
           <button onClick={handleCreate} disabled={!name.trim() || saving} style={{
             padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: '6px',
-            color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px',
+            color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px',
             opacity: !name.trim() || saving ? 0.5 : 1,
           }}>
             {saving ? 'Creating…' : 'Create'}

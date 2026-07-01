@@ -153,7 +153,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     const el = messageRefs.current[messageId];
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.style.background = '#C49A0F22';
+      el.style.background = '#4c8bf022';
       setTimeout(() => { if (el) el.style.background = ''; }, 2000);
     }
   }
@@ -164,7 +164,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       setToolbar(
         <>
           <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '12px', color: 'var(--muted)' }}>
-            <input type="checkbox" checked={allSelected} onChange={selectAll} style={{ accentColor: '#C49A0F', cursor: 'pointer', width: 15, height: 15 }} />
+            <input type="checkbox" checked={allSelected} onChange={selectAll} style={{ accentColor: 'var(--accent)', cursor: 'pointer', width: 15, height: 15 }} />
             {allSelected ? 'Deselect all' : 'Select all'}
           </label>
           <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', padding: '4px 8px' }}>Cancel</button>
@@ -314,7 +314,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         {deleteMode ? (
           <>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--muted)' }}>
-              <input type="checkbox" checked={allSelected} onChange={selectAll} style={{ accentColor: '#C49A0F', cursor: 'pointer' }} />
+              <input type="checkbox" checked={allSelected} onChange={selectAll} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
               {allSelected ? 'Deselect all' : 'Select all'}
             </label>
             <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px' }}>Cancel</button>
@@ -366,11 +366,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         })}
         {agentTyping && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
-            <div className="msg-avatar" style={{ background: '#1a3a2a', color: '#fff', flexShrink: 0 }}>🤖</div>
+            <div className="msg-avatar" style={{ background: '#30363d', color: '#fff', flexShrink: 0 }}>🤖</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#161b22', borderRadius: '12px', padding: '10px 14px' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#56d364', display: 'inline-block', animation: 'typing-bounce 1s infinite' }} />
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#56d364', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.2s' }} />
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#56d364', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.4s' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.2s' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.4s' }} />
             </div>
           </div>
         )}
@@ -434,7 +434,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               rows={1}
             />
             <button onClick={toggleVoice} title={listening ? 'Stop recording' : 'Voice input'}
-              style={{ background: listening ? 'rgba(196,154,15,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', fontSize: '18px', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
+              style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', fontSize: '18px', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
               {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
             </button>
             <button className="send-btn" onClick={sendMessage} disabled={(!input.trim() && !stagedFile) || sending}>

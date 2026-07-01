@@ -32,7 +32,7 @@ function ApprovalCard({ message, currentUser, selected, onSelect, deleteMode }: 
       .eq('id', message.id);
   }
 
-  const stateColor = approvalState === 'sent' ? '#2ea043' : approvalState === 'approved' ? '#56d364' : 'var(--muted)';
+  const stateColor = approvalState === 'sent' ? 'var(--accent)' : approvalState === 'approved' ? '#8fb8f5' : 'var(--muted)';
   const stateLabel = approvalState === 'sent' ? '✓ Sent' : approvalState === 'approved' ? '⏳ Queued' : '⏸ Pending';
 
   return (
@@ -43,7 +43,7 @@ function ApprovalCard({ message, currentUser, selected, onSelect, deleteMode }: 
         type="checkbox"
         checked={selected}
         onChange={e => onSelect(message.id, e.target.checked)}
-        style={{ opacity: selected ? 1 : 0.3, marginTop: '14px', cursor: 'pointer', accentColor: '#C49A0F', flexShrink: 0, display: deleteMode ? 'block' : 'none' }}
+        style={{ opacity: selected ? 1 : 0.3, marginTop: '14px', cursor: 'pointer', accentColor: 'var(--accent)', flexShrink: 0, display: deleteMode ? 'block' : 'none' }}
       />
       <div className="feed-card" style={{ flex: 1, minWidth: 0 }}>
         <div className="feed-card-meta">
@@ -135,7 +135,7 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
         {deleteMode ? (
           <>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--muted)' }}>
-              <input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(messages.map(m => m.id)))} style={{ accentColor: '#C49A0F', cursor: 'pointer' }} />
+              <input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(messages.map(m => m.id)))} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
               {allSelected ? 'Deselect all' : 'Select all'}
             </label>
             <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px' }}>Cancel</button>

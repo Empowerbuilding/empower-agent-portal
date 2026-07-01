@@ -23,7 +23,7 @@ function presenceState(lastActiveAt?: string | null): PresenceState {
 }
 
 function presenceColor(state: PresenceState) {
-  return state === 'online' ? '#2ea043' : state === 'away' ? '#d29922' : '#6e7681';
+  return state === 'online' ? 'var(--accent)' : state === 'away' ? '#8b949e' : '#6e7681';
 }
 
 function presenceLabel(state: PresenceState) {
@@ -115,7 +115,7 @@ export default function PresenceButton({ orgId, size = 15, openDirection = 'up',
         {onlineCount > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -6, minWidth: 15, height: 15, borderRadius: '8px',
-            background: '#2ea043', color: '#fff', fontSize: '10px', fontWeight: 700,
+            background: 'var(--accent)', color: '#fff', fontSize: '10px', fontWeight: 700,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
             border: '2px solid var(--sidebar-bg)', boxSizing: 'content-box', lineHeight: 1,
           }}>
@@ -149,7 +149,7 @@ export default function PresenceButton({ orgId, size = 15, openDirection = 'up',
                   <div style={{ position: 'relative', flexShrink: 0 }}>
                     <div style={{
                       width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)',
-                      color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '12px', fontWeight: 700,
                     }}>
                       {u.name.charAt(0)}

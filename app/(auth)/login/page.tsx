@@ -95,7 +95,7 @@ export default function LoginPage() {
               width: '100%',
               padding: '12px',
               borderRadius: '8px',
-              background: loading ? '#8a6a08' : '#C49A0F',
+              background: loading ? '#2f5aa8' : '#4c8bf0',
               color: '#fff',
               fontWeight: '600',
               fontSize: '14px',

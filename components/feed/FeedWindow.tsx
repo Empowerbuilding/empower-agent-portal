@@ -81,7 +81,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
         {deleteMode ? (
           <>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--muted)' }}>
-              <input type="checkbox" checked={allSelected} onChange={selectAll} style={{ accentColor: '#C49A0F', cursor: 'pointer' }} />
+              <input type="checkbox" checked={allSelected} onChange={selectAll} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
               {allSelected ? 'Deselect all' : 'Select all'}
             </label>
             <button onClick={() => setDeleteMode(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px' }}>Cancel</button>
@@ -106,7 +106,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
           <div key={msg.id} className="feed-card" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
             {deleteMode && (
               <input type="checkbox" checked={selected.has(msg.id)} onChange={e => handleSelect(msg.id, e.target.checked)}
-                style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#C49A0F', flexShrink: 0 }} />
+                style={{ marginTop: '3px', cursor: 'pointer', accentColor: 'var(--accent)', flexShrink: 0 }} />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="feed-card-meta">

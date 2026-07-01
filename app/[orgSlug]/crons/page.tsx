@@ -45,7 +45,7 @@ function StatusBadge({ status }: { status: string | null }) {
   let color = '#7d8590';
   let bg = '#21262d';
   let label = status ?? '—';
-  if (s === 'ok' || s === 'success') { color = '#2ea043'; bg = 'rgba(46,160,67,0.15)'; label = 'OK'; }
+  if (s === 'ok' || s === 'success') { color = '#4c8bf0'; bg = 'rgba(76,139,240,0.15)'; label = 'OK'; }
   else if (s === 'error') { color = '#da3633'; bg = 'rgba(218,54,51,0.15)'; label = 'Error'; }
   else if (s === 'idle') { color = '#7d8590'; bg = '#21262d'; label = 'Idle'; }
   return (
@@ -57,7 +57,7 @@ function StatusBadge({ status }: { status: string | null }) {
 
 function EnabledBadge({ enabled }: { enabled: boolean | null }) {
   return enabled ? (
-    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'rgba(46,160,67,0.15)', color: '#2ea043', fontWeight: 700 }}>● Enabled</span>
+    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'rgba(76,139,240,0.15)', color: '#4c8bf0', fontWeight: 700 }}>● Enabled</span>
   ) : (
     <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: '#21262d', color: 'var(--muted)', fontWeight: 700 }}>○ Disabled</span>
   );
@@ -70,7 +70,7 @@ function SourceBadge({ source }: { source: string | null }) {
       title={isHost ? 'Runs from the host crontab, outside OpenClaw\'s own scheduler' : 'Registered in the agent\'s OpenClaw cron scheduler'}
       style={{
         fontSize: '10px', padding: '2px 7px', borderRadius: '10px',
-        background: isHost ? 'rgba(196,154,15,0.12)' : '#21262d',
+        background: isHost ? 'rgba(76,139,240,0.12)' : '#21262d',
         color: isHost ? 'var(--accent)' : 'var(--muted)',
         fontWeight: 600, letterSpacing: '0.02em',
       }}
