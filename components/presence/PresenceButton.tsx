@@ -33,9 +33,13 @@ function presenceLabel(state: PresenceState) {
 interface Props {
   orgId: string;
   size?: number;
+  /** 'down' opens the panel below the button (use in top bars); default 'up' opens above (use in bottom bars). */
+  openDirection?: 'up' | 'down';
+  /** Which edge of the button the panel's edge aligns to, to avoid clipping off-screen. */
+  align?: 'left' | 'right';
 }
 
-export default function PresenceButton({ orgId, size = 15 }: Props) {
+export default function PresenceButton({ orgId, size = 15, openDirection = 'up', align = 'right' }: Props) {
   const [users, setUsers] = useState<PresenceUser[]>([]);
   const [open, setOpen] = useState(false);
   const supabase = createClient();
@@ -117,6 +121,12 @@ export default function PresenceButton({ orgId, size = 15 }: Props) {
         <div
           ref={panelRef}
           className="presence-panel"
+          style={{
+            top: openDirection === 'down' ? 'calc(100% + 8px)' : undefined,
+            bottom: openDirection === 'up' ? 'calc(100% + 8px)' : undefined,
+            right: align === 'right' ? 0 : undefined,
+            left: align === 'left' ? 0 : undefined,
+          }}
         >
           <div className="presence-panel-header">Team ({users.length})</div>
           <div className="presence-panel-list">

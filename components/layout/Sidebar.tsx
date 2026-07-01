@@ -7,7 +7,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser } from '@/lib/types';
 import { IconGear, IconClock } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
-import PresenceButton from '@/components/presence/PresenceButton';
 
 interface Props {
   org: Organization;
@@ -365,7 +364,6 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentUser.name}</div>
             <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{currentUser.role}</div>
           </div>
-          <PresenceButton orgId={org.id} />
           <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '4px', flexShrink: 0, textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={15} /></Link>
           <Link href={`/${orgSlug}/settings`} onClick={onClose} title="Settings" style={{ color: 'var(--muted)', padding: '4px', flexShrink: 0, textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGear size={15} /></Link>
           <button onClick={handleSignOut} title="Sign out" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>

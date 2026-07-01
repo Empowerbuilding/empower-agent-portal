@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import NotificationPrompt from '@/components/NotificationPrompt';
+import PresenceButton from '@/components/presence/PresenceButton';
 import { Organization, PortalChannel, Agent, PortalUser } from '@/lib/types';
 import { MobileToolbarProvider, useMobileToolbar } from '@/context/MobileToolbar';
 import { registerServiceWorker } from '@/lib/push';
@@ -47,6 +48,9 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
   return (
     <div className="app-shell">
       <NotificationPrompt userId={currentUser.id} />
+      <div className="presence-ribbon desktop-only">
+        <PresenceButton orgId={org.id} openDirection="down" align="right" />
+      </div>
       <Sidebar
         org={org}
         channels={channels}
@@ -82,6 +86,9 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
           </div>
           {/* Channel-specific action buttons injected by child components */}
           {toolbar && <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>{toolbar}</div>}
+          <div className="presence-ribbon mobile-inline" style={{ position: 'static' }}>
+            <PresenceButton orgId={org.id} openDirection="down" align="right" />
+          </div>
         </div>
 
         {children}
