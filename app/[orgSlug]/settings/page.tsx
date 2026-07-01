@@ -10,33 +10,6 @@ interface User {
   name: string;
   email: string;
   role: string;
-  last_active_at?: string | null;
-}
-
-type PresenceState = 'online' | 'away' | 'offline';
-
-function presenceState(lastActiveAt?: string | null): PresenceState {
-  if (!lastActiveAt) return 'offline';
-  const diffMs = Date.now() - new Date(lastActiveAt).getTime();
-  if (diffMs < 60_000) return 'online';
-  if (diffMs < 5 * 60_000) return 'away';
-  return 'offline';
-}
-
-function PresenceDot({ lastActiveAt }: { lastActiveAt?: string | null }) {
-  const state = presenceState(lastActiveAt);
-  const color = state === 'online' ? '#2ea043' : state === 'away' ? '#d29922' : '#6e7681';
-  const title = state === 'online' ? 'Online' : state === 'away' ? 'Away' : 'Offline';
-  return (
-    <span
-      title={title}
-      style={{
-        width: 9, height: 9, borderRadius: '50%', background: color, flexShrink: 0,
-        border: '2px solid #0d1117', boxSizing: 'content-box',
-        position: 'absolute', bottom: -1, right: -1,
-      }}
-    />
-  );
 }
 
 export default function SettingsPage() {
@@ -156,7 +129,7 @@ export default function SettingsPage() {
         setOrgName(org.name);
         setOrgNameEdit(org.name);
         setOrgId(org.id);
-        const { data: members } = await supabase.from('portal_users').select('id, name, email, role, last_active_at').eq('org_id', org.id).order('role');
+        const { data: members } = await supabase.from('portal_users').select('id, name, email, role').eq('org_id', org.id).order('role');
         setUsers(members ?? []);
         // Derive current user id from auth session matched against portal_users
         const { data: authData } = await supabase.auth.getUser();
@@ -168,26 +141,6 @@ export default function SettingsPage() {
     }
     load();
   }, [orgSlug]);
-
-  // Live presence — subscribe to portal_users updates so status dots refresh in realtime
-  useEffect(() => {
-    if (!orgId) return;
-    const sub = supabase
-      .channel(`presence:${orgId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'portal_users', filter: `org_id=eq.${orgId}` }, (payload) => {
-        const updated = payload.new as User;
-        setUsers(prev => prev.map(u => u.id === updated.id ? { ...u, last_active_at: updated.last_active_at } : u));
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(sub); };
-  }, [orgId]);
-
-  // Re-render every 20s so "online" -> "away" -> "offline" transitions reflect without new data
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => setTick(t => t + 1), 20000);
-    return () => clearInterval(interval);
-  }, []);
 
   async function saveOrgName() {
     if (!orgNameEdit.trim() || orgNameEdit === orgName) return;
@@ -333,15 +286,12 @@ export default function SettingsPage() {
               display: 'flex', alignItems: 'center', gap: '12px',
               background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '12px 14px',
             }}>
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
-                  color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '13px', fontWeight: 700,
-                }}>
-                  {u.name.charAt(0)}
-                </div>
-                <PresenceDot lastActiveAt={u.last_active_at} />
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
+                color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '13px', fontWeight: 700, flexShrink: 0,
+              }}>
+                {u.name.charAt(0)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{u.name}</div>
