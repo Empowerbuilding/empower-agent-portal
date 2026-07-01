@@ -49,15 +49,26 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const channelId = req.nextUrl.searchParams.get('channelId') || DEFAULT_CHANNEL_ID;
+    // Default window keeps the list to recently-active threads only; without this,
+    // every contact with SMS history ever (1500+) renders as a collapsed row and
+    // the view becomes an unreadable wall of thin lines. Pass ?days=0 for no limit.
+    const daysParam = req.nextUrl.searchParams.get('days');
+    const windowDays = daysParam !== null ? Number(daysParam) : 45;
+    const sinceIso = windowDays > 0
+      ? new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString()
+      : null;
 
     const crm = createSupabaseClient(CRM_URL, CRM_SERVICE_KEY);
 
-    const { data: activities, error: actErr } = await crm
+    let activitiesQuery = crm
       .from('activities')
       .select('id, contact_id, activity_type, title, description, created_at')
       .in('activity_type', ['sms_sent', 'sms_received'])
       .order('created_at', { ascending: true })
       .limit(1000);
+    if (sinceIso) activitiesQuery = activitiesQuery.gte('created_at', sinceIso);
+
+    const { data: activities, error: actErr } = await activitiesQuery;
 
     if (actErr) return NextResponse.json({ error: actErr.message }, { status: 500 });
 
