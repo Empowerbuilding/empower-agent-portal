@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import MessageBubble from './MessageBubble';
 import SearchModal from './SearchModal';
+import PresenceButton from '@/components/presence/PresenceButton';
 
 interface Props {
   channel: PortalChannel;
@@ -172,6 +173,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const color = contextPct !== null ? (contextPct >= 50 ? '#da3633' : contextPct >= 30 ? '#d29922' : '#2ea043') : null;
       setToolbar(
         <>
+          <PresenceButton orgId={orgId} openDirection="down" align="right" size={15} />
           <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}><IconSearch size={15} /></button>
           {color && <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}22`, borderRadius: '4px', padding: '2px 5px' }}>{contextPct}%</span>}
           <button onClick={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }} disabled={resetting} title="Reset context" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: resetting ? 'wait' : 'pointer', padding: '4px 6px', opacity: resetting ? 0.3 : 0.7 }}><IconRefresh size={15} /></button>
@@ -180,7 +182,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       );
     }
     return () => setToolbar(null);
-  }, [contextPct, resetting, deleteMode, allSelected]);
+  }, [contextPct, resetting, deleteMode, allSelected, orgId]);
 
   function handleSelect(id: string, checked: boolean) {
     setSelected(prev => { const n = new Set(prev); checked ? n.add(id) : n.delete(id); return n; });
@@ -322,7 +324,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                 {channel.description && <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{channel.description}</div>}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '4px' }}>
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              <PresenceButton orgId={orgId} openDirection="down" align="right" />
               <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconSearch size={16} /></button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   {contextPct !== null && (() => {
