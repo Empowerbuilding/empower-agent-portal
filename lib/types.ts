@@ -70,6 +70,7 @@ export interface PortalUser {
   email: string;
   role: 'owner' | 'admin' | 'rep';
   active: boolean;
+  last_active_at?: string | null;
 }
 
 export interface ChannelWithAgent extends PortalChannel {

@@ -26,6 +26,15 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
     registerServiceWorker();
   }, []);
 
+  // Presence heartbeat — ping every 30s while the portal is open so other
+  // team members can see who's currently online (see Settings > Team Members)
+  useEffect(() => {
+    const ping = () => { fetch('/api/heartbeat', { method: 'POST' }).catch(() => {}); };
+    ping();
+    const interval = setInterval(ping, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Clear app icon badge when user is in the portal
   useEffect(() => {
     if ('clearAppBadge' in navigator) (navigator as any).clearAppBadge();
