@@ -45,6 +45,13 @@ export default function PresenceButton({ orgId, size = 15, openDirection = 'up',
   const supabase = createClient();
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+  // OrgShell renders this component twice (desktop ribbon + mobile inline, one
+  // hidden via CSS media query but both mounted in the DOM). Supabase Realtime
+  // dedupes channels by name, so two instances sharing "presence-btn:{orgId}"
+  // collide: the 2nd instance's .on() call throws "cannot add postgres_changes
+  // callbacks after subscribe()" because it got back the already-subscribed
+  // channel object from the 1st instance. Unique suffix per mount avoids this.
+  const instanceIdRef = useRef(Math.random().toString(36).slice(2));
 
   // Load org members
   useEffect(() => {
@@ -61,7 +68,7 @@ export default function PresenceButton({ orgId, size = 15, openDirection = 'up',
   useEffect(() => {
     if (!orgId) return;
     const sub = supabase
-      .channel(`presence-btn:${orgId}`)
+      .channel(`presence-btn:${orgId}:${instanceIdRef.current}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'portal_users', filter: `org_id=eq.${orgId}` }, (payload) => {
         const updated = payload.new as PresenceUser;
         setUsers(prev => prev.map(u => u.id === updated.id ? { ...u, last_active_at: updated.last_active_at } : u));
