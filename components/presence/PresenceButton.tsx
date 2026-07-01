@@ -129,10 +129,15 @@ export default function PresenceButton({ orgId, size = 15, openDirection = 'up',
           ref={panelRef}
           className="presence-panel"
           style={{
-            top: openDirection === 'down' ? 'calc(100% + 8px)' : undefined,
-            bottom: openDirection === 'up' ? 'calc(100% + 8px)' : undefined,
-            right: align === 'right' ? 0 : undefined,
-            left: align === 'left' ? 0 : undefined,
+            // Explicit 'auto' (not undefined) on the inactive axis — the .presence-panel
+            // CSS class sets bottom: calc(100% + 8px) by default. An inline value of
+            // undefined does NOT clear that class rule, so openDirection="down" was
+            // leaving both top and bottom set simultaneously, squeezing the panel's
+            // height down to a sliver instead of showing the full member list.
+            top: openDirection === 'down' ? 'calc(100% + 8px)' : 'auto',
+            bottom: openDirection === 'up' ? 'calc(100% + 8px)' : 'auto',
+            right: align === 'right' ? 0 : 'auto',
+            left: align === 'left' ? 0 : 'auto',
           }}
         >
           <div className="presence-panel-header">Team ({users.length})</div>
