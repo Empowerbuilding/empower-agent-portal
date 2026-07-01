@@ -18,6 +18,7 @@ interface CronJob {
   last_delivered: boolean | null;
   consecutive_errors: number | null;
   synced_at: string;
+  source: string | null;
 }
 
 function formatSchedule(expr: string | null, tz: string | null) {
@@ -62,6 +63,23 @@ function EnabledBadge({ enabled }: { enabled: boolean | null }) {
   );
 }
 
+function SourceBadge({ source }: { source: string | null }) {
+  const isHost = source === 'host-crontab';
+  return (
+    <span
+      title={isHost ? 'Runs from the host crontab, outside OpenClaw\'s own scheduler' : 'Registered in the agent\'s OpenClaw cron scheduler'}
+      style={{
+        fontSize: '10px', padding: '2px 7px', borderRadius: '10px',
+        background: isHost ? 'rgba(196,154,15,0.12)' : '#21262d',
+        color: isHost ? 'var(--accent)' : 'var(--muted)',
+        fontWeight: 600, letterSpacing: '0.02em',
+      }}
+    >
+      {isHost ? 'HOST CRONTAB' : 'OPENCLAW'}
+    </span>
+  );
+}
+
 export default async function CronsPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
   const supabase = await createClient();
@@ -80,6 +98,7 @@ export default async function CronsPage({ params }: { params: Promise<{ orgSlug:
     .from('agent_cron_jobs')
     .select('*')
     .eq('org_id', org.id)
+    .in('agent_name', ['vanessa', 'atlas'])
     .order('agent_name')
     .order('name');
 
@@ -96,7 +115,9 @@ export default async function CronsPage({ params }: { params: Promise<{ orgSlug:
     <div style={{ padding: '32px', maxWidth: '900px', margin: '0 auto', height: '100%', overflowY: 'auto' }}>
       <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}>Active Cron Jobs</div>
       <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '32px' }}>
-        Read-only snapshot mirrored from each agent's container every 5 minutes. To change a job, edit it on the agent directly.
+        Read-only snapshot for Vanessa + Atlas, synced every 5 minutes. Includes jobs registered in each
+        agent's own OpenClaw scheduler, plus host-crontab jobs that run directly against these containers
+        outside OpenClaw's scheduler (labeled below). To change a job, edit it at the source.
       </div>
 
       {agentNames.length === 0 && (
@@ -114,8 +135,9 @@ export default async function CronsPage({ params }: { params: Promise<{ orgSlug:
                 background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '14px 16px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{job.name ?? '(unnamed)'}</div>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', wordBreak: 'break-word' }}>{job.name ?? '(unnamed)'}</div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+                    <SourceBadge source={job.source} />
                     <EnabledBadge enabled={job.enabled} />
                     <StatusBadge status={job.last_run_status} />
                   </div>
