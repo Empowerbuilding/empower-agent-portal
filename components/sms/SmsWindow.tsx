@@ -316,8 +316,6 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             const isPending = meta.approval_state === 'pending';
             const isInbound = direction === 'inbound';
             const body = extractSmsBody(msg.content);
-            const isApproving = approving === msg.id;
-
             if (isPending) {
               return (
                 <div key={msg.id} style={{ alignSelf: 'flex-end', maxWidth: '85%', width: '100%' }}>
