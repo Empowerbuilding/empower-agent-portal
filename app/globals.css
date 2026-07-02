@@ -492,3 +492,31 @@ html, body {
   0%, 100% { opacity: 0.3; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.1); }
 }
+
+/* ── Agent file editor — mobile ── */
+.show-mobile { display: none; }
+
+@media (max-width: 767px) {
+  .show-mobile { display: block; }
+  .hidden-mobile { display: none !important; }
+
+  .agent-files-sidebar {
+    width: 100% !important;
+    height: 100%;
+    border-right: none !important;
+  }
+
+  .agent-files-editor {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* ── Channel drag-to-reorder ── */
+.channel-link-dragging {
+  opacity: 0.5;
+}
+
+.channel-drop-target {
+  border-top: 2px solid var(--accent);
+}

@@ -18,6 +18,7 @@ export default function AgentFilesPage() {
   const supabase = createClient();
 
   const [agentName, setAgentName] = useState('');
+  const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [content, setContent] = useState('');
@@ -59,6 +60,7 @@ export default function AgentFilesPage() {
   const openFile = useCallback(async (fileName: string, fileList?: FileEntry[]) => {
     if (isDirty && activeFile && !confirm(`Discard unsaved changes to ${activeFile}?`)) return;
     setActiveFile(fileName);
+    setMobileView('editor');
     setLoadingContent(true);
     setSaveNote('');
     setSaveError('');
@@ -123,7 +125,10 @@ export default function AgentFilesPage() {
       <div style={{
         width: 200, flexShrink: 0, borderRight: '1px solid #21262d',
         background: '#0a0e16', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      }}>
+        // Mobile: full-width when in list view, hidden when in editor view
+      }}
+        className={mobileView === 'editor' ? 'agent-files-sidebar hidden-mobile' : 'agent-files-sidebar'}
+      >
         <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid #21262d' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {agentName || 'Agent'} — Files
@@ -160,13 +165,15 @@ export default function AgentFilesPage() {
             onClick={() => router.push(`/${orgSlug}/settings`)}
             style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', padding: 0 }}
           >
-            ← Back to Settings
+            ← Settings
           </button>
         </div>
       </div>
 
       {/* Editor */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}
+        className={mobileView === 'list' ? 'agent-files-editor hidden-mobile' : 'agent-files-editor'}
+      >
         {/* Toolbar */}
         <div style={{
           padding: '10px 16px', borderBottom: '1px solid #21262d',
@@ -174,6 +181,12 @@ export default function AgentFilesPage() {
           background: '#0d1117', flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Mobile back button */}
+            <button
+              onClick={() => setMobileView('list')}
+              className="show-mobile"
+              style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '0 4px', flexShrink: 0 }}
+            >←</button>
             <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>
               {activeFile ?? '—'}
             </span>

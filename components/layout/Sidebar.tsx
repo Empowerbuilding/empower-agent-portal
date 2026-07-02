@@ -195,6 +195,8 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
   const [gearOpen, setGearOpen] = useState<string | null>(null);
   const [addingForAgent, setAddingForAgent] = useState<{ agentId: string; agent: Agent } | null>(null);
   const [renamingChannel, setRenamingChannel] = useState<(PortalChannel & { agents: Agent }) | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const draggedIdRef = useRef<string | null>(null);
 
   // Unread tracking via localStorage
   const [lastSeen, setLastSeen] = useState<Record<string, string>>({});
@@ -351,9 +353,40 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                 return (
                   <div
                     key={ch.id}
-                    style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
+                    style={{
+                      position: 'relative', display: 'flex', alignItems: 'center',
+                      borderTop: dragOverId === ch.id ? '2px solid var(--accent)' : '2px solid transparent',
+                      transition: 'border-color 0.1s',
+                    }}
                     onMouseEnter={() => setHoveredChannel(ch.id)}
                     onMouseLeave={() => { setHoveredChannel(null); }}
+                    draggable
+                    onDragStart={() => { draggedIdRef.current = ch.id; }}
+                    onDragOver={e => { e.preventDefault(); setDragOverId(ch.id); }}
+                    onDragLeave={() => setDragOverId(null)}
+                    onDrop={async e => {
+                      e.preventDefault();
+                      setDragOverId(null);
+                      const draggedId = draggedIdRef.current;
+                      if (!draggedId || draggedId === ch.id) return;
+                      draggedIdRef.current = null;
+
+                      // Reorder: move dragged channel to just before drop target
+                      setChannels(prev => {
+                        const list = [...prev];
+                        const fromIdx = list.findIndex(c => c.id === draggedId);
+                        const toIdx = list.findIndex(c => c.id === ch.id);
+                        if (fromIdx === -1 || toIdx === -1) return prev;
+                        const [moved] = list.splice(fromIdx, 1);
+                        list.splice(toIdx, 0, moved);
+                        // Persist new positions
+                        list.forEach((c, i) => {
+                          supabase.from('portal_channels').update({ position: i }).eq('id', c.id).then(() => {});
+                        });
+                        return list;
+                      });
+                    }}
+                    onDragEnd={() => { setDragOverId(null); draggedIdRef.current = null; }}
                   >
                     <Link
                       href={href}
