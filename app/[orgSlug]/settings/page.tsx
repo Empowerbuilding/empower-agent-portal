@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, isIOS, isInStandaloneMode } from '@/lib/push';
 
 interface User {
@@ -26,6 +26,8 @@ export default function SettingsPage() {
   const orgSlug = params.orgSlug as string;
   const supabase = createClient();
 
+  const router = useRouter();
+  const [agents, setAgents] = useState<{ id: string; name: string; display_name: string; container_status: string }[]>([]);
   const [orgName, setOrgName] = useState('');
   const [orgNameEdit, setOrgNameEdit] = useState('');
   const [users, setUsers] = useState<User[]>([]);
@@ -157,6 +159,9 @@ export default function SettingsPage() {
         // Load pending invites
         const invRes = await fetch(`/api/invite?orgId=${org.id}`);
         if (invRes.ok) setInvites(await invRes.json());
+        // Load agents
+        const { data: agentList } = await supabase.from('agents').select('id, name, display_name, container_status').eq('org_id', org.id).order('display_name');
+        setAgents(agentList ?? []);
       }
     }
     load();
@@ -451,6 +456,33 @@ export default function SettingsPage() {
                 <button onClick={() => revokeInvite(inv.id)} title="Revoke invite" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#da3633', fontSize: '16px', padding: '2px 4px', flexShrink: 0 }}>×</button>
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Agents */}
+      {['owner', 'admin'].includes(currentUserRole) && agents.length > 0 && (
+        <section style={{ marginTop: '40px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Agents</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {agents.map(agent => {
+              const statusColor = agent.container_status === 'running' ? '#22c55e' : agent.container_status === 'unhealthy' ? '#f59e0b' : '#ef4444';
+              return (
+                <div key={agent.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '12px 14px' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, flexShrink: 0, display: 'inline-block' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{agent.display_name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>{agent.container_status}</div>
+                  </div>
+                  <button
+                    onClick={() => router.push(`/${orgSlug}/agents/${agent.id}`)}
+                    style={{ padding: '6px 12px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}
+                  >
+                    Edit Files
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
