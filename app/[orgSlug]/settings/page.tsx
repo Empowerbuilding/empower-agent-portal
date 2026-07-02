@@ -487,7 +487,13 @@ export default function SettingsPage() {
                     onClick={() => router.push(`/${orgSlug}/agents/${agent.id}`)}
                     style={{ padding: '6px 12px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}
                   >
-                    Edit Files
+                    Files
+                  </button>
+                  <button
+                    onClick={() => router.push(`/${orgSlug}/agents/${agent.id}/integrations`)}
+                    style={{ padding: '6px 12px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}
+                  >
+                    Integrations
                   </button>
                 </div>
               );
