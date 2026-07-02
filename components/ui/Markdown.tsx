@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * Simple inline markdown renderer for portal messages.
- * Supports: **bold**, *italic*, `code`, ```code blocks```, bullet lists, line breaks.
+ * Markdown renderer for portal messages.
+ * Supports: headers (# ## ###), **bold**, *italic*, `code`, ```blocks```,
+ * bullet lists, numbered lists, --- dividers, | tables |, line breaks.
  */
 
 interface Props {
@@ -20,7 +21,6 @@ function renderInline(text: string): React.ReactNode[] {
   while ((match = regex.exec(text)) !== null) {
     if (match.index > last) parts.push(text.slice(last, match.index));
     if (match[2] && match[3]) {
-      // [label](url) link
       parts.push(<a key={key++} href={match[3]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{match[2]}</a>);
     } else if (match[4]) parts.push(<strong key={key++}>{match[4]}</strong>);
     else if (match[5]) parts.push(<em key={key++}>{match[5]}</em>);
@@ -31,88 +31,151 @@ function renderInline(text: string): React.ReactNode[] {
   return parts;
 }
 
+function isTableRow(line: string) {
+  return line.trim().startsWith('|') && line.trim().endsWith('|');
+}
+
+function isSeparatorRow(line: string) {
+  return /^\|[\s\-:|]+\|/.test(line.trim());
+}
+
+function parseTableRow(line: string): string[] {
+  return line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+}
+
 export default function Markdown({ content, className }: Props) {
   if (!content) return null;
 
-  // Split into blocks by double newlines (paragraphs) and code fences
   const lines = content.split('\n');
   const blocks: React.ReactNode[] = [];
   let codeLines: string[] = [];
   let inCode = false;
   let lineKey = 0;
+  let i = 0;
 
-  for (let i = 0; i < lines.length; i++) {
+  while (i < lines.length) {
     const line = lines[i];
 
+    // Code fence
     if (line.startsWith('```')) {
-      // Single-line fence: ```text``` — open and close on same line
       const singleLine = line.match(/^```(.+)```$/);
       if (singleLine) {
         blocks.push(
-          <pre key={lineKey++} style={{
-            background: '#161b22', border: '1px solid #30363d', borderRadius: '6px',
-            padding: '10px 12px', overflow: 'auto', fontSize: '13px',
-            fontFamily: 'monospace', margin: '6px 0', whiteSpace: 'pre-wrap',
-          }}>
+          <pre key={lineKey++} style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '6px', padding: '10px 12px', overflow: 'auto', fontSize: '13px', fontFamily: 'monospace', margin: '6px 0', whiteSpace: 'pre-wrap' }}>
             {singleLine[1]}
           </pre>
         );
-        continue;
+        i++; continue;
       }
       if (inCode) {
         blocks.push(
-          <pre key={lineKey++} style={{
-            background: '#161b22', border: '1px solid #30363d', borderRadius: '6px',
-            padding: '10px 12px', overflow: 'auto', fontSize: '13px',
-            fontFamily: 'monospace', margin: '6px 0', whiteSpace: 'pre-wrap',
-          }}>
+          <pre key={lineKey++} style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '6px', padding: '10px 12px', overflow: 'auto', fontSize: '13px', fontFamily: 'monospace', margin: '6px 0', whiteSpace: 'pre-wrap' }}>
             {codeLines.join('\n')}
           </pre>
         );
-        codeLines = [];
-        inCode = false;
-      } else {
-        inCode = true;
-      }
-      continue;
+        codeLines = []; inCode = false;
+      } else { inCode = true; }
+      i++; continue;
     }
 
-    if (inCode) {
-      codeLines.push(line);
-      continue;
-    }
+    if (inCode) { codeLines.push(line); i++; continue; }
 
+    // Empty line
     if (line.trim() === '') {
       blocks.push(<div key={lineKey++} style={{ height: '6px' }} />);
-      continue;
+      i++; continue;
     }
 
-    // Bullet list
-    if (line.match(/^[-*]\s/)) {
+    // Horizontal rule --- or ***
+    if (line.trim().match(/^(-{3,}|\*{3,})$/)) {
+      blocks.push(<hr key={lineKey++} style={{ border: 'none', borderTop: '1px solid #30363d', margin: '10px 0' }} />);
+      i++; continue;
+    }
+
+    // Headers # ## ###
+    const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const sizes = ['18px', '16px', '14px'];
+      const margins = ['10px 0 4px', '8px 0 4px', '6px 0 2px'];
       blocks.push(
-        <div key={lineKey++} style={{ display: 'flex', gap: '6px', marginBottom: '2px' }}>
-          <span style={{ color: 'var(--muted)', flexShrink: 0 }}>•</span>
-          <span>{renderInline(line.replace(/^[-*]\s/, ''))}</span>
+        <div key={lineKey++} style={{ fontSize: sizes[level - 1], fontWeight: 700, color: 'var(--text)', margin: margins[level - 1], lineHeight: 1.3 }}>
+          {renderInline(headingMatch[2])}
+        </div>
+      );
+      i++; continue;
+    }
+
+    // Table
+    if (isTableRow(line)) {
+      const tableLines: string[] = [];
+      while (i < lines.length && isTableRow(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      // Find header and separator
+      const headerRow = tableLines[0];
+      const hasSep = tableLines.length > 1 && isSeparatorRow(tableLines[1]);
+      const bodyRows = hasSep ? tableLines.slice(2) : tableLines.slice(1);
+      const headers = parseTableRow(headerRow);
+
+      blocks.push(
+        <div key={lineKey++} style={{ overflowX: 'auto', margin: '8px 0' }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '13px' }}>
+            {headers.some(h => h) && (
+              <thead>
+                <tr>
+                  {headers.map((h, hi) => (
+                    <th key={hi} style={{ padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid #30363d', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap', background: '#0d1117' }}>
+                      {renderInline(h)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {bodyRows.map((row, ri) => (
+                <tr key={ri} style={{ borderBottom: '1px solid #21262d' }}>
+                  {parseTableRow(row).map((cell, ci) => (
+                    <td key={ci} style={{ padding: '6px 10px', color: 'var(--text)', verticalAlign: 'top' }}>
+                      {renderInline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       );
       continue;
     }
 
-    // Numbered list
-    if (line.match(/^\d+\.\s/)) {
-      const num = line.match(/^(\d+)\.\s(.*)$/);
-      if (num) {
-        blocks.push(
-          <div key={lineKey++} style={{ display: 'flex', gap: '6px', marginBottom: '2px' }}>
-            <span style={{ color: 'var(--muted)', flexShrink: 0, minWidth: '16px' }}>{num[1]}.</span>
-            <span>{renderInline(num[2])}</span>
-          </div>
-        );
-        continue;
-      }
+    // Bullet list
+    if (line.match(/^[-*•]\s/)) {
+      blocks.push(
+        <div key={lineKey++} style={{ display: 'flex', gap: '6px', marginBottom: '2px' }}>
+          <span style={{ color: 'var(--muted)', flexShrink: 0 }}>•</span>
+          <span>{renderInline(line.replace(/^[-*•]\s/, ''))}</span>
+        </div>
+      );
+      i++; continue;
     }
 
+    // Numbered list
+    const numMatch = line.match(/^(\d+)\.\s(.*)$/);
+    if (numMatch) {
+      blocks.push(
+        <div key={lineKey++} style={{ display: 'flex', gap: '6px', marginBottom: '2px' }}>
+          <span style={{ color: 'var(--muted)', flexShrink: 0, minWidth: '16px' }}>{numMatch[1]}.</span>
+          <span>{renderInline(numMatch[2])}</span>
+        </div>
+      );
+      i++; continue;
+    }
+
+    // Plain paragraph
     blocks.push(<div key={lineKey++} style={{ marginBottom: '2px' }}>{renderInline(line)}</div>);
+    i++;
   }
 
   return <div className={className} style={{ lineHeight: 1.5 }}>{blocks}</div>;
