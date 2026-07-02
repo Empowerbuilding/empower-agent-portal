@@ -159,9 +159,17 @@ export default function SettingsPage() {
         // Load pending invites
         const invRes = await fetch(`/api/invite?orgId=${org.id}`);
         if (invRes.ok) setInvites(await invRes.json());
-        // Load agents
-        const { data: agentList } = await supabase.from('agents').select('id, name, display_name, container_status').eq('org_id', org.id).order('display_name');
-        setAgents(agentList ?? []);
+        // Load agents — only those with portal channels in this org
+        const { data: channelAgents } = await supabase
+          .from('portal_channels')
+          .select('agent_id')
+          .eq('org_id', org.id)
+          .eq('active', true);
+        const agentIds = [...new Set((channelAgents ?? []).map((c: any) => c.agent_id))];
+        if (agentIds.length > 0) {
+          const { data: agentList } = await supabase.from('agents').select('id, name, display_name, container_status').in('id', agentIds).order('display_name');
+          setAgents(agentList ?? []);
+        }
       }
     }
     load();
@@ -224,6 +232,7 @@ export default function SettingsPage() {
   }
 
   return (
+    <div className="page-scroll">
     <div style={{ padding: '32px', maxWidth: '560px', margin: '0 auto' }}>
       <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', marginBottom: '32px' }}>Settings</div>
 
@@ -486,6 +495,7 @@ export default function SettingsPage() {
           </div>
         </section>
       )}
+    </div>
     </div>
   );
 }

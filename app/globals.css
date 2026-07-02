@@ -111,6 +111,13 @@ html, body {
   min-width: 0;
 }
 
+/* Settings and other scrollable pages */
+.page-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 /* ── Channel header ── */
 .channel-header {
   padding: 0 20px;
