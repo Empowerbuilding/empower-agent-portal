@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
 
     const portal = createServiceClient(PORTAL_URL, PORTAL_SERVICE_KEY, { auth: { persistSession: false } });
 
-    // Post sent message to portal SMS channel
     const sentMeta = {
       approval_state: 'sent',
       contact_phone: to,
@@ -56,22 +55,24 @@ export async function POST(req: NextRequest) {
       sent_by: userFlag || 'direct',
       telnyx_id: msgId,
     };
-    await portal.from('portal_messages').insert({
-      channel_id: channelId,
-      org_id: ORG_ID,
-      sender_type: 'system',
-      sender_name: userFlag ? (userFlag === 'larry' ? 'Larry' : 'Shannon') : 'Agent',
-      content: body,
-      metadata: sentMeta,
-      processed: true,
-    });
 
-    // If approving a draft, mark it as sent
     if (draftMessageId) {
+      // Approving an existing draft — update in place, don't post a duplicate
       const { data: draft } = await portal.from('portal_messages').select('metadata').eq('id', draftMessageId).single();
       if (draft) {
-        await portal.from('portal_messages').update({ metadata: { ...draft.metadata, approval_state: 'sent' } }).eq('id', draftMessageId);
+        await portal.from('portal_messages').update({ metadata: { ...draft.metadata, ...sentMeta } }).eq('id', draftMessageId);
       }
+    } else {
+      // Direct reply — no existing draft, post a new sent message
+      await portal.from('portal_messages').insert({
+        channel_id: channelId,
+        org_id: ORG_ID,
+        sender_type: 'system',
+        sender_name: userFlag ? (userFlag === 'larry' ? 'Larry' : 'Shannon') : 'Agent',
+        content: body,
+        metadata: sentMeta,
+        processed: true,
+      });
     }
 
     // CRM log (best effort)

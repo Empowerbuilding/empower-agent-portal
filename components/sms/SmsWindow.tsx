@@ -72,6 +72,9 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const [approving, setApproving] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [askingVanessa, setAskingVanessa] = useState<string | null>(null);
+  // phone number Vanessa is currently drafting for (shows indicator in thread)
+  const [vanessaDrafting, setVanessaDrafting] = useState<string | null>(null);
+  const vanessaDraftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -121,6 +124,12 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
         (payload) => {
           const msg = payload.new as PortalMessage;
           setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+          // Clear drafting indicator when Vanessa's draft arrives
+          const meta = (msg.metadata || {}) as Record<string, any>;
+          if (meta.approval_state === 'pending' && meta.contact_phone) {
+            setVanessaDrafting(prev => prev === meta.contact_phone ? null : prev);
+            if (vanessaDraftTimerRef.current) clearTimeout(vanessaDraftTimerRef.current);
+          }
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'portal_messages', filter: `channel_id=eq.${channel.id}` },
         (payload) => {
@@ -174,6 +183,11 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
         content: prompt,
         processed: false,
       });
+      // Show drafting indicator in the thread
+      setVanessaDrafting(phone);
+      if (vanessaDraftTimerRef.current) clearTimeout(vanessaDraftTimerRef.current);
+      // Auto-clear after 45s if draft never arrives
+      vanessaDraftTimerRef.current = setTimeout(() => setVanessaDrafting(null), 45000);
     } finally {
       setTimeout(() => setAskingVanessa(null), 2000);
     }
@@ -382,6 +396,25 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
               </div>
             );
           })}
+        {/* Vanessa drafting indicator */}
+        {vanessaDrafting === activeConv.contact_phone && (
+          <div style={{ alignSelf: 'flex-end', maxWidth: '85%' }}>
+            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '16px' }}>🤖</span>
+              <div>
+                <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, marginBottom: '3px' }}>Vanessa is drafting…</div>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  {[0,1,2].map(i => (
+                    <span key={i} style={{
+                      width: 6, height: 6, borderRadius: '50%', background: 'var(--muted)',
+                      animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                    }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
