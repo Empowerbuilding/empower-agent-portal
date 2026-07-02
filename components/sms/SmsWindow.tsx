@@ -384,6 +384,11 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
 
       {/* Reply input */}
       <div className="input-area">
+        {replyText.length > 0 && (
+          <div style={{ fontSize: '11px', color: replyText.length > 160 ? '#da3633' : replyText.length > 140 ? '#d29922' : 'var(--muted)', textAlign: 'right', paddingBottom: '4px', paddingRight: '4px' }}>
+            {replyText.length}/160{replyText.length > 160 ? ` (+${Math.ceil((replyText.length - 160) / 153 + 1) - 1} seg)` : ''}
+          </div>
+        )}
         <div className="input-row">
           <textarea
             ref={textareaRef}

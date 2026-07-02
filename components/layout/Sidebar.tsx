@@ -361,7 +361,8 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                       onClick={onClose}
                       style={{ flex: 1 }}
                     >
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {ch.channel_type === 'sms' && <span style={{ fontSize: '12px', flexShrink: 0 }}>📱</span>}
                         {ch.display_name}
                       </span>
                       {unread && (
