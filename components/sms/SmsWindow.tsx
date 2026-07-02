@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import { useMobileToolbar } from '@/context/MobileToolbar';
-import { IconSend } from '@/components/ui/Icons';
+import { IconSend, IconMic, IconMicOff } from '@/components/ui/Icons';
 
 interface Props {
   channel: PortalChannel;
@@ -70,8 +70,11 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
   const [approving, setApproving] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  const [askingVanessa, setAskingVanessa] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
 
@@ -131,6 +134,46 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   function selectContact(phone: string) {
     setSelectedPhone(phone);
     setMobileView('thread');
+    setListening(false);
+    recognitionRef.current?.stop();
+  }
+
+  function toggleVoice() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { alert('Voice input not supported in this browser.'); return; }
+    if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
+    const rec = new SR();
+    rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = false;
+    recognitionRef.current = rec;
+    let base = replyText;
+    rec.onresult = (e: any) => {
+      const t = Array.from(e.results).map((r: any) => r[0].transcript).join('');
+      const sep = base && !base.endsWith(' ') ? ' ' : '';
+      setReplyText(base + sep + t);
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    rec.start(); setListening(true);
+  }
+
+  async function askVanessa(msg: PortalMessage) {
+    if (!activeConv) return;
+    setAskingVanessa(msg.id);
+    try {
+      const body = extractSmsBody(msg.content);
+      const prompt = `[portal channel: ${channel.id}] [System]: Inbound SMS from ${activeConv.contact_name} (${activeConv.contact_phone}): "${body}" — Please draft a reply for approval.`;
+      await supabase.from('portal_messages').insert({
+        channel_id: channel.id,
+        org_id: orgId,
+        sender_type: 'user',
+        sender_id: currentUser.id,
+        sender_name: currentUser.name,
+        content: prompt,
+        processed: false,
+      });
+    } finally {
+      setTimeout(() => setAskingVanessa(null), 2000);
+    }
   }
 
   async function approveDraft(msg: PortalMessage) {
@@ -311,7 +354,17 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                   <div style={{ background: '#21262d', borderRadius: '18px 18px 18px 4px', padding: '10px 14px' }}>
                     <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px' }}>{formatFull(msg.created_at)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{formatFull(msg.created_at)}</span>
+                    <button
+                      onClick={() => askVanessa(msg)}
+                      disabled={askingVanessa === msg.id}
+                      title="Ask Vanessa to draft a reply"
+                      style={{ background: 'none', border: '1px solid #30363d', borderRadius: '4px', color: 'var(--muted)', cursor: 'pointer', fontSize: '11px', padding: '2px 7px', opacity: askingVanessa === msg.id ? 0.5 : 0.8 }}
+                    >
+                      {askingVanessa === msg.id ? '✓ Sent to Vanessa' : '🤖 Ask Vanessa'}
+                    </button>
+                  </div>
                 </div>
               );
             }
@@ -344,6 +397,10 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             placeholder={`Reply to ${activeConv.contact_name}…`}
             rows={1}
           />
+          <button onClick={toggleVoice} title={listening ? 'Stop recording' : 'Voice input'}
+            style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s', display: 'flex', alignItems: 'center' }}>
+            {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
+          </button>
           <button
             className="send-btn"
             onClick={sendReply}
