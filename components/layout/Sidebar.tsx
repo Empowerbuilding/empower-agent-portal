@@ -18,8 +18,8 @@ interface Props {
 }
 
 function StatusDot({ status }: { status: string }) {
-  const color = status === 'running' ? 'var(--accent)' : status === 'unhealthy' ? '#8b949e' : '#da3633';
-  return <span className="status-dot" style={{ background: color }} />;
+  const color = status === 'running' ? '#22c55e' : status === 'unhealthy' ? '#f59e0b' : '#ef4444';
+  return <span className="status-dot" style={{ background: color, display: 'inline-block', width: 8, height: 8, borderRadius: '50%', flexShrink: 0 }} />;
 }
 
 interface AddChannelModalProps {
