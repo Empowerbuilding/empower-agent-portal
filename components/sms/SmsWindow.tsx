@@ -166,7 +166,8 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
       const chatChannelId = channel.id
         .replace('-larry-sms', '-larry')
         .replace('-shannon-sms', '-shannon');
-      const prompt = `Draft a reply to this inbound text from ${activeConv.contact_name} (${activeConv.contact_phone}): "${body}"`;
+      const phone = activeConv.contact_phone;
+      const prompt = `Draft an SMS reply to this inbound text from ${activeConv.contact_name} (${phone}): "${body}". Run send_sms.py --draft --to "${phone}" with your reply so it appears in the SMS inbox for approval. Do not just type the draft here — post it to the SMS channel using the script.`;
       await supabase.from('portal_messages').insert({
         channel_id: chatChannelId,
         org_id: orgId,
