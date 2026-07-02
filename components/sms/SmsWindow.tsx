@@ -161,9 +161,14 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     setAskingVanessa(msg.id);
     try {
       const body = extractSmsBody(msg.content);
-      const prompt = `[portal channel: ${channel.id}] [System]: Inbound SMS from ${activeConv.contact_name} (${activeConv.contact_phone}): "${body}" — Please draft a reply for approval.`;
+      // Route to the chat channel (not the SMS channel) so Vanessa sees it
+      // and so it doesn't pollute the SMS conversation thread
+      const chatChannelId = channel.id
+        .replace('-larry-sms', '-larry')
+        .replace('-shannon-sms', '-shannon');
+      const prompt = `Draft a reply to this inbound text from ${activeConv.contact_name} (${activeConv.contact_phone}): "${body}"`;
       await supabase.from('portal_messages').insert({
-        channel_id: channel.id,
+        channel_id: chatChannelId,
         org_id: orgId,
         sender_type: 'user',
         sender_id: currentUser.id,
@@ -410,8 +415,10 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             className="send-btn"
             onClick={sendReply}
             disabled={!replyText.trim() || sending}
+            title={`Send to ${activeConv.contact_name}`}
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}
           >
-            {sending ? '…' : <IconSend size={15} />}
+            {sending ? '…' : <><IconSend size={14} /><span style={{ fontSize: '12px' }}>{activeConv.contact_name.split(' ')[0]}</span></>}
           </button>
         </div>
       </div>
