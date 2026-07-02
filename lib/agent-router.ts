@@ -142,15 +142,17 @@ export async function agentResetContext(agentId: string, channelId: string): Pro
   if (!agent) return false;
   const config = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
 
-  const sessionKey = `portal:channel:${channelId}`;
-  const command = `docker exec ${agent.container_name} node /app/openclaw.mjs session reset --session-key "${sessionKey}" 2>/dev/null || docker exec ${agent.container_name} python3 -c "
+  // Session keys use the full format: agent:main:portal:channel:<channelId>
+  // Also handle legacy dated variants: agent:main:portal:channel:<channelId>:<date>
+  const command = `docker exec ${agent.container_name} python3 -c "
 import json
 path = '/home/node/.openclaw/agents/main/sessions/sessions.json'
 with open(path) as f: d = json.load(f)
-key = '${sessionKey}'
-if key in d: del d[key]
+prefix = 'agent:main:portal:channel:${channelId}'
+to_delete = [k for k in list(d.keys()) if k == prefix or k.startswith(prefix + ':')]
+for k in to_delete: del d[k]
 with open(path, 'w') as f: json.dump(d, f)
-print('reset ok')
+print('reset ok, deleted:', to_delete)
 " 2>/dev/null`;
 
   try {
