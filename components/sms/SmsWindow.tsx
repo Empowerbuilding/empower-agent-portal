@@ -161,15 +161,12 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     setAskingVanessa(msg.id);
     try {
       const body = extractSmsBody(msg.content);
-      // Route to the chat channel (not the SMS channel) so Vanessa sees it
-      // and so it doesn't pollute the SMS conversation thread
-      const chatChannelId = channel.id
-        .replace('-larry-sms', '-larry')
-        .replace('-shannon-sms', '-shannon');
+      // Route to background channel — Vanessa monitors it, Larry/Shannon never see it
       const phone = activeConv.contact_phone;
-      const prompt = `Draft an SMS reply to this inbound text from ${activeConv.contact_name} (${phone}): "${body}". Run send_sms.py --draft --to "${phone}" with your reply so it appears in the SMS inbox for approval. Do not just type the draft here — post it to the SMS channel using the script.`;
+      const senderUser = channel.id.includes('larry') ? 'larry' : 'shannon';
+      const prompt = `SMS action from ${currentUser.name}: Draft a reply to this inbound text from ${activeConv.contact_name} (${phone}): "${body}". Run send_sms.py --draft --to "${phone}" --user ${senderUser} and post it to the SMS inbox. No reply needed here.`;
       await supabase.from('portal_messages').insert({
-        channel_id: chatChannelId,
+        channel_id: 'barnhaus-vanessa-sms-actions',
         org_id: orgId,
         sender_type: 'user',
         sender_id: currentUser.id,
