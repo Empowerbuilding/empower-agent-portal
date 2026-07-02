@@ -436,3 +436,47 @@ html, body {
   padding: 4px;
   flex-shrink: 0;
 }
+
+/* ── SMS Inbox Layout ──────────────────────────────────────────────────── */
+
+/* Desktop: side-by-side panels */
+.sms-desktop-layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+.sms-contact-list {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid #30363d;
+  overflow-y: auto;
+}
+.sms-thread-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.sms-mobile-layout {
+  display: none;
+}
+.desktop-only {
+  display: flex;
+}
+
+/* Mobile: single panel, switch between list and thread */
+@media (max-width: 767px) {
+  .sms-desktop-layout {
+    display: none;
+  }
+  .sms-mobile-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+}
