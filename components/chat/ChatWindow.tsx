@@ -366,7 +366,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         })}
         {agentTyping && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
-            <div className="msg-avatar" style={{ background: '#30363d', color: '#fff', flexShrink: 0 }}>🤖</div>
+            <div className="msg-avatar" style={{ background: '#1a1f2e', flexShrink: 0 }}><img src="/logo.png" alt="Agent" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '3px' }} /></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#161b22', borderRadius: '12px', padding: '10px 14px' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite' }} />
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.2s' }} />

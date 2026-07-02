@@ -115,7 +115,7 @@ export default function SearchModal({ channelId, channelName, onClose, onJumpTo 
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '11px', color: '#fff', fontWeight: 700,
                 }}>
-                  {msg.sender_type === 'user' ? (msg.sender_name?.charAt(0) ?? 'U') : '🤖'}
+                  {msg.sender_type === 'user' ? (msg.sender_name?.charAt(0) ?? 'U') : <img src="/logo.png" alt="Agent" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '2px' }} />}
                 </div>
                 <span style={{ fontWeight: 600, fontSize: '13px', color: msg.sender_type === 'user' ? '#79c0ff' : '#8fb8f5' }}>
                   {msg.sender_name ?? (msg.sender_type === 'user' ? 'User' : 'Agent')}
