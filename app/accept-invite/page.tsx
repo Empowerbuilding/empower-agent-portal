@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Image from 'next/image';
@@ -15,7 +15,7 @@ interface InviteData {
   organizations: { name: string; slug: string; logo_url: string | null };
 }
 
-export default function AcceptInvitePage() {
+function AcceptInviteContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
@@ -163,6 +163,7 @@ export default function AcceptInvitePage() {
     );
   }
 
+
   if (status === 'invalid') {
     return (
       <div style={containerStyle}>
@@ -215,7 +216,7 @@ export default function AcceptInvitePage() {
   }
 
   // status === 'valid'
-  return (
+  return (  
     <div style={containerStyle}>
       <div style={cardStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
@@ -311,5 +312,17 @@ export default function AcceptInvitePage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#080c14', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#7d8590', fontSize: '14px' }}>Loading…</div>
+      </div>
+    }>
+      <AcceptInviteContent />
+    </Suspense>
   );
 }
