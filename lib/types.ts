@@ -1,4 +1,4 @@
-export type ChannelType = 'chat' | 'feed' | 'approval';
+export type ChannelType = 'chat' | 'feed' | 'approval' | 'sms';
 export type SenderType = 'user' | 'agent' | 'system';
 export type ContainerStatus = 'running' | 'stopped' | 'unhealthy' | 'error' | 'provisioning';
 
