@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import ChatWindow from '@/components/chat/ChatWindow';
 import FeedWindow from '@/components/feed/FeedWindow';
 import ApprovalWindow from '@/components/approval/ApprovalWindow';
+import SmsWindow from '@/components/sms/SmsWindow';
 import { PortalChannel } from '@/lib/types';
 
 export default async function ChannelPage({
@@ -61,6 +62,17 @@ export default async function ChannelPage({
   const messages = (rawMessages ?? []).reverse();
 
   const ch = channel as PortalChannel;
+
+  if (ch.channel_type === 'sms') {
+    return (
+      <SmsWindow
+        channel={ch}
+        initialMessages={messages ?? []}
+        currentUser={{ id: portalUser.id, name: portalUser.name, role: portalUser.role }}
+        orgId={org.id}
+      />
+    );
+  }
 
   if (ch.channel_type === 'feed') {
     return <FeedWindow channel={ch} initialMessages={messages ?? []} />;
