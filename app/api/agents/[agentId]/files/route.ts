@@ -40,14 +40,6 @@ function sshExec(privateKey: string, command: string): Promise<string> {
   });
 }
 
-function getWorkspacePath(containerName: string): string {
-  // Vanessa/Atlas share the sales-agent container — their workspace is at a different path
-  if (containerName === 'sales-agent-openclaw-gateway-1') {
-    return '/root/.openclaw/workspace';
-  }
-  return `/root/.${containerName.replace('-openclaw', '')}/workspace`;
-}
-
 async function authCheck(agentId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -55,7 +47,7 @@ async function authCheck(agentId: string) {
 
   const { data: agent } = await supabase
     .from('agents')
-    .select('id, name, container_name, org_id')
+    .select('id, name, container_name, workspace_path, org_id')
     .eq('id', agentId)
     .single();
   if (!agent) return null;
@@ -81,7 +73,7 @@ export async function GET(
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { agent } = auth;
-  const workspacePath = getWorkspacePath(agent.container_name ?? agent.name);
+  const workspacePath = agent.workspace_path || `/root/.${agent.name}/workspace`;
   const privateKey = getSSHKey();
   if (!privateKey) return NextResponse.json({ error: 'SSH key not configured' }, { status: 500 });
 
@@ -134,7 +126,7 @@ export async function POST(
   }
 
   const { agent } = auth;
-  const workspacePath = getWorkspacePath(agent.container_name ?? agent.name);
+  const workspacePath = agent.workspace_path || `/root/.${agent.name}/workspace`;
   const privateKey = getSSHKey();
 
   try {
@@ -163,7 +155,7 @@ export async function PATCH(
   }
 
   const { agent } = auth;
-  const workspacePath = getWorkspacePath(agent.container_name ?? agent.name);
+  const workspacePath = agent.workspace_path || `/root/.${agent.name}/workspace`;
   const containerName = agent.container_name ?? `${agent.name}-openclaw`;
   const privateKey = getSSHKey();
 
