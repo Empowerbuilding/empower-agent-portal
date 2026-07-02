@@ -113,7 +113,42 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
   );
 }
 
-function ChannelGearMenu({ onDelete, onClose }: { onDelete: () => void; onClose: () => void }) {
+function RenameChannelModal({ channel, onClose, onRenamed }: { channel: PortalChannel & { agents: Agent }; onClose: () => void; onRenamed: (newName: string) => void }) {
+  const [name, setName] = useState(channel.display_name);
+  const [saving, setSaving] = useState(false);
+  const supabase = createClient();
+
+  async function handleRename() {
+    if (!name.trim() || name.trim() === channel.display_name) { onClose(); return; }
+    setSaving(true);
+    await supabase.from('portal_channels').update({ display_name: name.trim() }).eq('id', channel.id);
+    onRenamed(name.trim());
+    onClose();
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '12px', padding: '24px', width: '300px', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>Rename Channel</div>
+        <input
+          autoFocus
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleRename()}
+          style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--text)', padding: '10px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+          <button onClick={handleRename} disabled={!name.trim() || saving} style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px', opacity: !name.trim() || saving ? 0.5 : 1 }}>
+            {saving ? 'Saving…' : 'Rename'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChannelGearMenu({ onRename, onDelete, onClose }: { onRename: () => void; onDelete: () => void; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -124,17 +159,24 @@ function ChannelGearMenu({ onDelete, onClose }: { onDelete: () => void; onClose:
     return () => document.removeEventListener('mousedown', handle);
   }, [onClose]);
 
+  const itemStyle: React.CSSProperties = {
+    display: 'block', width: '100%', textAlign: 'left', background: 'none',
+    border: 'none', cursor: 'pointer', padding: '6px 10px', fontSize: '13px', borderRadius: '4px',
+  };
+
   return (
     <div ref={ref} style={{
       position: 'absolute', right: 0, top: '100%', zIndex: 100,
       background: '#161b22', border: '1px solid #30363d', borderRadius: '6px',
-      padding: '4px', minWidth: '130px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+      padding: '4px', minWidth: '140px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
     }}>
-      <button onClick={() => { onDelete(); onClose(); }} style={{
-        display: 'block', width: '100%', textAlign: 'left', background: 'none',
-        border: 'none', color: '#da3633', cursor: 'pointer', padding: '6px 10px',
-        fontSize: '13px', borderRadius: '4px',
-      }}
+      <button onClick={() => { onRename(); onClose(); }} style={{ ...itemStyle, color: 'var(--text)' }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#21262d')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+      >
+        Rename channel
+      </button>
+      <button onClick={() => { onDelete(); onClose(); }} style={{ ...itemStyle, color: '#da3633' }}
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(218,54,51,0.1)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'none')}
       >
@@ -152,6 +194,7 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
   const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
   const [gearOpen, setGearOpen] = useState<string | null>(null);
   const [addingForAgent, setAddingForAgent] = useState<{ agentId: string; agent: Agent } | null>(null);
+  const [renamingChannel, setRenamingChannel] = useState<(PortalChannel & { agents: Agent }) | null>(null);
 
   // Unread tracking via localStorage
   const [lastSeen, setLastSeen] = useState<Record<string, string>>({});
@@ -263,6 +306,14 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
         />
       )}
 
+      {renamingChannel && (
+        <RenameChannelModal
+          channel={renamingChannel}
+          onClose={() => setRenamingChannel(null)}
+          onRenamed={(newName) => setChannels(prev => prev.map(c => c.id === renamingChannel.id ? { ...c, display_name: newName } : c))}
+        />
+      )}
+
       <nav className={`sidebar${isOpen ? ' open' : ''}`}>
         <div className="sidebar-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
@@ -339,6 +390,7 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                         >⚙</button>
                         {gearOpen === ch.id && (
                           <ChannelGearMenu
+                            onRename={() => setRenamingChannel(ch)}
                             onDelete={() => deleteChannel(ch.id)}
                             onClose={() => setGearOpen(null)}
                           />
