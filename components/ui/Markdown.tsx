@@ -92,10 +92,10 @@ export default function Markdown({ content, className }: Props) {
       i++; continue;
     }
 
-    // Headers # ## ###
-    const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
+    // Headers # through ######
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
-      const level = headingMatch[1].length;
+      const level = Math.min(headingMatch[1].length, 3);
       const sizes = ['18px', '16px', '14px'];
       const margins = ['10px 0 4px', '8px 0 4px', '6px 0 2px'];
       blocks.push(
