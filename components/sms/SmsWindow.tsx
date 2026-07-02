@@ -69,7 +69,6 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list');
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
-  const [approving, setApproving] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [askingVanessa, setAskingVanessa] = useState<string | null>(null);
   // phone number Vanessa is currently drafting for (shows indicator in thread)
@@ -193,28 +192,10 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     }
   }
 
-  async function approveDraft(msg: PortalMessage) {
-    setApproving(msg.id);
-    try {
-      const meta = (msg.metadata || {}) as Record<string, any>;
-      const to = meta.contact_phone || meta.to;
-      if (!to) return;
-      await fetch('/api/sms/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to,
-          body: extractSmsBody(msg.content),
-          channelId: channel.id,
-          contactName: meta.contact_name || null,
-          contactId: meta.contact_id || null,
-          userFlag,
-          draftMessageId: msg.id,
-        }),
-      });
-    } finally {
-      setApproving(null);
-    }
+  async function denyDraft(msgId: string) {
+    // Delete the pending draft — gone from thread
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+    await supabase.from('portal_messages').delete().eq('id', msgId);
   }
 
   async function sendReply() {
@@ -341,24 +322,39 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
               return (
                 <div key={msg.id} style={{ alignSelf: 'flex-end', maxWidth: '85%', width: '100%' }}>
                   <div style={{ background: '#0d1117', border: '1px solid var(--accent)', borderRadius: '12px', padding: '12px 14px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      ⏸ Draft — pending approval
+                    <div style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      🤖 Vanessa’s Draft
                     </div>
                     <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
-                    <button
-                      onClick={() => approveDraft(msg)}
-                      disabled={isApproving}
-                      style={{
-                        marginTop: '12px', width: '100%', padding: '10px',
-                        background: isApproving ? '#30363d' : 'var(--accent)',
-                        border: 'none', borderRadius: '8px',
-                        color: isApproving ? 'var(--muted)' : '#000',
-                        fontWeight: 700, cursor: isApproving ? 'wait' : 'pointer',
-                        fontSize: '14px', minHeight: '44px',
-                      }}
-                    >
-                      {isApproving ? 'Sending…' : '📤 Send'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                      <button
+                        onClick={() => {
+                          setReplyText(body);
+                          denyDraft(msg.id);
+                          setTimeout(() => textareaRef.current?.focus(), 50);
+                        }}
+                        style={{
+                          flex: 1, padding: '10px',
+                          background: 'var(--accent)',
+                          border: 'none', borderRadius: '8px',
+                          color: '#fff', fontWeight: 700,
+                          cursor: 'pointer', fontSize: '14px', minHeight: '44px',
+                        }}
+                      >
+                        Stage to Edit
+                      </button>
+                      <button
+                        onClick={() => denyDraft(msg.id)}
+                        style={{
+                          padding: '10px 16px',
+                          background: 'none', border: '1px solid #30363d',
+                          borderRadius: '8px', color: 'var(--muted)',
+                          cursor: 'pointer', fontSize: '14px', minHeight: '44px',
+                        }}
+                      >
+                        Deny
+                      </button>
+                    </div>
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px', textAlign: 'right' }}>{formatFull(msg.created_at)}</div>
                 </div>
