@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import { useMobileToolbar } from '@/context/MobileToolbar';
@@ -81,6 +81,28 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const { setToolbar } = useMobileToolbar();
 
   const userFlag = channel.id.includes('larry') ? 'larry' : channel.id.includes('shannon') ? 'shannon' : null;
+
+  // CRM contact strip
+  const [crmCache, setCrmCache] = useState<Record<string, any>>({});
+  const [crmLoading, setCrmLoading] = useState(false);
+
+  const fetchCrmContact = useCallback(async (phone: string) => {
+    if (crmCache[phone] !== undefined) return; // already fetched (null = not found)
+    setCrmLoading(true);
+    try {
+      const res = await fetch(`/api/crm/contact?phone=${encodeURIComponent(phone)}`);
+      const data = res.ok ? await res.json() : null;
+      setCrmCache(prev => ({ ...prev, [phone]: data }));
+    } catch {
+      setCrmCache(prev => ({ ...prev, [phone]: null }));
+    } finally {
+      setCrmLoading(false);
+    }
+  }, [crmCache]);
+
+  useEffect(() => {
+    if (selectedPhone) fetchCrmContact(selectedPhone);
+  }, [selectedPhone]);
   const conversations = groupByContact(messages);
   const activeConv = selectedPhone ? conversations.find(c => c.contact_phone === selectedPhone) : null;
 
@@ -295,6 +317,74 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   // ── Thread view ───────────────────────────────────────────────────────────
   const ThreadView = activeConv ? (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* CRM context strip — visible on both mobile and desktop */}
+      {(() => {
+        const crm = selectedPhone ? crmCache[selectedPhone] : undefined;
+        if (!crm) return null;
+        const scoreEmoji = crm.lead_score === 'hot' ? '🔥' : crm.lead_score === 'cold' ? '🧊' : '〜';
+        const stageLabel: Record<string, string> = {
+          subscriber: 'Sub', lead: 'Lead', mql: 'MQL', sql: 'SQL',
+          customer: 'Customer', former_client: 'Former'
+        };
+        const dealStageLabel: Record<string, string> = {
+          qualified: 'Qualified', concept: 'Concept', design: 'Design',
+          engineering: 'Eng', proposal: 'Proposal', active: 'Active',
+        };
+        const formatValue = (v: number | null) =>
+          v ? (v >= 1000 ? `$${Math.round(v / 1000)}k` : `$${v}`) : null;
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+            padding: '6px 16px', background: '#0a0e16',
+            borderBottom: '1px solid #21262d', fontSize: '12px', flexShrink: 0,
+          }}>
+            <span style={{ color: 'var(--muted)' }}>
+              {scoreEmoji} <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+                {crm.lead_score ? crm.lead_score.charAt(0).toUpperCase() + crm.lead_score.slice(1) : '—'}
+              </span>
+            </span>
+            {crm.lifecycle_stage && (
+              <>
+                <span style={{ color: '#30363d' }}>•</span>
+                <span style={{ color: 'var(--muted)' }}>
+                  {stageLabel[crm.lifecycle_stage] ?? crm.lifecycle_stage}
+                </span>
+              </>
+            )}
+            {crm.best_deal && (
+              <>
+                <span style={{ color: '#30363d' }}>•</span>
+                <span style={{ color: 'var(--muted)' }}>
+                  {dealStageLabel[crm.best_deal.stage] ?? crm.best_deal.stage}
+                  {formatValue(crm.best_deal.value) && (
+                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+                      {' '}{formatValue(crm.best_deal.value)}
+                    </span>
+                  )}
+                </span>
+              </>
+            )}
+            {crm.whale_score != null && crm.whale_score >= 60 && (
+              <>
+                <span style={{ color: '#30363d' }}>•</span>
+                <span style={{ color: '#f59e0b' }}>🐋 {crm.whale_score}</span>
+              </>
+            )}
+            <a
+              href={crm.crm_url}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                marginLeft: 'auto', fontSize: '11px', color: 'var(--accent)',
+                textDecoration: 'none', opacity: 0.8, whiteSpace: 'nowrap',
+              }}
+            >
+              CRM →
+            </a>
+          </div>
+        );
+      })()}
+
       {/* Thread header — desktop only (mobile uses mobile-header + back button) */}
       <div className="desktop-only channel-header" style={{ alignItems: 'center', gap: '10px', flexShrink: 0 }}>
         <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#1a3a6a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
