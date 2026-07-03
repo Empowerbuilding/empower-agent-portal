@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const CRM_URL = process.env.CRM_SUPABASE_URL;
-const CRM_KEY = process.env.CRM_SUPABASE_SERVICE_ROLE_KEY;
+// Coolify has it as CRM_SUPABASE_KEY; fall back to the longer name for local dev
+const CRM_KEY = process.env.CRM_SUPABASE_KEY ?? process.env.CRM_SUPABASE_SERVICE_ROLE_KEY;
 
 export interface CrmContactData {
   id: string;
