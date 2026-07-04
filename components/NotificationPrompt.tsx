@@ -12,26 +12,24 @@ export default function NotificationPrompt({ userId }: Props) {
 
   useEffect(() => {
     if (!('Notification' in window)) return;
-    if (Notification.permission === 'granted') return;
     if (Notification.permission === 'denied') return;
 
-    // Check if already subscribed
     isPushSubscribed().then((subscribed) => {
       if (subscribed) return;
+      if (Notification.permission === 'granted') return;
 
       if (isIOS() && !isInStandaloneMode()) {
-        // On iOS but not installed — show install prompt
+        // iOS not installed yet — show install prompt (re-show after 7 days even if dismissed)
         const dismissed = localStorage.getItem('ios-install-dismissed');
-        if (!dismissed) setShow('ios');
-      } else if (!isIOS()) {
-        // Non-iOS — show push permission prompt after short delay
+        const dismissedAt = dismissed ? parseInt(dismissed) : 0;
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+        if (!dismissed || Date.now() - dismissedAt > sevenDays) setTimeout(() => setShow('ios'), 2000);
+      } else {
+        // Non-iOS or iOS standalone — show push prompt (re-show after 3 days)
         const dismissed = localStorage.getItem('push-prompt-dismissed');
-        if (!dismissed) setTimeout(() => setShow('push'), 3000);
-      }
-      // iOS + standalone = show push prompt
-      else if (isIOS() && isInStandaloneMode()) {
-        const dismissed = localStorage.getItem('push-prompt-dismissed');
-        if (!dismissed) setTimeout(() => setShow('push'), 3000);
+        const dismissedAt = dismissed ? parseInt(dismissed) : 0;
+        const threeDays = 3 * 24 * 60 * 60 * 1000;
+        if (!dismissed || Date.now() - dismissedAt > threeDays) setTimeout(() => setShow('push'), 2000);
       }
     });
   }, []);
@@ -48,12 +46,12 @@ export default function NotificationPrompt({ userId }: Props) {
   }
 
   function dismissPush() {
-    localStorage.setItem('push-prompt-dismissed', '1');
+    localStorage.setItem('push-prompt-dismissed', String(Date.now()));
     setShow(null);
   }
 
   function dismissIOS() {
-    localStorage.setItem('ios-install-dismissed', '1');
+    localStorage.setItem('ios-install-dismissed', String(Date.now()));
     setShow(null);
   }
 

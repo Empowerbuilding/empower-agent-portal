@@ -9,6 +9,7 @@ import MessageBubble from './MessageBubble';
 import SearchModal from './SearchModal';
 import ChatOverflowMenu from './ChatOverflowMenu';
 import PresenceButton from '@/components/presence/PresenceButton';
+import { playSend, playReceive, unlockAudio } from '@/lib/sounds';
 
 interface Props {
   channel: PortalChannel;
@@ -92,6 +93,13 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
           } else {
             setAgentTyping(false);
+            // Play receive sound for agent/system messages
+            setMessages(prev => {
+              if (prev.some(m => m.id === msg.id)) return prev;
+              playReceive();
+              return [...prev, msg];
+            });
+            return;
           }
           setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         })
@@ -277,6 +285,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       setUploading(false);
     }
 
+    unlockAudio();
+    playSend();
     await supabase.from('portal_messages').insert({
       channel_id: channel.id,
       org_id: orgId,
