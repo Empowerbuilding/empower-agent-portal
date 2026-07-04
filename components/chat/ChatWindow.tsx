@@ -50,8 +50,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     };
   }, []);
 
+  const isInitialLoad = useRef(true);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isInitialLoad.current) {
+      // Snap instantly on first load — no visible scroll animation
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+      isInitialLoad.current = false;
+    } else {
+      // Smooth scroll only for new incoming messages
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -77,7 +85,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       } else {
         setAgentTyping(false);
       }
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), 50);
     }
   };
 
