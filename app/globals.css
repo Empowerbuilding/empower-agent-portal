@@ -157,6 +157,8 @@ html, body {
   min-height: 61px;
   display: flex;
   align-items: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 @media (min-width: 768px) {
   .input-area { padding: 10px 20px; }
@@ -170,6 +172,10 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 24px;
   padding: 10px 14px;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .input-row textarea {
@@ -187,23 +193,23 @@ html, body {
 }
 
 .send-btn {
-  background: transparent;
-  color: var(--muted);
+  background: var(--accent);
+  color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 6px 8px;
+  border-radius: 50%;
+  padding: 0;
   font-size: 14px;
   cursor: pointer;
   flex-shrink: 0;
-  min-height: 36px;
-  min-width: 36px;
+  height: 34px;
+  width: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s;
+  transition: opacity 0.15s, background 0.15s;
 }
-.send-btn:not(:disabled):hover { color: var(--accent); }
-.send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.send-btn:not(:disabled):hover { background: #5a9cf5; }
+.send-btn:disabled { opacity: 0.25; cursor: not-allowed; }
 
 /* ── Message bubbles — Discord style ── */
 .msg-row {
