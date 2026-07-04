@@ -198,14 +198,26 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const draggedIdRef = useRef<string | null>(null);
 
-  // Unread tracking via localStorage
+  // Unread tracking via DB (portal_channel_members.last_seen_at)
   const [lastSeen, setLastSeen] = useState<Record<string, string>>({});
   const [latestMsg, setLatestMsg] = useState<Record<string, string>>({});
 
+  // Load last_seen_at from DB on mount — works cross-device
   useEffect(() => {
-    const stored = localStorage.getItem('portal_last_seen');
-    if (stored) setLastSeen(JSON.parse(stored));
-  }, []);
+    async function loadLastSeen() {
+      const { data } = await supabase
+        .from('portal_channel_members')
+        .select('channel_id, last_seen_at')
+        .eq('user_id', currentUser.id);
+      if (!data) return;
+      const seen: Record<string, string> = {};
+      for (const row of data) {
+        if (row.last_seen_at) seen[row.channel_id] = row.last_seen_at;
+      }
+      setLastSeen(seen);
+    }
+    loadLastSeen();
+  }, [currentUser.id]);
 
   // Seed initial unread state from DB — catches messages that arrived before page load
   useEffect(() => {
@@ -231,20 +243,33 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
   // Track previous channel so we can mark it as seen when leaving
   const prevChId = useRef<string | null>(null);
 
-  // Mark channels as seen when pathname changes (stamp both the one we're leaving and arriving at)
+  // Mark channels as seen when pathname changes — write to DB for cross-device sync
   useEffect(() => {
     const parts = pathname.split('/');
     const chId = parts[parts.length - 1];
     const now = new Date().toISOString();
-    setLastSeen(prev => {
-      const updated = { ...prev };
-      // Mark the channel we're arriving at as seen
-      if (chId && chId !== orgSlug) updated[chId] = now;
-      // Also mark the channel we just left as seen (clears the dot)
-      if (prevChId.current && prevChId.current !== chId) updated[prevChId.current] = now;
-      localStorage.setItem('portal_last_seen', JSON.stringify(updated));
-      return updated;
-    });
+
+    const toMark: string[] = [];
+    if (chId && chId !== orgSlug) toMark.push(chId);
+    if (prevChId.current && prevChId.current !== chId) toMark.push(prevChId.current);
+
+    if (toMark.length > 0) {
+      // Optimistic local update so dot clears immediately
+      setLastSeen(prev => {
+        const updated = { ...prev };
+        for (const id of toMark) updated[id] = now;
+        return updated;
+      });
+      // Persist each to DB
+      for (const id of toMark) {
+        fetch('/api/mark-seen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channelId: id }),
+        }).catch(() => {});
+      }
+    }
+
     prevChId.current = (chId && chId !== orgSlug) ? chId : null;
   }, [pathname, orgSlug]);
 
