@@ -126,7 +126,7 @@ export default function Markdown({ content, className }: Props) {
               <thead>
                 <tr>
                   {headers.map((h, hi) => (
-                    <th key={hi} style={{ padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap', background: 'var(--sidebar-bg)' }}>
+                    <th key={hi} style={{ padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap', background: 'var(--surface-hover)' }}>
                       {renderInline(h)}
                     </th>
                   ))}
