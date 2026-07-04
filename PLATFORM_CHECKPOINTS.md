@@ -44,14 +44,13 @@ Between checkpoints I keep going unless something is broken.
 
 ---
 
-## Phase 4 — Crons (defaults + NL)
+## Phase 4 — Crons (defaults + NL) ✅ DONE 2026-07-04
 
-| Checkpoint | What I show you | What you decide |
-|---|---|---|
-| Before starting | Confirm the 3 default crons and their schedules/messages | Add, remove, or change wording |
-| After NL parse route | Show 3 test examples: input text → parsed output | Approve or tune the prompt |
-| After UI update | Screenshot of the updated modal with NL field | Approve |
-| ✅ Done | Test end-to-end: type a cron in English → it appears in the list | Sign off |
+- `/api/agents/[agentId]/crons/parse` — POST {text} → GPT-4o-mini → {name, scheduleType, scheduleValue, message, tz}
+- OPENAI_API_KEY added to Coolify portal env
+- AddCronModal: NL input at top with Parse → button, auto-fills fields below
+- Edit button on each openclaw-cron row: opens modal pre-filled, delete+recreate on save
+- Default crons seeded by provisioner in Phase 1
 
 ---
 
