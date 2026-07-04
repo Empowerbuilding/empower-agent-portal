@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   const { data: channel, error: channelErr } = await supabase
     .from('portal_channels')
     .select('id, org_id')
-    .eq('channel_id', channelId)
+    .eq('id', channelId)
     .eq('org_id', orgId)
     .single()
 
