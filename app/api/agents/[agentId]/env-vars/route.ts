@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAgent } from '@/lib/agent-router';
+import { syncIntegrationToToolsMd, removeIntegrationFromToolsMd } from '@/lib/tools-md-writer';
 
 export const runtime = 'nodejs';
 
@@ -82,6 +83,13 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Sync to TOOLS.md in the agent's workspace (non-blocking — don't fail the request)
+  try {
+    await syncIntegrationToToolsMd(agentId, integrationId, vars as Record<string, string>);
+  } catch (e) {
+    console.warn('tools-md-writer sync failed (non-fatal):', e);
+  }
+
   return NextResponse.json({ success: true, saved: upserts.length });
 }
 
@@ -102,6 +110,13 @@ export async function DELETE(
     .delete()
     .eq('agent_id', agentId)
     .eq('integration_id', integrationId);
+
+  // Remove section from TOOLS.md (non-blocking)
+  try {
+    await removeIntegrationFromToolsMd(agentId, integrationId);
+  } catch (e) {
+    console.warn('tools-md-writer remove failed (non-fatal):', e);
+  }
 
   return NextResponse.json({ success: true });
 }

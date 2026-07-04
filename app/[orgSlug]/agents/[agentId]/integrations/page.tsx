@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { INTEGRATIONS, CATEGORIES, type Integration } from '@/lib/integrations';
 
@@ -12,6 +12,12 @@ interface SavedVar {
 }
 
 function isConnected(integration: Integration, savedVars: SavedVar[]): 'connected' | 'partial' | 'disconnected' {
+  // OAuth integrations: connected = has account email (written back after OAuth callback)
+  if (integration.authType === 'oauth') {
+    const saved = savedVars.filter(v => v.integration_id === integration.id);
+    const hasAccount = saved.some(v => v.key === 'GOOGLE_ACCOUNT_EMAIL' || v.key === 'MS_ACCOUNT_EMAIL');
+    return hasAccount ? 'connected' : 'disconnected';
+  }
   const required = integration.fields.filter(f => f.required);
   const saved = savedVars.filter(v => v.integration_id === integration.id);
   const savedKeys = new Set(saved.map(v => v.key));
@@ -115,6 +121,37 @@ function ConnectCard({
             </div>
           )}
 
+          {/* OAuth flow — show Connect button instead of key fields */}
+          {integration.authType === 'oauth' && integration.id === 'google' && (
+            <div style={{ marginTop: '14px' }}>
+              {status === 'connected' ? (
+                <div style={{ fontSize: '13px', color: '#22c55e', padding: '8px 0' }}>
+                  ✓ Connected — token written to workspace
+                </div>
+              ) : (
+                <a
+                  href={`/api/oauth/google?agentId=${agentId}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '10px',
+                    padding: '10px 16px', background: '#fff', border: '1px solid #dadce0',
+                    borderRadius: '6px', color: '#3c4043', fontWeight: 600, fontSize: '14px',
+                    textDecoration: 'none', cursor: 'pointer',
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.2 30.2 0 24 0 14.6 0 6.6 5.3 2.7 13.1l7.9 6.1C12.5 13 17.8 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 3-2.2 5.5-4.7 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-16.9z" />
+                    <path fill="#FBBC05" d="M10.6 28.5A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.1.8-4.5L2.4 13.4A23.8 23.8 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6.1z"/>
+                    <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.4-5.7c-2 1.4-4.6 2.2-7.8 2.2-6.2 0-11.5-4.2-13.4-9.8l-8 6.2C6.4 42.7 14.6 48 24 48z"/>
+                  </svg>
+                  Sign in with Google
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Standard API key form */}
+          {integration.authType !== 'oauth' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px' }}>
             {integration.fields.map(field => (
               <div key={field.key}>
@@ -138,7 +175,10 @@ function ConnectCard({
               </div>
             ))}
           </div>
+          )}
 
+          {integration.authType !== 'oauth' && (
+          <>
           {error && <div style={{ marginTop: '10px', fontSize: '12px', color: '#da3633', background: 'rgba(218,54,51,0.08)', borderRadius: '6px', padding: '7px 10px' }}>{error}</div>}
           {success && <div style={{ marginTop: '10px', fontSize: '12px', color: '#22c55e', background: 'rgba(34,197,94,0.08)', borderRadius: '6px', padding: '7px 10px' }}>✓ {success}</div>}
 
@@ -152,6 +192,8 @@ function ConnectCard({
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
+          </>
+          )}
         </div>
       )}
     </div>
@@ -165,10 +207,16 @@ export default function IntegrationsPage() {
   const orgSlug = params.orgSlug as string;
   const supabase = createClient();
 
+  const searchParams = useSearchParams();
+  const connectedParam = searchParams.get('connected');
+
   const [agentName, setAgentName] = useState('');
   const [savedVars, setSavedVars] = useState<SavedVar[]>([]);
   const [activeCategory, setActiveCategory] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [oauthBanner, setOauthBanner] = useState<string | null>(
+    connectedParam ? `✓ ${connectedParam.charAt(0).toUpperCase() + connectedParam.slice(1)} connected successfully` : null
+  );
 
   useEffect(() => {
     supabase.from('agents').select('display_name').eq('id', agentId).single()
@@ -215,6 +263,14 @@ export default function IntegrationsPage() {
             </div>
           </div>
         </div>
+
+        {/* OAuth success banner */}
+        {oauthBanner && (
+          <div style={{ marginBottom: '16px', padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', fontSize: '13px', color: '#22c55e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {oauthBanner}
+            <button onClick={() => setOauthBanner(null)} style={{ background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: '16px' }}>×</button>
+          </div>
+        )}
 
         {/* Category filter */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
