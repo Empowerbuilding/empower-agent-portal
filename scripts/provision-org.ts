@@ -158,7 +158,10 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       if (process.env.TELNYX_API_KEY) {
         const telnyx = await provisionTelnyxNumber();
         telnyxPhone = telnyx.phoneNumber;
-        await supabase.from('agents').update({ telnyx_phone_number: telnyxPhone }).eq('id', agent.id);
+        await supabase.from('agents').update({ 
+          telnyx_phone_number: telnyxPhone,
+          telnyx_connection_id: '2996679323039040927'  // Empower Shared Voice
+        }).eq('id', agent.id);
         console.log('[provision] Telnyx number assigned:', telnyxPhone);
       } else {
         console.warn('[provision] TELNYX_API_KEY not set — skipping phone provisioning');
