@@ -59,32 +59,39 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     if (!deleteMode) setSelected(new Set());
   }, [deleteMode]);
 
-  // Refresh messages on mount to catch any that arrived while away (Next.js router cache issue)
-  useEffect(() => {
-    async function refresh() {
-      const { data: rawData } = await supabase
-        .from('portal_messages')
-        .select('*')
-        .eq('channel_id', channel.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      const data = rawData ? [...rawData].reverse() : null;
-      if (data) {
-        setMessages(data as PortalMessage[]);
-        // If the last message is from the user, agent hasn't replied yet — restore typing indicator
-        const lastMsg = data[data.length - 1];
-        if (lastMsg && lastMsg.sender_type === 'user') {
-          setAgentTyping(true);
-          if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-          typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
-        } else {
-          setAgentTyping(false);
-        }
-        // Scroll to bottom after fresh fetch so response is visible
-        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+  // Shared refresh — fetches latest messages + restores typing indicator state
+  const refresh = async () => {
+    const { data: rawData } = await supabase
+      .from('portal_messages')
+      .select('*')
+      .eq('channel_id', channel.id)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    const data = rawData ? [...rawData].reverse() : null;
+    if (data) {
+      setMessages(data as PortalMessage[]);
+      const lastMsg = data[data.length - 1];
+      if (lastMsg && lastMsg.sender_type === 'user') {
+        setAgentTyping(true);
+        if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
+      } else {
+        setAgentTyping(false);
       }
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     }
+  };
+
+  // Refresh on mount (catch messages missed while away)
+  useEffect(() => {
     refresh();
+  }, [channel.id]);
+
+  // Refresh when app comes back to foreground (realtime socket drops in background on mobile)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [channel.id]);
 
   useEffect(() => {
