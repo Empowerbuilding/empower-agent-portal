@@ -352,7 +352,7 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                 <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Agent Portal</div>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '20px', padding: '4px', lineHeight: 1 }} aria-label="Close menu">✕</button>
+
           </div>
         </div>
 
