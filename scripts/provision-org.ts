@@ -11,6 +11,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { NodeSSH } from 'node-ssh';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 const PORTAL_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PORTAL_SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -343,19 +346,23 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     await ssh.execCommand(`cp -r ${TEMPLATE_PATH} ${workspacePath}`);
     await ssh.execCommand(`mkdir -p ${workspacePath}/memory ${workspacePath}/drafts ${workspacePath}/reports ${workspacePath}/proposals`);
 
-    // Clear org-specific runtime state (sessions, crons, delivery queue)
+    // Clear org-specific runtime state (sessions, crons, delivery queue, device pairing, sqlite)
     await ssh.execCommand(`rm -rf ${ocPath}/agents/main/sessions`);
     await ssh.execCommand(`rm -rf ${ocPath}/cron/*`);
     await ssh.execCommand(`rm -rf ${ocPath}/delivery-queue/*`);
-    await ssh.execCommand(`rm -rf ${ocPath}/devices/*`);
+    await ssh.execCommand(`rm -f ${ocPath}/devices/pending.json`);
+    await ssh.execCommand(`rm -f ${ocPath}/devices/paired.json`);
     await ssh.execCommand(`rm -rf ${ocPath}/identity/*`);
+    await ssh.execCommand(`rm -f ${ocPath}/state/openclaw.sqlite*`);  // Force fresh SQLite on first boot
 
     // ── STEP 6: Write bootstrap files ────────────────────────────────────────
     const files = buildBootstrapFiles(input);
     for (const [filename, content] of Object.entries(files)) {
-      // Write via python to avoid heredoc quoting issues
-      const escaped = content.replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`');
-      await ssh.execCommand(`python3 -c "import sys; open('${workspacePath}/${filename}', 'w').write(sys.stdin.read())" << '__PROVEOF__'\n${content}\n__PROVEOF__`);
+        // Write via temp file + putFile (SFTP) to avoid all shell quoting/escaping issues
+      const tmpPath = path.join(os.tmpdir(), `provision-${Date.now()}-${filename}`);
+      fs.writeFileSync(tmpPath, content, 'utf8');
+      await ssh.putFile(tmpPath, `${workspacePath}/${filename}`);
+      fs.unlinkSync(tmpPath);
     }
 
     // ── STEP 6b: Write openclaw.json for this org ────────────────────────────
@@ -405,10 +412,11 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       },
     };
 
-    // Use Python to write JSON safely (avoids shell quoting issues with keys containing special chars)
-    const ocConfigJson = JSON.stringify(ocConfig, null, 2);
-    // Write via sftp (node-ssh built-in) to avoid all shell escaping
-    await ssh.putContent(ocConfigJson, `${ocPath}/openclaw.json`);
+    // Write openclaw.json via temp file + putFile (SFTP) — avoids shell quoting issues
+    const ocConfigTmp = path.join(os.tmpdir(), `provision-openclaw-${input.orgSlug}.json`);
+    fs.writeFileSync(ocConfigTmp, JSON.stringify(ocConfig, null, 2), 'utf8');
+    await ssh.putFile(ocConfigTmp, `${ocPath}/openclaw.json`);
+    fs.unlinkSync(ocConfigTmp);
 
     // ── STEP 7: Start Docker container ───────────────────────────────────────
     // Fix ownership to node user (uid 1000) before starting
@@ -438,7 +446,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     for (const cron of DEFAULT_CRONS) {
       if (!enabledCrons.includes(cron.id)) continue;
       const tzFlag = cron.tz ? `--tz "${cron.tz}"` : '';
-      const cmd = `docker exec ${containerName} node /app/openclaw.mjs cron add --name "${cron.name}" ${cron.scheduleFlag} ${tzFlag} --session isolated "${cron.message}"`;
+      const cmd = `docker exec ${containerName} node /app/openclaw.mjs cron add --name "${cron.name}" ${cron.scheduleFlag} ${tzFlag} --session isolated --message "${cron.message.replace(/"/g, '\\"')}"`;  
       await ssh.execCommand(cmd);
     }
 
