@@ -10,6 +10,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { provisionTelnyxNumber } from './provision-telnyx-number';
 import { NodeSSH } from 'node-ssh';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -56,7 +57,8 @@ export interface ProvisionResult {
 
 const DEFAULT_CHANNELS = [
   { suffix: 'general',         display: 'General',          type: 'chat',     icon: '💬', position: 1 },
-  { suffix: 'sms-drafts',      display: 'SMS Drafts',       type: 'sms',      icon: '📱', position: 5 },
+  { suffix: 'sms-inbox',       display: 'SMS Inbox',        type: 'sms',      icon: '📱', position: 5 },
+  { suffix: 'sms-drafts',      display: 'SMS Drafts',       type: 'sms',      icon: '✉️',  position: 6 },
   { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',     icon: '🔔', position: 6 },
   { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',     icon: '📞', position: 7 },
 ];
@@ -149,6 +151,21 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       .select()
       .single();
     if (agentErr) throw new Error(`Create agent failed: ${agentErr.message}`);
+
+    // ── STEP 2b: Provision Telnyx phone number ───────────────────────────────
+    let telnyxPhone: string | null = null;
+    try {
+      if (process.env.TELNYX_API_KEY) {
+        const telnyx = await provisionTelnyxNumber();
+        telnyxPhone = telnyx.phoneNumber;
+        await supabase.from('agents').update({ telnyx_phone_number: telnyxPhone }).eq('id', agent.id);
+        console.log('[provision] Telnyx number assigned:', telnyxPhone);
+      } else {
+        console.warn('[provision] TELNYX_API_KEY not set — skipping phone provisioning');
+      }
+    } catch (e) {
+      console.error('[provision] Telnyx provisioning failed (non-fatal):', e);
+    }
 
     // ── STEP 3: Create default portal channels ───────────────────────────────
     const channelRows = DEFAULT_CHANNELS.map(ch => ({
