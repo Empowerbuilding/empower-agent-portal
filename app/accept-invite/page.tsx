@@ -141,7 +141,7 @@ function AcceptInviteContent() {
     background: 'var(--bg)',
     border: '1px solid var(--border)',
     borderRadius: '6px',
-    color: '#e6edf3',
+    color: 'var(--text)',
     fontSize: '14px',
     boxSizing: 'border-box',
     outline: 'none',
@@ -169,7 +169,7 @@ function AcceptInviteContent() {
       <div style={containerStyle}>
         <div style={cardStyle}>
           <div style={{ fontSize: '24px', marginBottom: '12px' }}>🔗</div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#e6edf3', marginBottom: '8px' }}>Invalid invite link</div>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>Invalid invite link</div>
           <div style={{ fontSize: '14px', color: '#7d8590' }}>This invite link is invalid or doesn't exist. Ask to be re-invited.</div>
         </div>
       </div>
@@ -181,7 +181,7 @@ function AcceptInviteContent() {
       <div style={containerStyle}>
         <div style={cardStyle}>
           <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏰</div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#e6edf3', marginBottom: '8px' }}>Invite expired</div>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>Invite expired</div>
           <div style={{ fontSize: '14px', color: '#7d8590' }}>This invite link has expired. Ask your admin to send a new one.</div>
         </div>
       </div>
@@ -193,9 +193,9 @@ function AcceptInviteContent() {
       <div style={containerStyle}>
         <div style={cardStyle}>
           <div style={{ fontSize: '24px', marginBottom: '12px' }}>✅</div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#e6edf3', marginBottom: '8px' }}>Already accepted</div>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>Already accepted</div>
           <div style={{ fontSize: '14px', color: '#7d8590', marginBottom: '20px' }}>This invite has already been used. Try logging in.</div>
-          <a href="/login" style={{ display: 'block', textAlign: 'center', padding: '10px', background: '#4c8bf0', borderRadius: '6px', color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: '14px' }}>
+          <a href="/login" style={{ display: 'block', textAlign: 'center', padding: '10px', background: 'var(--accent)', borderRadius: '6px', color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: '14px' }}>
             Go to Login
           </a>
         </div>
@@ -208,7 +208,7 @@ function AcceptInviteContent() {
       <div style={containerStyle}>
         <div style={cardStyle}>
           <div style={{ fontSize: '24px', marginBottom: '12px' }}>🎉</div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#e6edf3', marginBottom: '8px' }}>You're in!</div>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>You're in!</div>
           <div style={{ fontSize: '14px', color: '#7d8590' }}>Account created. Taking you to the portal…</div>
         </div>
       </div>
@@ -222,17 +222,17 @@ function AcceptInviteContent() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
           <Image src="/logo.png" alt="Empower" width={28} height={28} style={{ objectFit: 'contain', borderRadius: '4px' }} />
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#e6edf3' }}>{invite?.organizations.name}</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{invite?.organizations.name}</div>
             <div style={{ fontSize: '11px', color: '#7d8590' }}>Agent Portal</div>
           </div>
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#e6edf3', marginBottom: '6px' }}>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}>
             Accept your invitation
           </div>
           <div style={{ fontSize: '13px', color: '#7d8590' }}>
-            You've been invited to join as <strong style={{ color: '#8fb8f5' }}>{invite?.role}</strong>.
+            You've been invited to join as <strong style={{ color: 'var(--accent)' }}>{invite?.role}</strong>.
             Set up your account below.
           </div>
         </div>
@@ -296,7 +296,7 @@ function AcceptInviteContent() {
             disabled={submitting}
             style={{
               padding: '11px',
-              background: submitting ? 'var(--border)' : '#4c8bf0',
+              background: submitting ? 'var(--border)' : 'var(--accent)',
               border: 'none',
               borderRadius: '6px',
               color: '#fff',

@@ -288,7 +288,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                 {/* Avatar */}
                 <div style={{
-                  width: 36, height: 36, borderRadius: '50%', background: '#1a3a6a',
+                  width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-dim)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '14px', fontWeight: 700, color: '#fff', flexShrink: 0,
                 }}>
@@ -335,7 +335,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
         return (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
-            padding: '6px 16px', background: '#0a0e16',
+            padding: '6px 16px', background: 'var(--sidebar-bg)',
             borderBottom: '1px solid var(--border)', fontSize: '12px', flexShrink: 0,
           }}>
             <span style={{ color: 'var(--muted)' }}>
@@ -387,7 +387,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
 
       {/* Thread header — desktop only (mobile uses mobile-header + back button) */}
       <div className="desktop-only channel-header" style={{ alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-        <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#1a3a6a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
           {activeConv.contact_name.charAt(0).toUpperCase()}
         </div>
         <div>
@@ -473,8 +473,8 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             // Outbound sent
             return (
               <div key={msg.id} style={{ alignSelf: 'flex-end', maxWidth: '80%' }}>
-                <div style={{ background: '#1a3a6a', borderRadius: '18px 18px 4px 18px', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '14px', color: '#e6edf3', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
+                <div style={{ background: 'var(--accent-dim)', borderRadius: '18px 18px 4px 18px', padding: '10px 14px' }}>
+                  <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px', textAlign: 'right' }}>✓ {formatFull(msg.created_at)}</div>
               </div>

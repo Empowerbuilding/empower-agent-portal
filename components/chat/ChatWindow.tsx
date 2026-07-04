@@ -173,7 +173,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     const el = messageRefs.current[messageId];
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.style.background = '#4c8bf022';
+      el.style.background = 'var(--accent)22';
       setTimeout(() => { if (el) el.style.background = ''; }, 2000);
     }
   }
@@ -377,11 +377,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         })}
         {agentTyping && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
-            <div className="msg-avatar" style={{ background: '#1a1f2e', flexShrink: 0 }}><img src="/logo.png" alt="Agent" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '3px' }} /></div>
+            <div className="msg-avatar" style={{ background: 'var(--surface)', flexShrink: 0 }}><img src="/logo.png" alt="Agent" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '3px' }} /></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--surface)', borderRadius: '12px', padding: '10px 14px' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite' }} />
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.2s' }} />
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.4s' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', animation: 'typing-bounce 1s infinite' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.2s' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.4s' }} />
             </div>
           </div>
         )}

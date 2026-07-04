@@ -32,8 +32,8 @@ export default function LoginPage() {
     padding: '12px 16px',
     borderRadius: '8px',
     background: 'var(--sidebar-bg)',
-    border: '1px solid #1e2733',
-    color: '#e6edf3',
+    border: '1px solid var(--border)',
+    color: 'var(--text)',
     fontSize: '14px',
     outline: 'none',
     boxSizing: 'border-box',
@@ -55,7 +55,7 @@ export default function LoginPage() {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
             <Image src="/logo.png" alt="Empower Building AI" width={52} height={52} style={{ objectFit: 'contain' }} />
           </div>
-          <div style={{ fontSize: '22px', fontWeight: '700', color: '#e6edf3' }}>Empower Building AI</div>
+          <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text)' }}>Empower Building AI</div>
           <div style={{ fontSize: '13px', marginTop: '6px', color: '#7d8590' }}>Agent Portal</div>
         </div>
 
@@ -95,7 +95,7 @@ export default function LoginPage() {
               width: '100%',
               padding: '12px',
               borderRadius: '8px',
-              background: loading ? '#2f5aa8' : '#4c8bf0',
+              background: loading ? 'var(--accent-dim)' : 'var(--accent)',
               color: '#fff',
               fontWeight: '600',
               fontSize: '14px',

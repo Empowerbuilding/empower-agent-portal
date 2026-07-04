@@ -42,7 +42,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
   const approvalState = isSystem ? (message.metadata?.approval_state as string | undefined) : undefined;
 
   if (isSystem && approvalState) {
-    const stateColor = approvalState === 'sent' ? 'var(--accent)' : approvalState === 'approved' ? '#8fb8f5' : 'var(--muted)';
+    const stateColor = approvalState === 'sent' ? 'var(--accent)' : approvalState === 'approved' ? 'var(--accent)' : 'var(--muted)';
     const stateLabel = approvalState === 'sent' ? '✓ Sent' : approvalState === 'approved' ? '⏳ Queued' : '⏸ Pending';
     return (
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', margin: '6px 0' }}>
@@ -93,7 +93,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
       <div className="msg-body">
         {showHeader && (
           <div className="msg-meta">
-            <span style={{ color: isUser ? '#79c0ff' : '#8fb8f5', fontWeight: 600 }}>
+            <span style={{ color: isUser ? '#79c0ff' : 'var(--accent)', fontWeight: 600 }}>
               {message.sender_name ?? (isUser ? 'User' : 'Agent')}
             </span>
             <span>{formatTime(message.created_at)}</span>

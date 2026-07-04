@@ -124,7 +124,7 @@ export default function AgentFilesPage() {
       {/* File list sidebar */}
       <div style={{
         width: 200, flexShrink: 0, borderRight: '1px solid var(--border)',
-        background: '#0a0e16', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        background: 'var(--sidebar-bg)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
         // Mobile: full-width when in list view, hidden when in editor view
       }}
         className={mobileView === 'editor' ? 'agent-files-sidebar hidden-mobile' : 'agent-files-sidebar'}
@@ -239,7 +239,7 @@ export default function AgentFilesPage() {
               spellCheck={false}
               style={{
                 width: '100%', height: '100%', padding: '16px 20px',
-                background: 'var(--bg)', color: '#e6edf3',
+                background: 'var(--bg)', color: 'var(--text)',
                 border: 'none', outline: 'none', resize: 'none',
                 fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
                 fontSize: '13px', lineHeight: '1.6',

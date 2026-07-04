@@ -32,7 +32,7 @@ function ApprovalCard({ message, currentUser, selected, onSelect, deleteMode }: 
       .eq('id', message.id);
   }
 
-  const stateColor = approvalState === 'sent' ? 'var(--accent)' : approvalState === 'approved' ? '#8fb8f5' : 'var(--muted)';
+  const stateColor = approvalState === 'sent' ? 'var(--accent)' : approvalState === 'approved' ? 'var(--accent)' : 'var(--muted)';
   const stateLabel = approvalState === 'sent' ? '✓ Sent' : approvalState === 'approved' ? '⏳ Queued' : '⏸ Pending';
 
   return (

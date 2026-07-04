@@ -23,7 +23,7 @@ function highlight(text: string, query: string) {
   const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
   return parts.map((part, i) =>
     part.toLowerCase() === query.toLowerCase()
-      ? <mark key={i} style={{ background: '#4c8bf044', color: 'var(--text)', borderRadius: '2px', padding: '0 1px' }}>{part}</mark>
+      ? <mark key={i} style={{ background: 'var(--accent)44', color: 'var(--text)', borderRadius: '2px', padding: '0 1px' }}>{part}</mark>
       : part
   );
 }
@@ -117,7 +117,7 @@ export default function SearchModal({ channelId, channelName, onClose, onJumpTo 
                 }}>
                   {msg.sender_type === 'user' ? (msg.sender_name?.charAt(0) ?? 'U') : <img src="/logo.png" alt="Agent" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '2px' }} />}
                 </div>
-                <span style={{ fontWeight: 600, fontSize: '13px', color: msg.sender_type === 'user' ? '#79c0ff' : '#8fb8f5' }}>
+                <span style={{ fontWeight: 600, fontSize: '13px', color: msg.sender_type === 'user' ? '#79c0ff' : 'var(--accent)' }}>
                   {msg.sender_name ?? (msg.sender_type === 'user' ? 'User' : 'Agent')}
                 </span>
                 <span style={{ fontSize: '11px', color: 'var(--muted)', marginLeft: 'auto' }}>{formatDate(msg.created_at)}</span>
