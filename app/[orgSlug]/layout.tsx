@@ -31,8 +31,8 @@ export default async function OrgLayout({
 
   const { data: channels } = await supabase
     .from('portal_channels')
-    .select('*, agents(id, name, display_name, container_status)')
-    .in('id', channelIds).eq('active', true).order('position');
+    .select('*, agents(id, name, display_name, container_status, active)')
+    .in('id', channelIds).order('position');
 
   return (
     <OrgShell

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useMobileToolbar } from '@/context/MobileToolbar';
-import { IconMic, IconMicOff, IconPaperclip, IconSend } from '@/components/ui/Icons';
+import { IconMic, IconMicOff, IconPaperclip, IconSend, IconSearch } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import MessageBubble from './MessageBubble';
@@ -192,14 +192,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       );
     } else {
       setToolbar(
-        <ChatOverflowMenu
-          contextPct={contextPct}
-          resetting={resetting}
-          onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
-          onDeleteMode={() => setDeleteMode(true)}
-          onSearch={() => setSearchOpen(true)}
-          size={15}
-        />
+        <>
+          <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center' }}><IconSearch size={15} /></button>
+          <ChatOverflowMenu
+            contextPct={contextPct}
+            resetting={resetting}
+            onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
+            onDeleteMode={() => setDeleteMode(true)}
+            size={15}
+          />
+        </>
       );
     }
     return () => setToolbar(null);
@@ -343,14 +345,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text)' }}># {channel.display_name}</span>
             </div>
-            <ChatOverflowMenu
-              contextPct={contextPct}
-              resetting={resetting}
-              onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
-              onDeleteMode={() => setDeleteMode(true)}
-              onSearch={() => setSearchOpen(true)}
-              size={16}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.7 }}><IconSearch size={16} /></button>
+              <ChatOverflowMenu
+                contextPct={contextPct}
+                resetting={resetting}
+                onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
+                onDeleteMode={() => setDeleteMode(true)}
+                size={16}
+              />
+            </div>
           </>
         )}
       </div>

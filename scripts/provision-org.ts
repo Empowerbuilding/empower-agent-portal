@@ -332,24 +332,92 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       throw new Error(`Create portal user failed: ${puErr.message}`);
     }
 
-    // ── STEP 5: Clone workspace on DO server ─────────────────────────────────
+    // ── STEP 5: Clone full .openclaw dir from sales-agent ──────────────────
     await ssh.connect({ host: DO_SERVER, username: 'root', privateKeyPath: SSH_KEY_PATH });
 
-    await ssh.execCommand(`cp -r ${TEMPLATE_PATH} ${ocPath}/workspace`);
-    await ssh.execCommand(`mkdir -p ${ocPath}/workspace/memory ${ocPath}/workspace/drafts ${ocPath}/workspace/reports ${ocPath}/workspace/proposals`);
+    // Clone entire sales-agent .openclaw dir (brings plugins, extensions, config, state dirs)
+    await ssh.execCommand(`cp -r /root/.sales-agent ${ocPath}`);
+
+    // Replace workspace with fresh template
+    await ssh.execCommand(`rm -rf ${workspacePath}`);
+    await ssh.execCommand(`cp -r ${TEMPLATE_PATH} ${workspacePath}`);
+    await ssh.execCommand(`mkdir -p ${workspacePath}/memory ${workspacePath}/drafts ${workspacePath}/reports ${workspacePath}/proposals`);
+
+    // Clear org-specific runtime state (sessions, crons, delivery queue)
+    await ssh.execCommand(`rm -rf ${ocPath}/agents/main/sessions`);
+    await ssh.execCommand(`rm -rf ${ocPath}/cron/*`);
+    await ssh.execCommand(`rm -rf ${ocPath}/delivery-queue/*`);
+    await ssh.execCommand(`rm -rf ${ocPath}/devices/*`);
+    await ssh.execCommand(`rm -rf ${ocPath}/identity/*`);
 
     // ── STEP 6: Write bootstrap files ────────────────────────────────────────
     const files = buildBootstrapFiles(input);
     for (const [filename, content] of Object.entries(files)) {
-      await ssh.execCommand(`cat > ${workspacePath}/${filename} << 'PROVEOF'\n${content}\nPROVEOF`);
+      // Write via python to avoid heredoc quoting issues
+      const escaped = content.replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`');
+      await ssh.execCommand(`python3 -c "import sys; open('${workspacePath}/${filename}', 'w').write(sys.stdin.read())" << '__PROVEOF__'\n${content}\n__PROVEOF__`);
     }
 
+    // ── STEP 6b: Write openclaw.json for this org ────────────────────────────
+    const channelIds = [
+      `${input.orgSlug}-vanessa-general`,
+      ...input.reps.map(r => `${input.orgSlug}-vanessa-${r.name.toLowerCase().replace(/\s+/g, '-')}`),
+      `${input.orgSlug}-vanessa-sms-drafts`,
+    ];
+
+    const ocConfig = {
+      meta: { lastTouchedVersion: '2026.6.10' },
+      agents: {
+        defaults: {
+          model: 'google/gemini-3-flash-preview',
+          workspace: '/home/node/.openclaw/workspace',
+          timeoutSeconds: 600,
+          compaction: { mode: 'safeguard', truncateAfterCompaction: true, maxActiveTranscriptBytes: '500kb' },
+        },
+      },
+      tools: { profile: 'coding', exec: { security: 'full', ask: 'off' } },
+      commands: { native: 'auto', nativeSkills: 'auto', restart: true, ownerDisplay: 'raw' },
+      session: { dmScope: 'per-channel-peer' },
+      channels: {
+        discord: { enabled: false },
+        portal: {
+          enabled: true,
+          supabaseUrl: 'https://xqvnpcxyyxxxydescfzw.supabase.co',
+          supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          orgId: org.id,
+          agentName: input.agentDisplayName,
+          channelIds,
+          pollInterval: 1500,
+        },
+      },
+      gateway: {
+        port: 18789,
+        mode: 'local',
+        bind: 'loopback',
+        auth: { mode: 'token', token: `portal-agent-${input.orgSlug}-2026` },
+      },
+      plugins: {
+        entries: {
+          google: { enabled: true },
+          'openclaw-portal-channel': { enabled: true },
+          discord: { enabled: false },
+        },
+      },
+    };
+
+    // Use Python to write JSON safely (avoids shell quoting issues with keys containing special chars)
+    const ocConfigJson = JSON.stringify(ocConfig, null, 2);
+    // Write via sftp (node-ssh built-in) to avoid all shell escaping
+    await ssh.putContent(ocConfigJson, `${ocPath}/openclaw.json`);
+
     // ── STEP 7: Start Docker container ───────────────────────────────────────
+    // Fix ownership to node user (uid 1000) before starting
+    await ssh.execCommand(`chown -R 1000:1000 ${ocPath}`);
+
     const dockerRun = `docker run -d \
       --name ${containerName} \
       --restart unless-stopped \
-      -v ${ocPath}:${'/home/node/.openclaw'} \
-      -v ${workspacePath}:${'/home/node/.openclaw/workspace'} \
+      -v ${ocPath}:/home/node/.openclaw \
       ${AGENT_IMAGE}`;
     const { stderr: dockerErr } = await ssh.execCommand(dockerRun);
     if (dockerErr && !dockerErr.includes('already in use')) {
