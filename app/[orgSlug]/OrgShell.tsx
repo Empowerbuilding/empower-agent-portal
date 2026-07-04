@@ -68,17 +68,16 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
             }}
             aria-label="Open menu"
           >
-            ☰
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activeChannel ? `${activeChannel.icon ?? ''} ${activeChannel.display_name}` : org.name}
+              {activeChannel ? `# ${activeChannel.display_name}` : org.name}
             </div>
-            {activeChannel?.agents?.display_name && (
-              <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
-                {activeChannel.agents.display_name}
-              </div>
-            )}
           </div>
           {/* Channel-specific action buttons injected by child components (includes presence button) */}
           {toolbar && <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>{toolbar}</div>}
