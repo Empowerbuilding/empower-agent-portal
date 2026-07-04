@@ -432,14 +432,17 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       console.warn('Docker run warning:', dockerErr);
     }
 
-    // ── STEP 8: Wait for container ready (max 30s) ───────────────────────────
+    // ── STEP 8: Wait for container ready + gateway warmed (max 60s) ───────────
     let ready = false;
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000));
-      const { stdout } = await ssh.execCommand(`docker exec ${containerName} echo ok 2>/dev/null || echo nope`);
-      if (stdout.trim() === 'ok') { ready = true; break; }
+      const { stdout } = await ssh.execCommand(
+        `docker exec ${containerName} node /app/openclaw.mjs cron list 2>/dev/null | head -1 || echo nope`
+      );
+      // Ready when cron list returns (even 'No cron jobs' means gateway is up)
+      if (stdout.includes('No cron jobs') || stdout.includes('Name')) { ready = true; break; }
     }
-    if (!ready) throw new Error('Container did not start within 30s');
+    if (!ready) throw new Error('Container gateway did not start within 60s');
 
     // ── STEP 9: Seed default crons ───────────────────────────────────────────
     const enabledCrons = input.enabledCrons ?? ['morning-briefing', 'inbox-scan', 'eod-report'];

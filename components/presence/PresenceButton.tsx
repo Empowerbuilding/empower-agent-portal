@@ -42,6 +42,7 @@ interface Props {
 export default function PresenceButton({ orgId, size = 15, openDirection = 'up', align = 'right' }: Props) {
   const [users, setUsers] = useState<PresenceUser[]>([]);
   const [open, setOpen] = useState(false);
+  const [panelPos, setPanelPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const supabase = createClient();
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -103,7 +104,20 @@ export default function PresenceButton({ orgId, size = 15, openDirection = 'up',
     <div style={{ position: 'relative', flexShrink: 0 }}>
       <button
         ref={btnRef}
-        onClick={() => setOpen(o => !o)}
+        onClick={() => {
+          if (!open && btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect();
+            const panelW = Math.min(230, window.innerWidth - 16);
+            let left = r.right - panelW;
+            if (left < 8) left = 8;
+            if (openDirection === 'up') {
+              setPanelPos({ bottom: window.innerHeight - r.top + 8, left });
+            } else {
+              setPanelPos({ top: r.bottom + 8, left });
+            }
+          }
+          setOpen(o => !o);
+        }}
         title="Team presence"
         style={{
           position: 'relative', background: 'none', border: 'none', color: 'var(--muted)',
@@ -124,20 +138,18 @@ export default function PresenceButton({ orgId, size = 15, openDirection = 'up',
         )}
       </button>
 
-      {open && (
+      {open && panelPos && (
         <div
           ref={panelRef}
           className="presence-panel"
           style={{
-            // Explicit 'auto' (not undefined) on the inactive axis — the .presence-panel
-            // CSS class sets bottom: calc(100% + 8px) by default. An inline value of
-            // undefined does NOT clear that class rule, so openDirection="down" was
-            // leaving both top and bottom set simultaneously, squeezing the panel's
-            // height down to a sliver instead of showing the full member list.
-            top: openDirection === 'down' ? 'calc(100% + 8px)' : 'auto',
-            bottom: openDirection === 'up' ? 'calc(100% + 8px)' : 'auto',
-            right: align === 'right' ? 0 : 'auto',
-            left: align === 'left' ? 0 : 'auto',
+            position: 'fixed',
+            top: panelPos.top ?? 'auto',
+            bottom: panelPos.bottom ?? 'auto',
+            left: panelPos.left,
+            right: 'auto',
+            width: Math.min(230, window.innerWidth - 16),
+            zIndex: 9999,
           }}
         >
           <div className="presence-panel-header">Team ({users.length})</div>
