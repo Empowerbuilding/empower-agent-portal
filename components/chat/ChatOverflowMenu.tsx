@@ -39,7 +39,7 @@ export default function ChatOverflowMenu({ contextPct, resetting, onResetContext
       {open && (
         <div style={{
           position: 'absolute', right: 0, top: '100%', zIndex: 100,
-          background: '#161b22', border: '1px solid #30363d', borderRadius: '8px',
+          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px',
           padding: '6px', minWidth: '190px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
         }}>
           {color && (

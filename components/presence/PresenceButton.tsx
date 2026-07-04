@@ -156,7 +156,7 @@ export default function PresenceButton({ orgId, size = 15, openDirection = 'up',
                     </div>
                     <span style={{
                       width: 8, height: 8, borderRadius: '50%', background: presenceColor(state),
-                      border: '2px solid #161b22', boxSizing: 'content-box',
+                      border: '2px solid var(--surface)', boxSizing: 'content-box',
                       position: 'absolute', bottom: -1, right: -1,
                     }} />
                   </div>

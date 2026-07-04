@@ -69,8 +69,8 @@ function ConnectCard({
 
   return (
     <div style={{
-      background: '#0d1117',
-      border: `1px solid ${status === 'connected' ? 'rgba(34,197,94,0.3)' : '#21262d'}`,
+      background: 'var(--sidebar-bg)',
+      border: `1px solid ${status === 'connected' ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
       borderRadius: '10px',
       overflow: 'hidden',
       transition: 'border-color 0.15s',
@@ -92,7 +92,7 @@ function ConnectCard({
           {status === 'connected' && (
             <button
               onClick={e => { e.stopPropagation(); onDisconnect(integration.id); }}
-              style={{ background: 'none', border: '1px solid #30363d', borderRadius: '4px', color: 'var(--muted)', cursor: 'pointer', fontSize: '11px', padding: '2px 8px' }}
+              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--muted)', cursor: 'pointer', fontSize: '11px', padding: '2px 8px' }}
             >
               Remove
             </button>
@@ -103,7 +103,7 @@ function ConnectCard({
 
       {/* Expanded form */}
       {expanded && (
-        <div style={{ padding: '0 16px 16px', borderTop: '1px solid #21262d' }}>
+        <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
           {integration.note && (
             <div style={{ margin: '12px 0 8px', padding: '8px 10px', background: 'rgba(76,139,240,0.08)', borderRadius: '6px', fontSize: '12px', color: 'var(--muted)', lineHeight: 1.5 }}>
               ℹ️ {integration.note}
@@ -129,7 +129,7 @@ function ConnectCard({
                   autoComplete="off"
                   style={{
                     width: '100%', padding: '9px 12px',
-                    background: '#080c14', border: '1px solid #30363d', borderRadius: '6px',
+                    background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px',
                     color: 'var(--text)', fontSize: '13px', fontFamily: 'monospace',
                     boxSizing: 'border-box', outline: 'none',
                   }}
@@ -143,7 +143,7 @@ function ConnectCard({
           {success && <div style={{ marginTop: '10px', fontSize: '12px', color: '#22c55e', background: 'rgba(34,197,94,0.08)', borderRadius: '6px', padding: '7px 10px' }}>✓ {success}</div>}
 
           <div style={{ display: 'flex', gap: '8px', marginTop: '14px', justifyContent: 'flex-end' }}>
-            <button onClick={() => { setExpanded(false); setFields({}); setError(''); }} style={{ padding: '7px 14px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+            <button onClick={() => { setExpanded(false); setFields({}); setError(''); }} style={{ padding: '7px 14px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
             <button
               onClick={handleSave}
               disabled={saving || Object.keys(fields).length === 0}
@@ -224,7 +224,7 @@ export default function IntegrationsPage() {
               onClick={() => setActiveCategory(cat.id)}
               style={{
                 padding: '5px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
-                border: activeCategory === cat.id ? '1px solid var(--accent)' : '1px solid #30363d',
+                border: activeCategory === cat.id ? '1px solid var(--accent)' : '1px solid var(--border)',
                 background: activeCategory === cat.id ? 'rgba(76,139,240,0.15)' : 'none',
                 color: activeCategory === cat.id ? 'var(--accent)' : 'var(--muted)',
               }}

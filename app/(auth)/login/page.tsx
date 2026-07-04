@@ -31,7 +31,7 @@ export default function LoginPage() {
     width: '100%',
     padding: '12px 16px',
     borderRadius: '8px',
-    background: '#0d1117',
+    background: 'var(--sidebar-bg)',
     border: '1px solid #1e2733',
     color: '#e6edf3',
     fontSize: '14px',
@@ -45,7 +45,7 @@ export default function LoginPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#080c14',
+      background: 'var(--bg)',
       padding: '0 16px',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     }}>

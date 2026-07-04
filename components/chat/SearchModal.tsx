@@ -68,9 +68,9 @@ export default function SearchModal({ channelId, channelName, onClose, onJumpTo 
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 300, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '80px' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '12px', width: '100%', maxWidth: '600px', margin: '0 16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 120px)' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', width: '100%', maxWidth: '600px', margin: '0 16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 120px)' }}>
         {/* Search input */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderBottom: '1px solid #30363d' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
           <span style={{ fontSize: '18px', opacity: 0.5 }}>🔍</span>
           <input
             ref={inputRef}
@@ -82,7 +82,7 @@ export default function SearchModal({ channelId, channelName, onClose, onJumpTo 
           {query && (
             <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '2px 6px' }}>✕</button>
           )}
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', padding: '4px 8px' }}>Esc</button>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', padding: '4px 8px' }}>Esc</button>
         </div>
 
         {/* Results */}
@@ -104,8 +104,8 @@ export default function SearchModal({ channelId, channelName, onClose, onJumpTo 
             <div
               key={msg.id}
               onClick={() => { onJumpTo(msg.id); onClose(); }}
-              style={{ padding: '12px 16px', borderBottom: '1px solid #21262d', cursor: 'pointer', transition: 'background 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#21262d')}
+              style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--border)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>

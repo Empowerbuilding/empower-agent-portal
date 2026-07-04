@@ -24,7 +24,7 @@ function renderInline(text: string): React.ReactNode[] {
       parts.push(<a key={key++} href={match[3]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{match[2]}</a>);
     } else if (match[4]) parts.push(<strong key={key++}>{match[4]}</strong>);
     else if (match[5]) parts.push(<em key={key++}>{match[5]}</em>);
-    else if (match[6]) parts.push(<code key={key++} style={{ background: '#21262d', borderRadius: '3px', padding: '1px 5px', fontSize: '0.9em', fontFamily: 'monospace' }}>{match[6]}</code>);
+    else if (match[6]) parts.push(<code key={key++} style={{ background: 'var(--border)', borderRadius: '3px', padding: '1px 5px', fontSize: '0.9em', fontFamily: 'monospace' }}>{match[6]}</code>);
     last = match.index + match[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
@@ -61,7 +61,7 @@ export default function Markdown({ content, className }: Props) {
       const singleLine = line.match(/^```(.+)```$/);
       if (singleLine) {
         blocks.push(
-          <pre key={lineKey++} style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '6px', padding: '10px 12px', overflow: 'auto', fontSize: '13px', fontFamily: 'monospace', margin: '6px 0', whiteSpace: 'pre-wrap' }}>
+          <pre key={lineKey++} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px 12px', overflow: 'auto', fontSize: '13px', fontFamily: 'monospace', margin: '6px 0', whiteSpace: 'pre-wrap' }}>
             {singleLine[1]}
           </pre>
         );
@@ -69,7 +69,7 @@ export default function Markdown({ content, className }: Props) {
       }
       if (inCode) {
         blocks.push(
-          <pre key={lineKey++} style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '6px', padding: '10px 12px', overflow: 'auto', fontSize: '13px', fontFamily: 'monospace', margin: '6px 0', whiteSpace: 'pre-wrap' }}>
+          <pre key={lineKey++} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px 12px', overflow: 'auto', fontSize: '13px', fontFamily: 'monospace', margin: '6px 0', whiteSpace: 'pre-wrap' }}>
             {codeLines.join('\n')}
           </pre>
         );
@@ -88,7 +88,7 @@ export default function Markdown({ content, className }: Props) {
 
     // Horizontal rule --- or ***
     if (line.trim().match(/^(-{3,}|\*{3,})$/)) {
-      blocks.push(<hr key={lineKey++} style={{ border: 'none', borderTop: '1px solid #30363d', margin: '10px 0' }} />);
+      blocks.push(<hr key={lineKey++} style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '10px 0' }} />);
       i++; continue;
     }
 
@@ -126,7 +126,7 @@ export default function Markdown({ content, className }: Props) {
               <thead>
                 <tr>
                   {headers.map((h, hi) => (
-                    <th key={hi} style={{ padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid #30363d', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap', background: '#0d1117' }}>
+                    <th key={hi} style={{ padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap', background: 'var(--sidebar-bg)' }}>
                       {renderInline(h)}
                     </th>
                   ))}
@@ -135,7 +135,7 @@ export default function Markdown({ content, className }: Props) {
             )}
             <tbody>
               {bodyRows.map((row, ri) => (
-                <tr key={ri} style={{ borderBottom: '1px solid #21262d' }}>
+                <tr key={ri} style={{ borderBottom: '1px solid var(--border)' }}>
                   {parseTableRow(row).map((cell, ci) => (
                     <td key={ci} style={{ padding: '6px 10px', color: 'var(--text)', verticalAlign: 'top' }}>
                       {renderInline(cell)}

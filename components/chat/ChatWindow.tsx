@@ -317,11 +317,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       {/* Confirm modal */}
       {confirming && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '12px', padding: '24px', width: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', width: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>Delete {selected.size} message{selected.size !== 1 ? 's' : ''}?</div>
             <div style={{ fontSize: '13px', color: 'var(--muted)' }}>This can't be undone.</div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setConfirming(false)} style={{ padding: '8px 16px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+              <button onClick={() => setConfirming(false)} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
               <button onClick={deleteSelected} style={{ padding: '8px 16px', background: '#da3633', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}>Delete</button>
             </div>
           </div>
@@ -378,7 +378,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         {agentTyping && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
             <div className="msg-avatar" style={{ background: '#1a1f2e', flexShrink: 0 }}><img src="/logo.png" alt="Agent" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '3px' }} /></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#161b22', borderRadius: '12px', padding: '10px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--surface)', borderRadius: '12px', padding: '10px 14px' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite' }} />
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.2s' }} />
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8fb8f5', display: 'inline-block', animation: 'typing-bounce 1s infinite 0.4s' }} />
@@ -399,12 +399,12 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
 
       {/* Delete action bar */}
       {deleteMode && (
-        <div style={{ padding: '10px 16px', background: '#161b22', borderTop: '1px solid #30363d', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ padding: '10px 16px', background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{selected.size} selected</span>
           <button
             onClick={() => selected.size > 0 && setConfirming(true)}
             disabled={selected.size === 0}
-            style={{ padding: '8px 20px', background: selected.size > 0 ? '#da3633' : '#30363d', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: selected.size > 0 ? 'pointer' : 'not-allowed', fontSize: '13px' }}
+            style={{ padding: '8px 20px', background: selected.size > 0 ? '#da3633' : 'var(--border)', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: selected.size > 0 ? 'pointer' : 'not-allowed', fontSize: '13px' }}
           >
             Delete{selected.size > 0 ? ` (${selected.size})` : ''}
           </button>
@@ -424,14 +424,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 {stagedFile.file.type.startsWith('image/') ? (
                   <img src={stagedFile.previewUrl} alt={stagedFile.file.name}
-                    style={{ height: '48px', width: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #30363d' }} />
+                    style={{ height: '48px', width: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)' }} />
                 ) : (
-                  <div style={{ height: '48px', display: 'flex', alignItems: 'center', gap: '4px', background: '#21262d', borderRadius: '6px', padding: '0 8px', fontSize: '12px', color: 'var(--muted)', maxWidth: '120px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                  <div style={{ height: '48px', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--border)', borderRadius: '6px', padding: '0 8px', fontSize: '12px', color: 'var(--muted)', maxWidth: '120px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                     📎 {stagedFile.file.name}
                   </div>
                 )}
                 <button onClick={clearStagedFile}
-                  style={{ position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', borderRadius: '50%', background: '#30363d', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+                  style={{ position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', borderRadius: '50%', background: 'var(--border)', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
                   ✕
                 </button>
               </div>

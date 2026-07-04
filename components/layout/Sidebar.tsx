@@ -66,7 +66,7 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={onClose}>
       <div style={{
-        background: '#161b22', border: '1px solid #30363d', borderRadius: '12px',
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px',
         padding: '24px', width: '300px', display: 'flex', flexDirection: 'column', gap: '16px',
       }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>Add Channel</div>
@@ -78,7 +78,7 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
           onChange={e => setName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleCreate()}
           style={{
-            background: '#0d1117', border: '1px solid #30363d',
+            background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
             borderRadius: '6px', color: 'var(--text)', padding: '10px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box',
           }}
         />
@@ -87,8 +87,8 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
           {(['chat', 'feed', 'approval'] as const).map(t => (
             <button key={t} onClick={() => setType(t)} style={{
               flex: 1, padding: '6px 4px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
-              border: type === t ? '1px solid var(--accent)' : '1px solid #30363d',
-              background: type === t ? 'rgba(76,139,240,0.15)' : '#0d1117',
+              border: type === t ? '1px solid var(--accent)' : '1px solid var(--border)',
+              background: type === t ? 'rgba(76,139,240,0.15)' : 'var(--sidebar-bg)',
               color: type === t ? 'var(--accent)' : 'var(--muted)',
               fontWeight: type === t ? 600 : 400,
             }}>
@@ -98,7 +98,7 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
         </div>
 
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>
             Cancel
           </button>
           <button onClick={handleCreate} disabled={!name.trim() || saving} style={{
@@ -129,17 +129,17 @@ function RenameChannelModal({ channel, onClose, onRenamed }: { channel: PortalCh
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '12px', padding: '24px', width: '300px', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', width: '300px', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>Rename Channel</div>
         <input
           autoFocus
           value={name}
           onChange={e => setName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleRename()}
-          style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--text)', padding: '10px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+          style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text)', padding: '10px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
         />
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
           <button onClick={handleRename} disabled={!name.trim() || saving} style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px', opacity: !name.trim() || saving ? 0.5 : 1 }}>
             {saving ? 'Saving…' : 'Rename'}
           </button>
@@ -168,11 +168,11 @@ function ChannelGearMenu({ onRename, onDelete, onClose }: { onRename: () => void
   return (
     <div ref={ref} style={{
       position: 'absolute', right: 0, top: '100%', zIndex: 100,
-      background: '#161b22', border: '1px solid #30363d', borderRadius: '6px',
+      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px',
       padding: '4px', minWidth: '140px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
     }}>
       <button onClick={() => { onRename(); onClose(); }} style={{ ...itemStyle, color: 'var(--text)' }}
-        onMouseEnter={e => (e.currentTarget.style.background = '#21262d')}
+        onMouseEnter={e => (e.currentTarget.style.background = 'var(--border)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'none')}
       >
         Rename channel

@@ -26,7 +26,7 @@ function AttachmentPreview({ attachments }: { attachments: any[] }) {
         return isImage ? (
           <img key={i} src={a.url} alt={a.name ?? 'attachment'} style={{ maxWidth: '240px', maxHeight: '200px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer' }} onClick={() => window.open(a.url, '_blank')} />
         ) : (
-          <a key={i} href={a.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#21262d', borderRadius: '6px', padding: '6px 10px', color: 'var(--text)', textDecoration: 'none', fontSize: '13px' }}>
+          <a key={i} href={a.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--border)', borderRadius: '6px', padding: '6px 10px', color: 'var(--text)', textDecoration: 'none', fontSize: '13px' }}>
             📎 {a.name ?? 'File'}
           </a>
         );
@@ -51,7 +51,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
             style={{ cursor: 'pointer', flexShrink: 0, accentColor: 'var(--accent)', marginTop: '14px' }} />
         )}
         <div style={{
-          flex: 1, minWidth: 0, background: '#0d1117', border: '1px solid #30363d', borderRadius: '10px',
+          flex: 1, minWidth: 0, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '10px',
           padding: '12px 14px', maxWidth: '560px', wordBreak: 'break-word', overflowWrap: 'anywhere',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>

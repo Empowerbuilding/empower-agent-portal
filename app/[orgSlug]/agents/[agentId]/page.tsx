@@ -123,13 +123,13 @@ export default function AgentFilesPage() {
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* File list sidebar */}
       <div style={{
-        width: 200, flexShrink: 0, borderRight: '1px solid #21262d',
+        width: 200, flexShrink: 0, borderRight: '1px solid var(--border)',
         background: '#0a0e16', display: 'flex', flexDirection: 'column', overflow: 'hidden',
         // Mobile: full-width when in list view, hidden when in editor view
       }}
         className={mobileView === 'editor' ? 'agent-files-sidebar hidden-mobile' : 'agent-files-sidebar'}
       >
-        <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid #21262d' }}>
+        <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {agentName || 'Agent'} — Files
           </div>
@@ -160,7 +160,7 @@ export default function AgentFilesPage() {
           ))}
         </div>
 
-        <div style={{ padding: '10px 14px', borderTop: '1px solid #21262d' }}>
+        <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)' }}>
           <button
             onClick={() => router.push(`/${orgSlug}/settings`)}
             style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', padding: 0 }}
@@ -176,9 +176,9 @@ export default function AgentFilesPage() {
       >
         {/* Toolbar */}
         <div style={{
-          padding: '10px 16px', borderBottom: '1px solid #21262d',
+          padding: '10px 16px', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-          background: '#0d1117', flexShrink: 0,
+          background: 'var(--sidebar-bg)', flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* Mobile back button */}
@@ -202,7 +202,7 @@ export default function AgentFilesPage() {
               onClick={saveFile}
               disabled={!isDirty || saving || !activeFile}
               style={{
-                padding: '7px 16px', background: isDirty ? 'var(--accent)' : '#21262d',
+                padding: '7px 16px', background: isDirty ? 'var(--accent)' : 'var(--border)',
                 border: 'none', borderRadius: '6px', color: isDirty ? '#fff' : 'var(--muted)',
                 fontWeight: 700, cursor: isDirty && !saving ? 'pointer' : 'not-allowed',
                 fontSize: '13px', opacity: saving ? 0.7 : 1, transition: 'all 0.15s',
@@ -219,7 +219,7 @@ export default function AgentFilesPage() {
             padding: '8px 16px', fontSize: '12px', flexShrink: 0,
             background: saveError ? 'rgba(218,54,51,0.08)' : 'rgba(34,197,94,0.08)',
             color: saveError ? '#da3633' : '#22c55e',
-            borderBottom: '1px solid #21262d',
+            borderBottom: '1px solid var(--border)',
           }}>
             {saveError ? `⚠ ${saveError}` : `✓ ${saveNote}`}
           </div>
@@ -239,7 +239,7 @@ export default function AgentFilesPage() {
               spellCheck={false}
               style={{
                 width: '100%', height: '100%', padding: '16px 20px',
-                background: '#080c14', color: '#e6edf3',
+                background: 'var(--bg)', color: '#e6edf3',
                 border: 'none', outline: 'none', resize: 'none',
                 fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
                 fontSize: '13px', lineHeight: '1.6',

@@ -123,13 +123,13 @@ function AddCronModal({ agents, orgId, onClose, onCreated }: {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
-      <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>New Automation</div>
 
         {agents.length > 1 && (
           <div>
             <label style={{ display: 'block', fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>Agent</label>
-            <select value={agentId} onChange={e => setAgentId(e.target.value)} style={{ width: '100%', padding: '9px 12px', background: '#080c14', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--text)', fontSize: '14px' }}>
+            <select value={agentId} onChange={e => setAgentId(e.target.value)} style={{ width: '100%', padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text)', fontSize: '14px' }}>
               {agents.map(a => <option key={a.id} value={a.id}>{a.display_name}</option>)}
             </select>
           </div>
@@ -137,19 +137,19 @@ function AddCronModal({ agents, orgId, onClose, onCreated }: {
 
         <div>
           <label style={{ display: 'block', fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>Name</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Weekly Summary" style={{ width: '100%', padding: '9px 12px', background: '#080c14', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--text)', fontSize: '14px', boxSizing: 'border-box' }} />
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Weekly Summary" style={{ width: '100%', padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text)', fontSize: '14px', boxSizing: 'border-box' }} />
         </div>
 
         <div>
           <label style={{ display: 'block', fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>Schedule</label>
           <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
             {(['every', 'cron', 'at'] as const).map(t => (
-              <button key={t} onClick={() => setScheduleType(t)} style={{ flex: 1, padding: '6px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', border: scheduleType === t ? '1px solid var(--accent)' : '1px solid #30363d', background: scheduleType === t ? 'rgba(76,139,240,0.15)' : '#080c14', color: scheduleType === t ? 'var(--accent)' : 'var(--muted)' }}>
+              <button key={t} onClick={() => setScheduleType(t)} style={{ flex: 1, padding: '6px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', border: scheduleType === t ? '1px solid var(--accent)' : '1px solid var(--border)', background: scheduleType === t ? 'rgba(76,139,240,0.15)' : 'var(--bg)', color: scheduleType === t ? 'var(--accent)' : 'var(--muted)' }}>
                 {t === 'every' ? 'Repeat' : t === 'cron' ? 'Custom' : 'One-time'}
               </button>
             ))}
           </div>
-          <input value={scheduleValue} onChange={e => setScheduleValue(e.target.value)} placeholder={schedPlaceholders[scheduleType]} style={{ width: '100%', padding: '9px 12px', background: '#080c14', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--text)', fontSize: '13px', fontFamily: 'monospace', boxSizing: 'border-box' }} />
+          <input value={scheduleValue} onChange={e => setScheduleValue(e.target.value)} placeholder={schedPlaceholders[scheduleType]} style={{ width: '100%', padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text)', fontSize: '13px', fontFamily: 'monospace', boxSizing: 'border-box' }} />
           <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>
             {scheduleType === 'every' && 'e.g. 30m = every 30 minutes · 2h = every 2 hours · 1d = daily'}
             {scheduleType === 'cron' && 'Standard cron expression (minute hour dom month dow)'}
@@ -159,13 +159,13 @@ function AddCronModal({ agents, orgId, onClose, onCreated }: {
 
         <div>
           <label style={{ display: 'block', fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>Message to agent</label>
-          <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder="What should the agent do? e.g. Send the weekly pipeline summary to the team" style={{ width: '100%', padding: '9px 12px', background: '#080c14', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--text)', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
+          <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder="What should the agent do? e.g. Send the weekly pipeline summary to the team" style={{ width: '100%', padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text)', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
         </div>
 
         {error && <div style={{ fontSize: '12px', color: '#da3633', background: 'rgba(218,54,51,0.08)', borderRadius: '6px', padding: '8px 10px' }}>{error}</div>}
 
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
           <button onClick={handleCreate} disabled={saving} style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px', opacity: saving ? 0.6 : 1 }}>
             {saving ? 'Creating…' : 'Create'}
           </button>
@@ -282,8 +282,8 @@ export default function CronsPage() {
 
                   return (
                     <div key={job.id} style={{
-                      background: '#0d1117',
-                      border: `1px solid ${hasError ? 'rgba(218,54,51,0.3)' : !job.enabled ? '#21262d' : '#21262d'}`,
+                      background: 'var(--sidebar-bg)',
+                      border: `1px solid ${hasError ? 'rgba(218,54,51,0.3)' : !job.enabled ? 'var(--border)' : 'var(--border)'}`,
                       borderRadius: '8px', padding: '14px 16px',
                       opacity: job.enabled === false ? 0.6 : 1,
                     }}>
@@ -291,8 +291,8 @@ export default function CronsPage() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{label}</span>
-                            {!job.enabled && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '10px', background: '#21262d', color: 'var(--muted)', fontWeight: 600 }}>DISABLED</span>}
-                            {isExternal && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '10px', background: '#21262d', color: 'var(--muted)', fontWeight: 600 }}>EXTERNAL</span>}
+                            {!job.enabled && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '10px', background: 'var(--border)', color: 'var(--muted)', fontWeight: 600 }}>DISABLED</span>}
+                            {isExternal && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '10px', background: 'var(--border)', color: 'var(--muted)', fontWeight: 600 }}>EXTERNAL</span>}
                           </div>
                           {description && <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '3px' }}>{description}</div>}
                           <div style={{ display: 'flex', gap: '14px', marginTop: '8px', flexWrap: 'wrap' }}>
@@ -310,13 +310,13 @@ export default function CronsPage() {
                             <button
                               onClick={() => toggleCron(job, job.enabled ? 'disable' : 'enable')}
                               disabled={toggling === job.id}
-                              style={{ padding: '5px 10px', background: 'none', border: '1px solid #30363d', borderRadius: '5px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                              style={{ padding: '5px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: '5px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
                             >
                               {toggling === job.id ? '…' : job.enabled ? 'Disable' : 'Enable'}
                             </button>
                             <button
                               onClick={() => deleteCron(job)}
-                              style={{ padding: '5px 8px', background: 'none', border: '1px solid #30363d', borderRadius: '5px', color: '#da3633', cursor: 'pointer', fontSize: '13px' }}
+                              style={{ padding: '5px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: '5px', color: '#da3633', cursor: 'pointer', fontSize: '13px' }}
                               title="Delete"
                             >
                               ×

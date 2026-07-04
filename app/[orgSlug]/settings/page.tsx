@@ -239,7 +239,7 @@ export default function SettingsPage() {
       {/* Notifications */}
       <section style={{ marginBottom: '40px' }}>
         <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Notifications</div>
-        <div style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '14px 16px' }}>
+        <div style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>Push Notifications</div>
@@ -257,7 +257,7 @@ export default function SettingsPage() {
                 <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'rgba(76,139,240,0.15)', color: 'var(--accent)', fontWeight: 700 }}>● ON</span>
               )}
               {notifStatus === 'disabled' && (
-                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: '#21262d', color: 'var(--muted)', fontWeight: 700 }}>○ OFF</span>
+                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'var(--border)', color: 'var(--muted)', fontWeight: 700 }}>○ OFF</span>
               )}
               {notifStatus === 'blocked' && (
                 <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'rgba(218,54,51,0.15)', color: '#da3633', fontWeight: 700 }}>⊘ BLOCKED</span>
@@ -269,7 +269,7 @@ export default function SettingsPage() {
                   disabled={notifToggling}
                   style={{
                     padding: '7px 14px', border: 'none', borderRadius: '6px',
-                    background: notifStatus === 'enabled' ? '#21262d' : 'var(--accent)',
+                    background: notifStatus === 'enabled' ? 'var(--border)' : 'var(--accent)',
                     color: notifStatus === 'enabled' ? 'var(--muted)' : '#fff',
                     fontWeight: 700, cursor: notifToggling ? 'wait' : 'pointer', fontSize: '13px',
                     opacity: notifToggling ? 0.6 : 1,
@@ -301,7 +301,7 @@ export default function SettingsPage() {
       {/* Install App */}
       <section style={{ marginBottom: '40px' }}>
         <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>App</div>
-        <div style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>Install to Home Screen</div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Add the portal as an app on your device</div>
@@ -333,7 +333,7 @@ export default function SettingsPage() {
             onChange={e => setOrgNameEdit(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && saveOrgName()}
             style={{
-              flex: 1, background: '#0d1117', border: '1px solid #30363d', borderRadius: '6px',
+              flex: 1, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '6px',
               color: 'var(--text)', padding: '9px 12px', fontSize: '14px',
             }}
           />
@@ -355,7 +355,7 @@ export default function SettingsPage() {
       {showInviteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
           onClick={() => setShowInviteModal(false)}>
-          <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: '16px' }}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: '16px' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>Invite Team Member</div>
 
@@ -368,7 +368,7 @@ export default function SettingsPage() {
                 onChange={e => setInviteEmail(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendInvite()}
                 placeholder="colleague@company.com"
-                style={{ width: '100%', padding: '9px 12px', background: '#0d1117', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--text)', fontSize: '14px', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '9px 12px', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text)', fontSize: '14px', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -378,8 +378,8 @@ export default function SettingsPage() {
                 {(['rep', 'admin'] as const).map(r => (
                   <button key={r} onClick={() => setInviteRole(r)} style={{
                     flex: 1, padding: '8px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 600,
-                    border: inviteRole === r ? '1px solid var(--accent)' : '1px solid #30363d',
-                    background: inviteRole === r ? 'rgba(76,139,240,0.15)' : '#0d1117',
+                    border: inviteRole === r ? '1px solid var(--accent)' : '1px solid var(--border)',
+                    background: inviteRole === r ? 'rgba(76,139,240,0.15)' : 'var(--sidebar-bg)',
                     color: inviteRole === r ? 'var(--accent)' : 'var(--muted)',
                   }}>
                     {r === 'rep' ? 'Rep' : 'Admin'}
@@ -395,7 +395,7 @@ export default function SettingsPage() {
             {inviteSuccess && <div style={{ fontSize: '13px', color: '#22c55e', background: 'rgba(34,197,94,0.1)', borderRadius: '6px', padding: '8px 10px' }}>✓ {inviteSuccess}</div>}
 
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowInviteModal(false); setInviteError(''); setInviteEmail(''); }} style={{ padding: '8px 16px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+              <button onClick={() => { setShowInviteModal(false); setInviteError(''); setInviteEmail(''); }} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
               <button onClick={sendInvite} disabled={!inviteEmail.trim() || inviteSending} style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px', opacity: !inviteEmail.trim() || inviteSending ? 0.5 : 1 }}>
                 {inviteSending ? 'Sending…' : 'Send Invite'}
               </button>
@@ -416,7 +416,7 @@ export default function SettingsPage() {
           {users.map(u => (
             <div key={u.id} style={{
               display: 'flex', alignItems: 'center', gap: '12px',
-              background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '12px 14px',
+              background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px',
             }}>
               <div style={{
                 width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
@@ -431,7 +431,7 @@ export default function SettingsPage() {
               </div>
               <span style={{
                 fontSize: '11px', padding: '2px 8px', borderRadius: '12px',
-                background: u.role === 'owner' ? 'rgba(76,139,240,0.15)' : '#21262d',
+                background: u.role === 'owner' ? 'rgba(76,139,240,0.15)' : 'var(--border)',
                 color: u.role === 'owner' ? 'var(--accent)' : 'var(--muted)',
                 fontWeight: 600, flexShrink: 0,
               }}>
@@ -455,12 +455,12 @@ export default function SettingsPage() {
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Pending Invites</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {invites.filter(i => !i.accepted_at && new Date(i.expires_at) > new Date()).map(inv => (
-              <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '12px 14px' }}>
+              <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>{inv.email}</div>
                   <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>Expires {new Date(inv.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                 </div>
-                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: '#21262d', color: 'var(--muted)', fontWeight: 600, flexShrink: 0 }}>{inv.role}</span>
+                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'var(--border)', color: 'var(--muted)', fontWeight: 600, flexShrink: 0 }}>{inv.role}</span>
                 <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 600, flexShrink: 0 }}>Pending</span>
                 <button onClick={() => revokeInvite(inv.id)} title="Revoke invite" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#da3633', fontSize: '16px', padding: '2px 4px', flexShrink: 0 }}>×</button>
               </div>
@@ -477,7 +477,7 @@ export default function SettingsPage() {
             {agents.map(agent => {
               const statusColor = agent.container_status === 'running' ? '#22c55e' : agent.container_status === 'unhealthy' ? '#f59e0b' : '#ef4444';
               return (
-                <div key={agent.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#0d1117', border: '1px solid #21262d', borderRadius: '8px', padding: '12px 14px' }}>
+                <div key={agent.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px' }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, flexShrink: 0, display: 'inline-block' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{agent.display_name}</div>
@@ -485,13 +485,13 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => router.push(`/${orgSlug}/agents/${agent.id}`)}
-                    style={{ padding: '6px 12px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}
+                    style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}
                   >
                     Files
                   </button>
                   <button
                     onClick={() => router.push(`/${orgSlug}/agents/${agent.id}/integrations`)}
-                    style={{ padding: '6px 12px', background: 'none', border: '1px solid #30363d', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}
+                    style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}
                   >
                     Integrations
                   </button>

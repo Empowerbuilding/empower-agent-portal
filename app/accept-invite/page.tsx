@@ -118,7 +118,7 @@ function AcceptInviteContent() {
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
-    background: '#080c14',
+    background: 'var(--bg)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -127,8 +127,8 @@ function AcceptInviteContent() {
   };
 
   const cardStyle: React.CSSProperties = {
-    background: '#0d1117',
-    border: '1px solid #21262d',
+    background: 'var(--sidebar-bg)',
+    border: '1px solid var(--border)',
     borderRadius: '12px',
     padding: '36px',
     width: '100%',
@@ -138,8 +138,8 @@ function AcceptInviteContent() {
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '10px 12px',
-    background: '#080c14',
-    border: '1px solid #30363d',
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
     borderRadius: '6px',
     color: '#e6edf3',
     fontSize: '14px',
@@ -296,7 +296,7 @@ function AcceptInviteContent() {
             disabled={submitting}
             style={{
               padding: '11px',
-              background: submitting ? '#21262d' : '#4c8bf0',
+              background: submitting ? 'var(--border)' : '#4c8bf0',
               border: 'none',
               borderRadius: '6px',
               color: '#fff',
@@ -318,7 +318,7 @@ function AcceptInviteContent() {
 export default function AcceptInvitePage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', background: '#080c14', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ color: '#7d8590', fontSize: '14px' }}>Loading…</div>
       </div>
     }>
