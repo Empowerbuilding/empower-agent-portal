@@ -51,7 +51,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
             style={{ cursor: 'pointer', flexShrink: 0, accentColor: 'var(--accent)', marginTop: '14px' }} />
         )}
         <div style={{
-          flex: 1, minWidth: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px',
+          flex: 1, minWidth: 0, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px',
           padding: '12px 14px', maxWidth: '560px', wordBreak: 'break-word', overflowWrap: 'anywhere',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
