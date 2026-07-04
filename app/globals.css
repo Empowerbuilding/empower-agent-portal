@@ -5,17 +5,17 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #080c14;
-  --sidebar-bg: #0d1117;
-  --surface: #161b22;
-  --surface-hover: #1c2230;
-  --border: #21262d;
-  --text: #e6edf3;
-  --muted: #7d8590;
-  --accent: #4c8bf0;
-  --accent-dim: #2f5aa8;
-  --user-bubble: #2a5aa0;
-  --agent-bubble: #161b22;
+  --bg: #313338;
+  --sidebar-bg: #2b2d31;
+  --surface: #383a40;
+  --surface-hover: #404249;
+  --border: #3a3b42;
+  --text: #dbdee1;
+  --muted: #80848e;
+  --accent: #5865f2;
+  --accent-dim: #4752c4;
+  --user-bubble: #5865f2;
+  --agent-bubble: #383a40;
   --radius: 16px;
 }
 
@@ -122,7 +122,7 @@ html, body {
 .channel-header {
   padding: 0 20px;
   height: 52px;
-  background: #0b0f18;
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -264,8 +264,8 @@ html, body {
   overflow-x: hidden;
 }
 /* Code blocks get a subtle background */
-.msg-bubble pre { background: #1e2433; border-radius: 6px; padding: 10px 14px; margin: 4px 0; font-size: 13px; }
-.msg-bubble code:not(pre code) { background: #1e2433; border-radius: 3px; padding: 1px 5px; font-size: 13px; }
+.msg-bubble pre { background: #2b2d31; border-radius: 6px; padding: 10px 14px; margin: 4px 0; font-size: 13px; }
+.msg-bubble code:not(pre code) { background: #2b2d31; border-radius: 3px; padding: 1px 5px; font-size: 13px; }
 .msg-bubble.system {
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
@@ -352,7 +352,7 @@ html, body {
 .approval-reply-area { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .approval-reply-area textarea {
   width: 100%; padding: 10px 14px; border-radius: 12px;
-  background: #1c2230; border: 1px solid var(--border);
+  background: var(--surface); border: 1px solid var(--border);
   color: var(--text); font-size: 14px; resize: none;
   font-family: inherit; outline: none;
 }
@@ -370,8 +370,8 @@ html, body {
   bottom: calc(100% + 8px);
   right: 0;
   z-index: 100;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   width: min(240px, calc(100vw - 24px));
   max-height: 320px;
@@ -413,7 +413,7 @@ html, body {
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 @keyframes typing-bounce {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
@@ -484,7 +484,7 @@ html, body {
 .sms-contact-list {
   width: 260px;
   flex-shrink: 0;
-  border-right: 1px solid #30363d;
+  border-right: 1px solid var(--border);
   overflow-y: auto;
 }
 .sms-thread-panel {
