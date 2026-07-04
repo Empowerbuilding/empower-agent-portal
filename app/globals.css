@@ -5,18 +5,18 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #313338;
-  --sidebar-bg: #2b2d31;
-  --surface: #3b3d44;
-  --surface-hover: #43454d;
-  --card: #42444c;
-  --border: #3a3b42;
+  --bg: #26272b;
+  --sidebar-bg: #1e1f22;
+  --surface: #2d2f35;
+  --surface-hover: #35373e;
+  --card: #32343b;
+  --border: #2e3035;
   --text: #dbdee1;
   --muted: #80848e;
   --accent: #3b82f6;
   --accent-dim: #2563eb;
-  --user-bubble: #5865f2;
-  --agent-bubble: #383a40;
+  --user-bubble: #3b82f6;
+  --agent-bubble: #2d2f35;
   --radius: 16px;
 }
 
