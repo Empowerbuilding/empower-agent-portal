@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { subscribeToPush, isIOS, isInStandaloneMode, isPushSubscribed } from '@/lib/push';
+import { requestNotificationPermission, subscribeToPush, isIOS, isInStandaloneMode, isPushSubscribed } from '@/lib/push';
 
 interface Props {
   userId: string;
@@ -9,6 +9,8 @@ interface Props {
 
 export default function NotificationPrompt({ userId }: Props) {
   const [show, setShow] = useState<'push' | 'ios' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!('Notification' in window)) return;
@@ -35,13 +37,29 @@ export default function NotificationPrompt({ userId }: Props) {
   }, []);
 
   async function handleEnablePush() {
-    const ok = await subscribeToPush(userId);
-    if (ok) {
+    setError(null);
+    setLoading(true);
+
+    // Request permission FIRST — must happen before any awaits so Chrome
+    // on Android recognizes it as a direct user gesture response.
+    const granted = await requestNotificationPermission();
+    if (!granted) {
+      setLoading(false);
+      if (Notification.permission === 'denied') {
+        setError('Blocked in browser settings. Go to Site Settings to allow.');
+      } else {
+        setError('Permission not granted — tap Enable to try again.');
+      }
+      return;
+    }
+
+    // Permission granted — now set up the push subscription
+    const result = await subscribeToPush(userId);
+    setLoading(false);
+    if (result.ok) {
       setShow(null);
     } else {
-      // Permission denied — dismiss silently
-      localStorage.setItem('push-prompt-dismissed', '1');
-      setShow(null);
+      setError(result.error ?? 'Failed to subscribe.');
     }
   }
 
@@ -77,7 +95,10 @@ export default function NotificationPrompt({ userId }: Props) {
         <strong>Enable notifications</strong>
         <span>Get alerted when Vanessa replies</span>
       </div>
-      <button className="notif-prompt-enable" onClick={handleEnablePush}>Enable</button>
+      {error && <span style={{ fontSize: '11px', color: '#f85149', maxWidth: '180px' }}>{error}</span>}
+      <button className="notif-prompt-enable" onClick={handleEnablePush} disabled={loading}>
+        {loading ? '…' : 'Enable'}
+      </button>
       <button className="notif-prompt-dismiss" onClick={dismissPush}>✕</button>
     </div>
   );

@@ -17,13 +17,34 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 }
 
-export async function subscribeToPush(userId: string): Promise<boolean> {
-  try {
-    const reg = await registerServiceWorker();
-    if (!reg) return false;
+/**
+ * Request notification permission — must be called directly from a user gesture,
+ * before any async awaits, otherwise Chrome on Android blocks the dialog silently.
+ */
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return false;
+/**
+ * Subscribe to push — call AFTER permission is already granted.
+ * Registers service worker, creates push subscription, saves to DB.
+ */
+export async function subscribeToPush(userId: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    if (Notification.permission !== 'granted') {
+      return { ok: false, error: 'Permission not granted' };
+    }
+
+    // Ensure service worker is ready
+    const reg = await registerServiceWorker();
+    if (!reg) return { ok: false, error: 'Service worker failed to register' };
+
+    // Wait for SW to be active
+    await navigator.serviceWorker.ready;
 
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -36,10 +57,11 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
       body: JSON.stringify({ subscription: sub.toJSON(), userId }),
     });
 
-    return res.ok;
-  } catch (e) {
+    if (!res.ok) return { ok: false, error: `Server error: ${res.status}` };
+    return { ok: true };
+  } catch (e: any) {
     console.error('[push] subscribe failed:', e);
-    return false;
+    return { ok: false, error: e?.message ?? 'Unknown error' };
   }
 }
 
