@@ -150,14 +150,16 @@ html, body {
 
 /* ── Input area ── */
 .input-area {
-  padding: 8px 12px;
+  padding: 10px 12px;
   background: var(--bg);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
-  /* stays above mobile keyboard */
+  min-height: 61px;
+  display: flex;
+  align-items: center;
 }
 @media (min-width: 768px) {
-  .input-area { padding: 12px 20px 16px; }
+  .input-area { padding: 10px 20px; }
 }
 
 .input-row {
@@ -296,6 +298,7 @@ html, body {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  min-height: 61px;
 }
 
 .agent-group { margin-bottom: 16px; }
