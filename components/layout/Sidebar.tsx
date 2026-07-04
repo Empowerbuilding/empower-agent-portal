@@ -435,12 +435,12 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
                     {currentUser.role === 'owner' && (
                       <div style={{ position: 'relative', flexShrink: 0 }}>
                         <button
+                          className="channel-gear-btn"
                           onClick={e => { e.preventDefault(); setGearOpen(gearOpen === ch.id ? null : ch.id); }}
                           style={{
                             background: 'none', border: 'none', cursor: 'pointer',
                             color: 'var(--muted)', fontSize: '13px', padding: '4px 6px',
                             lineHeight: 1,
-                            opacity: hoveredChannel === ch.id ? 0.9 : 0.3,
                             transition: 'opacity 0.15s',
                             minWidth: '28px', textAlign: 'center',
                           }}

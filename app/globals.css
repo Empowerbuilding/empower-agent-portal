@@ -184,76 +184,95 @@ html, body {
 }
 
 .send-btn {
-  background: var(--accent);
-  color: #fff;
+  background: transparent;
+  color: var(--muted);
   border: none;
-  border-radius: 20px;
-  padding: 8px 18px;
+  border-radius: 8px;
+  padding: 6px 8px;
   font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
-  /* 44px tap target on mobile */
-  min-height: 38px;
-  transition: opacity 0.15s;
+  min-height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
 }
-.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.send-btn:not(:disabled):hover { color: var(--accent); }
+.send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* ── Message bubbles ── */
+/* ── Message bubbles — Discord style ── */
 .msg-row {
   display: flex;
-  gap: 10px;
-  padding: 3px 0;
+  gap: 12px;
+  padding: 1px 0;
+  border-radius: 4px;
+  transition: background 0.1s;
 }
-.msg-row.grouped { padding-top: 1px; margin-top: -2px; }
+.msg-row:hover { background: rgba(255,255,255,0.02); }
+.msg-row.grouped { padding-top: 0; }
+
+/* Grouped messages: indent to align with text above, no avatar space wasted */
+.msg-row.grouped { padding-left: 52px; }
 
 .msg-avatar {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
-.msg-body { display: flex; flex-direction: column; max-width: 78%; }
+.msg-body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 
 .msg-meta {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  gap: 8px;
+  line-height: 1.2;
 }
+.msg-meta span:first-child { font-size: 14px; font-weight: 600; color: var(--text); }
 
+/* Flat messages — no bubbles, Discord style */
 .msg-bubble {
-  padding: 10px 14px;
-  border-radius: 18px;
-  font-size: 14px;
+  padding: 0;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  font-size: 15px;
   line-height: 1.5;
   word-break: break-word;
   overflow-wrap: anywhere;
   max-width: 100%;
+  color: #d1d5db;
 }
+.msg-bubble.user { color: #e6edf3; }
+.msg-bubble.agent { color: #d1d5db; }
 .msg-bubble pre, .msg-bubble code {
   white-space: pre-wrap;
   word-break: break-all;
   max-width: 100%;
   overflow-x: hidden;
 }
-.msg-bubble.user { background: var(--user-bubble); border: 1px solid #3d72c4; border-radius: 4px 18px 18px 18px; }
-.msg-bubble.agent { background: var(--agent-bubble); border: 1px solid var(--border); border-radius: 4px 18px 18px 18px; }
+/* Code blocks get a subtle background */
+.msg-bubble pre { background: #1e2433; border-radius: 6px; padding: 10px 14px; margin: 4px 0; font-size: 13px; }
+.msg-bubble code:not(pre code) { background: #1e2433; border-radius: 3px; padding: 1px 5px; font-size: 13px; }
 .msg-bubble.system {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
   color: var(--text);
   font-size: 14px;
+  padding: 10px 14px !important;
   text-align: left;
   width: 100%;
   max-width: 680px;
@@ -295,18 +314,24 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 4px 12px;
   margin: 1px 6px;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 14px;
   color: #8b949e;
   text-decoration: none;
   cursor: pointer;
-  min-height: 36px; /* touch target */
-  transition: background 0.15s, color 0.15s;
+  min-height: 32px;
+  transition: background 0.1s, color 0.1s;
 }
 .channel-link:hover { background: var(--surface-hover); color: var(--text); }
 .channel-link.active { background: var(--surface-hover); color: var(--text); }
+
+/* Gear icon — hidden until hover */
+.channel-gear-btn { opacity: 0; transition: opacity 0.1s; }
+.channel-link:hover .channel-gear-btn,
+.channel-link.active .channel-gear-btn { opacity: 0.6; }
+.channel-gear-btn:hover { opacity: 1 !important; }
 
 .status-dot {
   width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
