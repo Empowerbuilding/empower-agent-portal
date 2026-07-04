@@ -71,9 +71,15 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const data = rawData ? [...rawData].reverse() : null;
       if (data) {
         setMessages(data as PortalMessage[]);
-        // If agent already replied, clear typing indicator
-        const hasAgentReply = data.some((m: PortalMessage) => m.sender_type !== 'user');
-        if (hasAgentReply) setAgentTyping(false);
+        // If the last message is from the user, agent hasn't replied yet — restore typing indicator
+        const lastMsg = data[data.length - 1];
+        if (lastMsg && lastMsg.sender_type === 'user') {
+          setAgentTyping(true);
+          if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+          typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
+        } else {
+          setAgentTyping(false);
+        }
         // Scroll to bottom after fresh fetch so response is visible
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
       }
