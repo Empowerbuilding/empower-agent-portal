@@ -32,15 +32,15 @@ Between checkpoints I keep going unless something is broken.
 
 ---
 
-## Phase 3 — Integrations → TOOLS.md sync
+## Phase 3 — Integrations → TOOLS.md sync ✅ DONE 2026-07-04
 
-| Checkpoint | What I show you | What you decide |
-|---|---|---|
-| Before starting | Show the TOOLS.md section format for each integration | Approve the format before I wire it |
-| After `tools-md-writer.ts` | Show unit test output: mock vars in → expected TOOLS.md section out | Approve or tweak format |
-| After env-vars route patched | Test: connect Resend in portal → read TOOLS.md → confirm section appears | Approve |
-| After Google OAuth flow | Walk through the OAuth connect → token saved → TOOLS.md written | Approve |
-| ✅ Done | Show all integrations connected status + resulting TOOLS.md | Sign off |
+- `lib/tools-md-writer.ts` — writes/replaces/removes integration sections in TOOLS.md
+- env-vars POST → syncIntegrationToToolsMd (non-blocking, won't fail save)
+- env-vars DELETE → removeIntegrationFromToolsMd  
+- Google OAuth: /api/oauth/google → consent → /api/oauth/google/callback → token.json → TOOLS.md
+- Integrations page: OAuth button for Google (Sign in with Google), API key form for all others
+- isConnected() updated to detect OAuth via GOOGLE_ACCOUNT_EMAIL
+- NEXT_PUBLIC_APP_URL env var added to Coolify portal app
 
 ---
 
