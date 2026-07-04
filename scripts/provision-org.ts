@@ -338,7 +338,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     // ── STEP 5: Clone full .openclaw dir from sales-agent ──────────────────
     await ssh.connect({ host: DO_SERVER, username: 'root', privateKeyPath: SSH_KEY_PATH });
 
-    // Clone entire sales-agent .openclaw dir (brings plugins, extensions, config, state dirs)
+    // Clone entire sales-agent .openclaw dir (brings plugins, extensions, config, pre-approved device pairing)
     await ssh.execCommand(`cp -r /root/.sales-agent ${ocPath}`);
 
     // Replace workspace with fresh template
@@ -346,14 +346,29 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     await ssh.execCommand(`cp -r ${TEMPLATE_PATH} ${workspacePath}`);
     await ssh.execCommand(`mkdir -p ${workspacePath}/memory ${workspacePath}/drafts ${workspacePath}/reports ${workspacePath}/proposals`);
 
-    // Clear org-specific runtime state (sessions, crons, delivery queue, device pairing, sqlite)
-    await ssh.execCommand(`rm -rf ${ocPath}/agents/main/sessions`);
-    await ssh.execCommand(`rm -rf ${ocPath}/cron/*`);
-    await ssh.execCommand(`rm -rf ${ocPath}/delivery-queue/*`);
+    // Clear org-specific runtime state via SQLite (keep device pairing — stored in devices/paired.json)
+    const clearScript = `import sqlite3
+conn = sqlite3.connect('${ocPath}/state/openclaw.sqlite')
+cur = conn.cursor()
+for t in ['cron_jobs','cron_run_logs','acp_sessions','acp_replay_sessions','acp_replay_events','delivery_queue_entries','task_runs','subagent_runs','current_conversation_bindings','plugin_binding_approvals']:
+    try:
+        cur.execute(f'DELETE FROM {t}')
+    except: pass
+conn.commit()
+conn.close()
+print('cleared')
+`;
+    // Write script via SFTP to avoid shell escaping issues, then run it
+    const clearScriptTmp = path.join(os.tmpdir(), `provision-clear-${input.orgSlug}.py`);
+    fs.writeFileSync(clearScriptTmp, clearScript, 'utf8');
+    await ssh.putFile(clearScriptTmp, `/tmp/provision-clear-${input.orgSlug}.py`);
+    fs.unlinkSync(clearScriptTmp);
+    const { stdout: clearOut } = await ssh.execCommand(`python3 /tmp/provision-clear-${input.orgSlug}.py && rm /tmp/provision-clear-${input.orgSlug}.py`);
+    console.log('SQLite clear:', clearOut || 'done');
+
+    // Clear pending scope upgrade requests and old session directories
     await ssh.execCommand(`rm -f ${ocPath}/devices/pending.json`);
-    await ssh.execCommand(`rm -f ${ocPath}/devices/paired.json`);
-    await ssh.execCommand(`rm -rf ${ocPath}/identity/*`);
-    await ssh.execCommand(`rm -f ${ocPath}/state/openclaw.sqlite*`);  // Force fresh SQLite on first boot
+    await ssh.execCommand(`rm -rf ${ocPath}/agents/main/sessions`);
 
     // ── STEP 6: Write bootstrap files ────────────────────────────────────────
     const files = buildBootstrapFiles(input);
@@ -422,11 +437,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     // Fix ownership to node user (uid 1000) before starting
     await ssh.execCommand(`chown -R 1000:1000 ${ocPath}`);
 
-    const dockerRun = `docker run -d \
-      --name ${containerName} \
-      --restart unless-stopped \
-      -v ${ocPath}:/home/node/.openclaw \
-      ${AGENT_IMAGE}`;
+    const dockerRun = `docker run -d --name ${containerName} --restart unless-stopped -v ${ocPath}:/home/node/.openclaw ${AGENT_IMAGE}`;
     const { stderr: dockerErr } = await ssh.execCommand(dockerRun);
     if (dockerErr && !dockerErr.includes('already in use')) {
       console.warn('Docker run warning:', dockerErr);
