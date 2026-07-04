@@ -111,7 +111,7 @@ export default function SearchModal({ channelId, channelName, onClose, onJumpTo 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <div style={{
                   width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0,
-                  background: msg.sender_type === 'user' ? '#2a5aa0' : '#30363d',
+                  background: msg.sender_type === 'user' ? '#2563eb' : '#40444b',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '11px', color: '#fff', fontWeight: 700,
                 }}>

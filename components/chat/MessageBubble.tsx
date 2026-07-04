@@ -86,7 +86,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
           style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', accentColor: 'var(--accent)' }} />
       )}
       {!grouped && (
-        <div className="msg-avatar" style={{ background: isUser ? '#2a5aa0' : '#30363d', color: '#fff' }}>
+        <div className="msg-avatar" style={{ background: isUser ? '#2563eb' : '#40444b', color: '#fff' }}>
           {isUser ? (message.sender_name?.charAt(0) ?? 'U') : <img src="/logo.png" alt="Agent" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '2px' }} />}
         </div>
       )}
