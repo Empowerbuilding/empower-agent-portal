@@ -1,17 +1,19 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { IconMore, IconRefresh, IconTrash } from '@/components/ui/Icons';
+import { IconMore, IconRefresh, IconTrash, IconSearch, IconGear } from '@/components/ui/Icons';
 
 interface Props {
   contextPct: number | null;
   resetting: boolean;
   onResetContext: () => void;
   onDeleteMode: () => void;
+  onSearch?: () => void;
+  settingsHref?: string;
   size?: number;
 }
 
-export default function ChatOverflowMenu({ contextPct, resetting, onResetContext, onDeleteMode, size = 16 }: Props) {
+export default function ChatOverflowMenu({ contextPct, resetting, onResetContext, onDeleteMode, onSearch, settingsHref, size = 16 }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -62,6 +64,16 @@ export default function ChatOverflowMenu({ contextPct, resetting, onResetContext
           >
             <IconRefresh size={14} /> Reset context
           </button>
+          {onSearch && (
+            <button
+              onClick={() => { setOpen(false); onSearch(); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '8px 10px', fontSize: '13px', borderRadius: '4px' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <IconSearch size={14} /> Search messages
+            </button>
+          )}
           <button
             onClick={() => { setOpen(false); onDeleteMode(); }}
             style={{
@@ -74,6 +86,17 @@ export default function ChatOverflowMenu({ contextPct, resetting, onResetContext
           >
             <IconTrash size={14} /> Delete messages
           </button>
+          {settingsHref && (
+            <a
+              href={settingsHref}
+              onClick={() => setOpen(false)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '8px 10px', fontSize: '13px', borderRadius: '4px', textDecoration: 'none' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <IconGear size={14} /> Agent settings
+            </a>
+          )}
         </div>
       )}
     </div>

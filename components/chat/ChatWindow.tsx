@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useMobileToolbar } from '@/context/MobileToolbar';
-import { IconSearch, IconMic, IconMicOff, IconPaperclip, IconSend } from '@/components/ui/Icons';
+import { IconMic, IconMicOff, IconPaperclip, IconSend } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import MessageBubble from './MessageBubble';
 import SearchModal from './SearchModal';
 import ChatOverflowMenu from './ChatOverflowMenu';
-import PresenceButton from '@/components/presence/PresenceButton';
 import { playSend, playReceive, unlockAudio } from '@/lib/sounds';
 
 interface Props {
@@ -193,17 +192,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       );
     } else {
       setToolbar(
-        <>
-          <PresenceButton orgId={orgId} openDirection="down" align="right" size={15} />
-          <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}><IconSearch size={15} /></button>
-          <ChatOverflowMenu
-            contextPct={contextPct}
-            resetting={resetting}
-            onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
-            onDeleteMode={() => setDeleteMode(true)}
-            size={15}
-          />
-        </>
+        <ChatOverflowMenu
+          contextPct={contextPct}
+          resetting={resetting}
+          onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
+          onDeleteMode={() => setDeleteMode(true)}
+          onSearch={() => setSearchOpen(true)}
+          size={15}
+        />
       );
     }
     return () => setToolbar(null);
@@ -345,23 +341,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         ) : (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '18px' }}>{channel.icon}</span>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>{channel.display_name}</div>
-                {channel.description && <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{channel.description}</div>}
-              </div>
+              <span style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text)' }}># {channel.display_name}</span>
             </div>
-            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-              <PresenceButton orgId={orgId} openDirection="down" align="right" />
-              <button onClick={() => setSearchOpen(true)} title="Search messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconSearch size={16} /></button>
-              <ChatOverflowMenu
-                contextPct={contextPct}
-                resetting={resetting}
-                onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
-                onDeleteMode={() => setDeleteMode(true)}
-                size={16}
-              />
-            </div>
+            <ChatOverflowMenu
+              contextPct={contextPct}
+              resetting={resetting}
+              onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
+              onDeleteMode={() => setDeleteMode(true)}
+              onSearch={() => setSearchOpen(true)}
+              size={16}
+            />
           </>
         )}
       </div>
@@ -370,8 +359,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       <div className="messages-list">
         {messages.length === 0 && (
           <div className="empty-state">
-            <span className="icon">{channel.icon}</span>
-            <span className="label">Start the conversation</span>
+            <span className="label" style={{ color: 'var(--muted)', fontSize: '13px' }}>No messages yet — start the conversation</span>
           </div>
         )}
         {messages.map((msg, i) => {

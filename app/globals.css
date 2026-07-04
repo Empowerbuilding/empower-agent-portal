@@ -327,11 +327,15 @@ html, body {
 .channel-link:hover { background: var(--surface-hover); color: var(--text); }
 .channel-link.active { background: var(--surface-hover); color: var(--text); }
 
-/* Gear icon — hidden until hover */
+/* Gear icon — hidden until hover on desktop, always visible on mobile */
 .channel-gear-btn { opacity: 0; transition: opacity 0.1s; }
 .channel-link:hover .channel-gear-btn,
 .channel-link.active .channel-gear-btn { opacity: 0.6; }
 .channel-gear-btn:hover { opacity: 1 !important; }
+@media (max-width: 767px) {
+  .channel-gear-btn { opacity: 0.4 !important; }
+  .channel-link.active .channel-gear-btn { opacity: 0.7 !important; }
+}
 
 .status-dot {
   width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
