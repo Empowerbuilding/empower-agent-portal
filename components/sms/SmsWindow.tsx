@@ -531,9 +531,8 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             onClick={sendReply}
             disabled={!replyText.trim() || sending}
             title={`Send to ${activeConv.contact_name}`}
-            style={{ display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}
           >
-            {sending ? '…' : <><IconSend size={14} /><span style={{ fontSize: '12px' }}>{activeConv.contact_name.split(' ')[0]}</span></>}
+            {sending ? '…' : <IconSend size={16} />}
           </button>
         </div>
       </div>
