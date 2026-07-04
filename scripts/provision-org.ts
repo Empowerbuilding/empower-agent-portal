@@ -14,7 +14,7 @@ import { NodeSSH } from 'node-ssh';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { generateAllFiles } from '../lib/bootstrap-writer';
+import { generateAllFiles, type WizardAnswers } from '../lib/bootstrap-writer';
 
 const PORTAL_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PORTAL_SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -43,6 +43,7 @@ export interface ProvisionInput {
   website?: string;
   reps: Rep[];
   enabledCrons?: string[]; // defaults: ['morning-briefing', 'inbox-scan', 'eod-report']
+  wizard?: Omit<WizardAnswers, 'orgName' | 'orgSlug'>; // Full wizard answers if provided
 }
 
 export interface ProvisionResult {
@@ -86,18 +87,21 @@ const DEFAULT_CRONS = [
 
 
 function buildBootstrapFiles(input: ProvisionInput): Record<string, string> {
-  // Use wizard answers if provided, else sensible defaults
-  const answers = {
+  const tone = (input.wizard?.agentTone ?? (
+    input.agentTone === 'Friendly & conversational' ? 'friendly' :
+    input.agentTone === 'Direct & fast' ? 'direct' : 'professional'
+  )) as 'professional' | 'friendly' | 'direct';
+
+  const answers: WizardAnswers = {
     orgName: input.orgName,
     orgSlug: input.orgSlug,
-    industry: input.industry,
-    whatWeSell: input.whatWeSell,
-    website: input.website,
-    agentName: input.agentDisplayName,
-    agentRole: 'inside sales agent',
-    agentFocus: ['qualify', 'calls', 'emails', 'sms'],
-    agentTone: (input.agentTone === 'Friendly & conversational' ? 'friendly' :
-                input.agentTone === 'Direct & fast' ? 'direct' : 'professional') as 'professional' | 'friendly' | 'direct',
+    industry: input.wizard?.industry ?? input.industry,
+    whatWeSell: input.wizard?.whatWeSell ?? input.whatWeSell,
+    website: input.wizard?.website ?? input.website,
+    agentName: input.wizard?.agentName ?? input.agentDisplayName,
+    agentRole: input.wizard?.agentRole ?? 'inside sales agent',
+    agentFocus: input.wizard?.agentFocus ?? ['qualify', 'calls', 'emails', 'sms'],
+    agentTone: tone,
     reps: input.reps,
   };
   return generateAllFiles(answers);

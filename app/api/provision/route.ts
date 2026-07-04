@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     website: website || '',
     reps,
     enabledCrons,
+    wizard: body.wizard,
   };
 
   const result = await provisionOrg(input);
