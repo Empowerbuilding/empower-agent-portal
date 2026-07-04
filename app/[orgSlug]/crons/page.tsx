@@ -87,19 +87,50 @@ function formatLastRun(ms: number | null, source: string | null): string {
   return new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-function AddCronModal({ agents, orgId, onClose, onCreated }: {
+function AddCronModal({ agents, orgId, onClose, onCreated, editJob }: {
   agents: AgentInfo[];
   orgId: string;
   onClose: () => void;
   onCreated: () => void;
+  editJob?: CronJob | null;
 }) {
-  const [agentId, setAgentId] = useState(agents[0]?.id ?? '');
-  const [name, setName] = useState('');
+  const isEdit = !!editJob;
+  const editAgent = editJob ? agents.find(a => a.name === editJob.agent_name) : null;
+  const [agentId, setAgentId] = useState(editAgent?.id ?? agents[0]?.id ?? '');
+  const [name, setName] = useState(editJob?.name ?? '');
   const [scheduleType, setScheduleType] = useState<'every' | 'cron' | 'at'>('every');
-  const [scheduleValue, setScheduleValue] = useState('');
+  const [scheduleValue, setScheduleValue] = useState(editJob?.schedule_expr ?? '');
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // NL input
+  const [nlText, setNlText] = useState('');
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState('');
+
+  async function parseNL() {
+    if (!nlText.trim()) return;
+    setParsing(true);
+    setParseError('');
+    try {
+      const targetAgentId = agentId || agents[0]?.id;
+      const res = await fetch(`/api/agents/${targetAgentId}/crons/parse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: nlText }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setParseError(data.error || 'Parse failed'); return; }
+      setName(data.name);
+      setScheduleType(data.scheduleType);
+      setScheduleValue(data.scheduleValue);
+      setMessage(data.message);
+    } catch (e: any) {
+      setParseError(e.message || 'Parse failed');
+    } finally {
+      setParsing(false);
+    }
+  }
 
   const schedPlaceholders = {
     every: '30m  or  2h  or  1d',
@@ -110,21 +141,62 @@ function AddCronModal({ agents, orgId, onClose, onCreated }: {
   async function handleCreate() {
     if (!name || !scheduleValue || !message) { setError('Fill in all fields'); return; }
     setSaving(true); setError('');
-    const res = await fetch(`/api/agents/${agentId}/crons`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, scheduleType, scheduleValue, message }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) { setError(data.error || 'Failed'); setSaving(false); return; }
-    onCreated();
-    onClose();
+    try {
+      // Edit = delete old + create new
+      if (isEdit && editJob) {
+        const delAgent = agents.find(a => a.name === editJob.agent_name);
+        if (delAgent) {
+          await fetch(`/api/agents/${delAgent.id}/crons`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cronId: editJob.id }),
+          });
+        }
+      }
+      const res = await fetch(`/api/agents/${agentId}/crons`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, scheduleType, scheduleValue, message }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) { setError(data.error || 'Failed'); setSaving(false); return; }
+      onCreated();
+      onClose();
+    } catch (e: any) {
+      setError(e.message || 'Failed');
+      setSaving(false);
+    }
   }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>New Automation</div>
+        <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>{isEdit ? 'Edit Automation' : 'New Automation'}</div>
+
+        {/* NL input — only on new */}
+        {!isEdit && (
+          <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', padding: '14px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b949e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>✨ Describe it in plain English</div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                value={nlText}
+                onChange={e => setNlText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && parseNL()}
+                placeholder={'e.g. "Email Larry every Tuesday at 10am with a follow-up reminder"'}
+                style={{ flex: 1, padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text)', fontSize: '13px', outline: 'none', minWidth: 0 }}
+              />
+              <button
+                onClick={parseNL}
+                disabled={!nlText.trim() || parsing}
+                style={{ padding: '9px 14px', background: parsing ? 'var(--border)' : 'var(--accent)', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: parsing ? 'default' : 'pointer', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0, opacity: !nlText.trim() ? 0.4 : 1 }}
+              >
+                {parsing ? '…' : 'Parse →'}
+              </button>
+            </div>
+            {parseError && <div style={{ fontSize: '11px', color: '#da3633', marginTop: '6px' }}>{parseError}</div>}
+            <div style={{ fontSize: '11px', color: '#6e7681', marginTop: '6px' }}>Auto-fills the fields below. You can edit before saving.</div>
+          </div>
+        )}
 
         {agents.length > 1 && (
           <div>
@@ -167,7 +239,7 @@ function AddCronModal({ agents, orgId, onClose, onCreated }: {
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
           <button onClick={handleCreate} disabled={saving} style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px', opacity: saving ? 0.6 : 1 }}>
-            {saving ? 'Creating…' : 'Create'}
+            {saving ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save Changes' : 'Create')}
           </button>
         </div>
       </div>
@@ -186,6 +258,7 @@ export default function CronsPage() {
   const [currentUserRole, setCurrentUserRole] = useState('');
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingJob, setEditingJob] = useState<CronJob | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
 
   useEffect(() => { loadAll(); }, [orgSlug]);
@@ -248,7 +321,15 @@ export default function CronsPage() {
 
   return (
     <div className="page-scroll">
-      {showAdd && <AddCronModal agents={agents} orgId={orgId} onClose={() => setShowAdd(false)} onCreated={loadAll} />}
+      {(showAdd || editingJob) && (
+        <AddCronModal
+          agents={agents}
+          orgId={orgId}
+          onClose={() => { setShowAdd(false); setEditingJob(null); }}
+          onCreated={loadAll}
+          editJob={editingJob}
+        />
+      )}
 
       <div style={{ padding: '28px 24px', maxWidth: '720px', margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
@@ -313,6 +394,13 @@ export default function CronsPage() {
                               style={{ padding: '5px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: '5px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
                             >
                               {toggling === job.id ? '…' : job.enabled ? 'Disable' : 'Enable'}
+                            </button>
+                            <button
+                              onClick={() => setEditingJob(job)}
+                              style={{ padding: '5px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: '5px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px' }}
+                              title="Edit"
+                            >
+                              ✏️
                             </button>
                             <button
                               onClick={() => deleteCron(job)}
