@@ -259,10 +259,10 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
       flexDirection: 'column',
       height: '100%',
       overflowY: 'auto',
-      background: '#0d1117',
+      background: 'var(--sidebar-bg)',
     }}>
       {/* Desktop-only header inside list panel */}
-      <div className="desktop-only" style={{ padding: '12px 16px', borderBottom: '1px solid #30363d', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+      <div className="desktop-only" style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
         Conversations
       </div>
 
@@ -280,8 +280,8 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             style={{
               display: 'block', width: '100%', textAlign: 'left',
               padding: '14px 16px',
-              background: isActive ? '#161b22' : 'transparent',
-              border: 'none', borderBottom: '1px solid #21262d',
+              background: isActive ? 'var(--surface)' : 'transparent',
+              border: 'none', borderBottom: '1px solid var(--border)',
               cursor: 'pointer',
             }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
@@ -336,7 +336,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
             padding: '6px 16px', background: '#0a0e16',
-            borderBottom: '1px solid #21262d', fontSize: '12px', flexShrink: 0,
+            borderBottom: '1px solid var(--border)', fontSize: '12px', flexShrink: 0,
           }}>
             <span style={{ color: 'var(--muted)' }}>
               {scoreEmoji} <span style={{ color: 'var(--text)', fontWeight: 600 }}>
@@ -345,7 +345,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             </span>
             {crm.lifecycle_stage && (
               <>
-                <span style={{ color: '#30363d' }}>•</span>
+                <span style={{ color: 'var(--border)' }}>•</span>
                 <span style={{ color: 'var(--muted)' }}>
                   {stageLabel[crm.lifecycle_stage] ?? crm.lifecycle_stage}
                 </span>
@@ -353,7 +353,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             )}
             {crm.best_deal && (
               <>
-                <span style={{ color: '#30363d' }}>•</span>
+                <span style={{ color: 'var(--border)' }}>•</span>
                 <span style={{ color: 'var(--muted)' }}>
                   {dealStageLabel[crm.best_deal.stage] ?? crm.best_deal.stage}
                   {formatValue(crm.best_deal.value) && (
@@ -366,7 +366,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             )}
             {crm.whale_score != null && crm.whale_score >= 60 && (
               <>
-                <span style={{ color: '#30363d' }}>•</span>
+                <span style={{ color: 'var(--border)' }}>•</span>
                 <span style={{ color: '#f59e0b' }}>🐋 {crm.whale_score}</span>
               </>
             )}
@@ -409,7 +409,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             if (isPending) {
               return (
                 <div key={msg.id} style={{ alignSelf: 'flex-end', maxWidth: '85%', width: '100%' }}>
-                  <div style={{ background: '#0d1117', border: '1px solid var(--accent)', borderRadius: '12px', padding: '12px 14px' }}>
+                  <div style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--accent)', borderRadius: '12px', padding: '12px 14px' }}>
                     <div style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       <img src="/logo.png" alt="Vanessa" style={{ width: 16, height: 16, objectFit: 'contain', verticalAlign: 'middle', marginRight: 4 }} /> Vanessa’s Draft
                     </div>
@@ -435,7 +435,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                         onClick={() => denyDraft(msg.id)}
                         style={{
                           padding: '10px 16px',
-                          background: 'none', border: '1px solid #30363d',
+                          background: 'none', border: '1px solid var(--border)',
                           borderRadius: '8px', color: 'var(--muted)',
                           cursor: 'pointer', fontSize: '14px', minHeight: '44px',
                         }}
@@ -452,7 +452,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             if (isInbound) {
               return (
                 <div key={msg.id} style={{ alignSelf: 'flex-start', maxWidth: '80%' }}>
-                  <div style={{ background: '#21262d', borderRadius: '18px 18px 18px 4px', padding: '10px 14px' }}>
+                  <div style={{ background: 'var(--surface)', borderRadius: '18px 18px 18px 4px', padding: '10px 14px' }}>
                     <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
@@ -461,7 +461,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                       onClick={() => askVanessa(msg)}
                       disabled={askingVanessa === msg.id}
                       title="Ask Vanessa to draft a reply"
-                      style={{ background: 'none', border: '1px solid #30363d', borderRadius: '4px', color: 'var(--muted)', cursor: 'pointer', fontSize: '11px', padding: '2px 7px', opacity: askingVanessa === msg.id ? 0.5 : 0.8 }}
+                      style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--muted)', cursor: 'pointer', fontSize: '11px', padding: '2px 7px', opacity: askingVanessa === msg.id ? 0.5 : 0.8 }}
                     >
                       {askingVanessa === msg.id ? '✓ Sent to Vanessa' : <><img src="/logo.png" alt="" style={{ width: 13, height: 13, objectFit: 'contain', verticalAlign: 'middle', marginRight: 3 }} />Ask Vanessa</>}
                     </button>
@@ -483,7 +483,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
         {/* Vanessa drafting indicator */}
         {vanessaDrafting === activeConv.contact_phone && (
           <div style={{ alignSelf: 'flex-end', maxWidth: '85%' }}>
-            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <img src="/logo.png" alt="Vanessa" style={{ width: 24, height: 24, objectFit: 'contain' }} />
               <div>
                 <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, marginBottom: '3px' }}>Vanessa is drafting…</div>
