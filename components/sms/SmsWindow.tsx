@@ -451,7 +451,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                       </button>
                     </div>
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px', textAlign: 'right' }}>{formatFull(msg.created_at)}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px', textAlign: 'right' }} suppressHydrationWarning>{formatFull(msg.created_at)}</div>
                 </div>
               );
             }
@@ -463,7 +463,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                     <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{formatFull(msg.created_at)}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--muted)' }} suppressHydrationWarning>{formatFull(msg.created_at)}</span>
                     <button
                       onClick={() => askVanessa(msg)}
                       disabled={askingVanessa === msg.id}
@@ -483,7 +483,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                 <div style={{ background: 'var(--accent-dim)', borderRadius: '18px 18px 4px 18px', padding: '10px 14px' }}>
                   <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px', textAlign: 'right' }}>✓ {formatFull(msg.created_at)}</div>
+                <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px', textAlign: 'right' }} suppressHydrationWarning>✓ {formatFull(msg.created_at)}</div>
               </div>
             );
           })}
