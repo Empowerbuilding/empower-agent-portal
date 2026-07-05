@@ -100,7 +100,16 @@ html, body {
     min-height: 52px;
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    /* Fixed position — immune to any flex/layout issue or React re-render */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+  }
+  /* Compensate for the fixed header so content starts below it */
+  .main-content {
+    padding-top: 52px;
   }
 }
 
