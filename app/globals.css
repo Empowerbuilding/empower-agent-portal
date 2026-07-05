@@ -36,10 +36,6 @@ html, body {
   height: 100dvh; /* dynamic viewport height — handles mobile browser chrome */
   overflow: hidden;
   position: relative;
-  /* Push content below the status bar in PWA mode.
-     viewport-fit=cover is set, so safe-area-inset-top gives the real status bar height.
-     This works regardless of which apple-mobile-web-app-status-bar-style the cached PWA has. */
-  padding-top: env(safe-area-inset-top);
 }
 
 /* ── Sidebar ── */

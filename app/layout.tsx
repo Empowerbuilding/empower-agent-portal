@@ -22,7 +22,6 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: 'cover', // required for env(safe-area-inset-top) to work in PWA standalone mode
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
