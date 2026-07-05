@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
   // Auth check — must be owner/admin of this agent's org
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(new URL('/login', req.url));
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portal.empowerbuilding.ai';
+  if (!user) return NextResponse.redirect(new URL('/login', APP_URL));
 
   const agent = await getAgent(agentId);
   if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });

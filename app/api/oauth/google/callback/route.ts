@@ -17,7 +17,8 @@ import { syncIntegrationToToolsMd } from '@/lib/tools-md-writer';
 
 export const runtime = 'nodejs';
 
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://portal.empowerbuilding.ai'}/api/oauth/google/callback`;
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portal.empowerbuilding.ai';
+const REDIRECT_URI = `${APP_URL}/api/oauth/google/callback`;
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo';
 
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
   // User denied consent
   if (errorParam) {
     return NextResponse.redirect(
-      new URL(`/api/oauth/google/error?reason=${encodeURIComponent(errorParam)}`, req.url)
+      new URL(`/api/oauth/google/error?reason=${encodeURIComponent(errorParam)}`, APP_URL)
     );
   }
 
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
   // Auth check
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(new URL('/login', req.url));
+  if (!user) return NextResponse.redirect(new URL('/login', APP_URL));
 
   const agent = await getAgent(agentId);
   if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
@@ -150,5 +151,5 @@ export async function GET(req: NextRequest) {
   const slug = (org as any)?.slug ?? '';
   // If returnTo is set (e.g. from wizard), go there; otherwise integrations page
   const dest = returnTo ? returnTo : `/${slug}/agents/${agentId}/integrations?connected=google`;
-  return NextResponse.redirect(new URL(dest, req.url));
+  return NextResponse.redirect(new URL(dest, APP_URL));
 }
