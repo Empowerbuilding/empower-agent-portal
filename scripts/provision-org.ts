@@ -362,8 +362,8 @@ print('cleared')
     const now = new Date().toISOString();
     if (googleClientId && googleClientSecret) {
       await supabase.from('agent_env_vars').upsert([
-        { agent_id: agent.id, key: 'GOOGLE_CLIENT_ID', value: googleClientId, display_name: 'Google Client ID', integration_id: 'google', is_secret: false, updated_at: now },
-        { agent_id: agent.id, key: 'GOOGLE_CLIENT_SECRET', value: googleClientSecret, display_name: 'Google Client Secret', integration_id: 'google', is_secret: true, updated_at: now },
+        { agent_id: agent.id, key: 'GOOGLE_CLIENT_ID', value: googleClientId, value_encrypted: '', display_name: 'Google Client ID', integration_id: 'google', is_secret: false, updated_at: now },
+        { agent_id: agent.id, key: 'GOOGLE_CLIENT_SECRET', value: googleClientSecret, value_encrypted: '', display_name: 'Google Client Secret', integration_id: 'google', is_secret: true, updated_at: now },
       ], { onConflict: 'agent_id,key' });
     } else {
       console.warn('[provision] GOOGLE_CLIENT_ID/SECRET not set — skipping Google OAuth seeding');
