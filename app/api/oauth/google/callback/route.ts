@@ -39,14 +39,14 @@ export async function GET(req: NextRequest) {
   }
 
   // Decode state
-  let state: { agentId: string };
+  let state: { agentId: string; returnTo?: string | null };
   try {
     state = JSON.parse(Buffer.from(stateRaw, 'base64url').toString());
   } catch {
     return NextResponse.json({ error: 'Invalid state' }, { status: 400 });
   }
 
-  const { agentId } = state;
+  const { agentId, returnTo } = state;
 
   // Auth check
   const supabase = await createClient();
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
     .single();
 
   const slug = (org as any)?.slug ?? '';
-  return NextResponse.redirect(
-    new URL(`/${slug}/agents/${agentId}/integrations?connected=google`, req.url)
-  );
+  // If returnTo is set (e.g. from wizard), go there; otherwise integrations page
+  const dest = returnTo ? returnTo : `/${slug}/agents/${agentId}/integrations?connected=google`;
+  return NextResponse.redirect(new URL(dest, req.url));
 }

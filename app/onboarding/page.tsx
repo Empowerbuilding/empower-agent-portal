@@ -95,6 +95,7 @@ export default function OnboardingPage() {
   const [launching, setLaunching] = useState(false);
   const [launchStatus, setLaunchStatus] = useState('');
   const [error, setError] = useState('');
+  const [launched, setLaunched] = useState<{ agentId: string; orgSlug: string; redirectTo: string } | null>(null);
 
   function update(patch: Partial<WizardState>) {
     setState(s => ({ ...s, ...patch }));
@@ -167,7 +168,11 @@ export default function OnboardingPage() {
       }
 
       setLaunchStatus('Done ✓');
-      setTimeout(() => router.push(data.redirectTo || `/${state.orgSlug}/general`), 800);
+      setTimeout(() => setLaunched({
+        agentId: data.agentId,
+        orgSlug: data.orgSlug || state.orgSlug,
+        redirectTo: data.redirectTo || `/${state.orgSlug}/general`,
+      }), 800);
     } catch (e: any) {
       clearInterval(interval);
       setError(e.message || 'Network error');
@@ -314,9 +319,9 @@ export default function OnboardingPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ fontSize: '13px', color: '#8b949e' }}>Connect your tools so {state.agentName} can send emails, make calls, and access your CRM. You can skip any of these and connect later in Settings.</div>
         {[
-          { id: 'gmail', icon: '📧', name: 'Gmail', desc: 'Send follow-up emails from your team\'s accounts', status: 'Connect later' },
-          { id: 'telnyx', icon: '📞', name: 'Phone (Telnyx)', desc: 'SMS and voice calls — auto-provisions a number', status: 'Connect later' },
-          { id: 'crm', icon: '🗄️', name: 'CRM', desc: 'Built-in CRM included — or connect your own', status: 'Built-in included' },
+          { id: 'gmail', icon: '📧', name: 'Gmail', desc: 'Send follow-up emails and scan your inbox — connect right after launch', status: 'Connect at launch' },
+          { id: 'telnyx', icon: '📞', name: 'Phone (Telnyx)', desc: 'SMS and voice calls — a number is auto-provisioned for you', status: 'Auto-provisioned' },
+          { id: 'crm', icon: '🗄️', name: 'CRM', desc: 'Built-in CRM included — contacts, deals, activity log', status: 'Built-in included' },
         ].map(item => (
           <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: '#0d1117', border: '1px solid #30363d', borderRadius: '10px' }}>
             <span style={{ fontSize: '24px' }}>{item.icon}</span>
@@ -324,7 +329,7 @@ export default function OnboardingPage() {
               <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{item.name}</div>
               <div style={{ fontSize: '12px', color: '#8b949e', marginTop: '2px' }}>{item.desc}</div>
             </div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: item.status === 'Built-in included' ? '#22c55e' : '#8b949e', background: item.status === 'Built-in included' ? 'rgba(34,197,94,0.1)' : '#21262d', padding: '4px 10px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: item.status === 'Built-in included' || item.status === 'Auto-provisioned' ? '#22c55e' : item.status === 'Connect at launch' ? '#3b82f6' : '#8b949e', background: item.status === 'Built-in included' || item.status === 'Auto-provisioned' ? 'rgba(34,197,94,0.1)' : item.status === 'Connect at launch' ? 'rgba(59,130,246,0.1)' : '#21262d', padding: '4px 10px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
               {item.status}
             </div>
           </div>
@@ -423,6 +428,36 @@ export default function OnboardingPage() {
   ];
 
   const stepComponents = [Step1, Step2, Step3, Step4, Step5, Step6];
+
+  // Post-launch: show Gmail connect screen before entering the org
+  if (launched) {
+    const gmailUrl = `/api/oauth/google?agentId=${launched.agentId}&returnTo=${encodeURIComponent(launched.redirectTo)}`;
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+        <div style={{ width: '100%', maxWidth: '480px', textAlign: 'center' }}>
+          <div style={{ fontSize: '32px', marginBottom: '16px' }}>🎉</div>
+          <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)', marginBottom: '8px' }}>Agent is live!</div>
+          <div style={{ fontSize: '14px', color: '#8b949e', marginBottom: '32px' }}>One last thing — connect Gmail so {state.agentName} can send follow-up emails and scan your inbox.</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <a href={gmailUrl} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+              padding: '14px 20px', background: '#fff', border: '1px solid #e2e2e2',
+              borderRadius: '10px', color: '#333', textDecoration: 'none', fontSize: '14px', fontWeight: 600,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.8 0 6.9 5.4 3 13.3l7.8 6C12.7 13.3 17.9 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.4c-.5 2.8-2.1 5.2-4.5 6.8l7 5.4C43.2 37 46.1 31.2 46.1 24.5z"/><path fill="#FBBC05" d="M10.8 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7L2.5 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.3-5.9z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7-5.4c-2.1 1.4-4.8 2.2-8.2 2.2-6.1 0-11.3-3.8-13.2-9.2l-8.3 5.9C6.9 42.6 14.8 48 24 48z"/></svg>
+              Connect Gmail
+            </a>
+            <button onClick={() => router.push(launched.redirectTo)} style={{
+              padding: '12px 20px', background: 'none', border: '1px solid #30363d',
+              borderRadius: '10px', color: '#8b949e', cursor: 'pointer', fontSize: '13px',
+            }}>
+              Skip for now — connect in Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '32px 16px 64px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>

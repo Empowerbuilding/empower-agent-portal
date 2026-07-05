@@ -355,7 +355,21 @@ print('cleared')
       await ssh.execCommand(cmd);
     }
 
-    // ── STEP 10: Mark agent running ──────────────────────────────────────────
+    // ── STEP 10: Seed Google OAuth credentials into agent_env_vars ──────────
+    // These come from the shared Empower Google OAuth client (baked into template)
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const now = new Date().toISOString();
+    if (googleClientId && googleClientSecret) {
+      await supabase.from('agent_env_vars').upsert([
+        { agent_id: agent.id, key: 'GOOGLE_CLIENT_ID', value: googleClientId, display_name: 'Google Client ID', integration_id: 'google', is_secret: false, updated_at: now },
+        { agent_id: agent.id, key: 'GOOGLE_CLIENT_SECRET', value: googleClientSecret, display_name: 'Google Client Secret', integration_id: 'google', is_secret: true, updated_at: now },
+      ], { onConflict: 'agent_id,key' });
+    } else {
+      console.warn('[provision] GOOGLE_CLIENT_ID/SECRET not set — skipping Google OAuth seeding');
+    }
+
+    // ── STEP 11: Mark agent running ───────────────────────────────────────────
     await supabase.from('agents').update({ container_status: 'running', deployed_at: new Date().toISOString() }).eq('id', agent.id);
 
     ssh.dispose();

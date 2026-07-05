@@ -67,8 +67,9 @@ export async function GET(req: NextRequest) {
     }, { status: 400 });
   }
 
-  // Encode agentId in state so callback knows who to write to
-  const state = Buffer.from(JSON.stringify({ agentId, returnTo: `/api/oauth/google/callback` })).toString('base64url');
+  // Encode agentId + optional returnTo in state so callback knows who to write to and where to redirect
+  const returnTo = searchParams.get('returnTo') || null;
+  const state = Buffer.from(JSON.stringify({ agentId, returnTo })).toString('base64url');
 
   const params = new URLSearchParams({
     client_id: clientId,
