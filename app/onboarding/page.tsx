@@ -423,7 +423,6 @@ export default function OnboardingPage() {
   ];
 
   const stepComponents = [Step1, Step2, Step3, Step4, Step5, Step6];
-  const CurrentStep = stepComponents[step - 1];
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '32px 16px 64px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -441,7 +440,7 @@ export default function OnboardingPage() {
 
       {/* Card */}
       <div style={{ width: '100%', maxWidth: '520px', background: '#161b22', border: '1px solid #30363d', borderRadius: '14px', padding: '28px 24px' }}>
-        <CurrentStep />
+        {stepComponents[step - 1]()}
       </div>
 
       {/* Nav */}
