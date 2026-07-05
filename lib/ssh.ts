@@ -98,7 +98,9 @@ export async function sshListFiles(
  * Falls back to reading a key file for local dev.
  */
 export function getSSHKey(secretName = 'RESET_SSH_KEY'): string {
-  const b64 = process.env[secretName];
+  // 'default' is an alias for RESET_SSH_KEY
+  const envKey = secretName === 'default' ? 'RESET_SSH_KEY' : secretName;
+  const b64 = process.env[envKey];
   if (b64) return Buffer.from(b64, 'base64').toString('utf8');
 
   // Dev fallback — read key file if it exists
