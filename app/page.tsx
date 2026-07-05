@@ -21,13 +21,7 @@ export default async function Home() {
     redirect('/onboarding');
   }
 
-  if (portalUsers.length === 1) {
-    // Single org — go straight there
-    const org = (portalUsers[0].organizations as unknown) as { slug: string } | null;
-    if (org?.slug) redirect(`/${org.slug}`);
-  }
-
-  // Multiple orgs — show org picker
+  // Always show picker — lets user switch orgs or create a new one
   const orgs = portalUsers
     .map(pu => (pu.organizations as unknown) as { slug: string } | null)
     .filter(Boolean) as { slug: string }[];
