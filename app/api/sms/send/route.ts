@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
           const now = new Date().toISOString();
           await crm.from('activities').insert({ contact_id: cId, activity_type: 'sms_sent', title: `SMS sent to ${to}`, description: body, created_at: now });
           const patch: Record<string, any> = { last_contacted_at: now, last_contact_type: 'sms_sent' };
-          if (!existingOwner && userFlag && USER_OWNER_IDS[userFlag]) patch.owner_id = USER_OWNER_IDS[userFlag];
+          if (userFlag && USER_OWNER_IDS[userFlag]) patch.owner_id = USER_OWNER_IDS[userFlag];
           await crm.from('contacts').update(patch).eq('id', cId);
         }
       } catch (e) {
