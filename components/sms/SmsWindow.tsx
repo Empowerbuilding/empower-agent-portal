@@ -50,6 +50,7 @@ function groupByContact(messages: PortalMessage[]): SmsConversation[] {
     }
     const conv = map.get(phone)!;
     if (meta.contact_name && conv.contact_name === phone) conv.contact_name = meta.contact_name;
+    if (meta.approval_state === 'superseded') continue; // hide old draft iterations
     conv.messages.push(msg);
     if (msg.created_at > conv.last_at) conv.last_at = msg.created_at;
     if (meta.approval_state === 'pending') conv.has_pending = true;
@@ -155,7 +156,13 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'portal_messages', filter: `channel_id=eq.${channel.id}` },
         (payload) => {
           const updated = payload.new as PortalMessage;
-          setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
+          const updMeta = (updated.metadata || {}) as Record<string, any>;
+          if (updMeta.approval_state === 'superseded') {
+            // Remove superseded drafts from the thread immediately
+            setMessages(prev => prev.filter(m => m.id !== updated.id));
+          } else {
+            setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
+          }
         })
       .subscribe();
     return () => { supabase.removeChannel(sub); };
