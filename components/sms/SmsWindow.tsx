@@ -323,7 +323,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
 
   // ── Thread view ───────────────────────────────────────────────────────────
   const ThreadView = activeConv ? (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {/* CRM context strip — visible on both mobile and desktop */}
       {(() => {
         const crm = selectedPhone ? crmCache[selectedPhone] : undefined;
