@@ -36,7 +36,6 @@ html, body {
   height: 100dvh; /* dynamic viewport height — handles mobile browser chrome */
   overflow: hidden;
   position: relative;
-  padding-top: env(safe-area-inset-top); /* push content below iPhone/Android status bar when black-translucent */
 }
 
 /* ── Sidebar ── */
