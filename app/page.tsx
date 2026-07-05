@@ -17,7 +17,8 @@ export default async function Home() {
     .single();
 
   if (!portalUser) {
-    redirect('/login');
+    // Logged in but no org yet — send to onboarding wizard
+    redirect('/onboarding');
   }
 
   // Admins go to admin panel, reps go to their org
@@ -26,5 +27,6 @@ export default async function Home() {
     redirect(`/${org.slug}`);
   }
 
-  redirect('/login');
+  // Has a portal_user row but org lookup failed — fall back to onboarding
+  redirect('/onboarding');
 }

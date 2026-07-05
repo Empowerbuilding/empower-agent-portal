@@ -20,7 +20,14 @@ import { generateAllFiles, type WizardAnswers } from '../lib/bootstrap-writer';
 const PORTAL_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PORTAL_SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const DO_SERVER = '142.93.29.212';
-const SSH_KEY_PATH = process.env.SSH_KEY_PATH || '/root/.ssh/id_ed25519';
+// SSH key: prefer RESET_SSH_KEY (base64-encoded, set in Coolify) over a key file
+function getSSHPrivateKey(): string {
+  const b64 = process.env.RESET_SSH_KEY;
+  if (b64) return Buffer.from(b64, 'base64').toString('utf8');
+  // Local dev fallback — read key file if it exists
+  const keyPath = process.env.SSH_KEY_PATH || '/root/.ssh/id_ed25519';
+  try { return fs.readFileSync(keyPath, 'utf8'); } catch { return ''; }
+}
 const TEMPLATE_PATH = '/root/portal-templates/vanessa';
 const AGENT_IMAGE = 'sales-agent-v2:latest';
 
@@ -217,7 +224,9 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     }
 
     // ── STEP 5: Clone full .openclaw dir from sales-agent ──────────────────
-    await ssh.connect({ host: DO_SERVER, username: 'root', privateKeyPath: SSH_KEY_PATH });
+    const sshPrivateKey = getSSHPrivateKey();
+    if (!sshPrivateKey) throw new Error('No SSH key available — set RESET_SSH_KEY env var');
+    await ssh.connect({ host: DO_SERVER, username: 'root', privateKey: sshPrivateKey });
 
     // Clone entire sales-agent .openclaw dir (brings plugins, extensions, config, pre-approved device pairing)
     await ssh.execCommand(`cp -r /root/.sales-agent ${ocPath}`);
