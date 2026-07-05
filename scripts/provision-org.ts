@@ -66,8 +66,9 @@ const DEFAULT_CHANNELS = [
   { suffix: 'general',         display: 'General',          type: 'chat',     icon: '💬', position: 1 },
   { suffix: 'sms-inbox',       display: 'SMS Inbox',        type: 'sms',      icon: '📱', position: 5 },
   { suffix: 'sms-drafts',      display: 'SMS Drafts',       type: 'sms',      icon: '✉️',  position: 6 },
-  { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',     icon: '🔔', position: 6 },
-  { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',     icon: '📞', position: 7 },
+  { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',     icon: '🔔', position: 7 },
+  { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',     icon: '📞', position: 8 },
+  { suffix: 'sms-actions',     display: 'SMS Actions',      type: 'chat',     icon: '📨', position: 99 },
 ];
 
 const DEFAULT_CRONS = [

@@ -5,17 +5,8 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 
 const TELNYX_KEY = process.env.TELNYX_API_KEY!;
-const TELNYX_FROM = process.env.TELNYX_FROM_NUMBER || '+18304076296';
-const CRM_URL = process.env.CRM_SUPABASE_URL!;
-const CRM_KEY = process.env.CRM_SUPABASE_KEY!;
 const PORTAL_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PORTAL_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const ORG_ID = '1c466ccb-ef35-4ba4-bf00-5fcabf20edec';
-
-const USER_OWNER_IDS: Record<string, string> = {
-  larry:   '4e86efd2-6335-464b-b286-671b863a9dfc',
-  shannon: 'e358d165-3b57-49b7-9f94-beb0b3414697',
-};
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,11 +18,59 @@ export async function POST(req: NextRequest) {
     const { to, body, channelId, contactName, contactId, userFlag, draftMessageId } = await req.json();
     if (!to || !body || !channelId) return NextResponse.json({ error: 'to, body, channelId required' }, { status: 400 });
 
-    // Send via Telnyx
+    const portal = createServiceClient(PORTAL_URL, PORTAL_SERVICE_KEY, { auth: { persistSession: false } });
+
+    // ── Look up channel → org + agent ────────────────────────────────────────
+    const { data: channel, error: chErr } = await portal
+      .from('portal_channels')
+      .select('org_id, agent_id')
+      .eq('id', channelId)
+      .single();
+    if (chErr || !channel) {
+      console.error('[sms/send] Channel lookup failed:', chErr?.message);
+      return NextResponse.json({ ok: false, error: 'Channel not found' }, { status: 404 });
+    }
+    const { org_id: orgId, agent_id: agentId } = channel;
+
+    // ── Look up agent → Telnyx phone number ──────────────────────────────────
+    const { data: agent } = await portal
+      .from('agents')
+      .select('telnyx_phone_number')
+      .eq('id', agentId)
+      .single();
+    const telnyxFrom = agent?.telnyx_phone_number || process.env.TELNYX_FROM_NUMBER || '+18304076296';
+
+    // ── Look up org → CRM credentials ────────────────────────────────────────
+    const { data: org } = await portal
+      .from('organizations')
+      .select('crm_supabase_url, crm_supabase_key')
+      .eq('id', orgId)
+      .single();
+    const crmUrl = org?.crm_supabase_url || null;
+    const crmKey = org?.crm_supabase_key || null;
+
+    // ── Look up sending rep → crm_user_id for owner update ───────────────────
+    let repCrmUserId: string | null = null;
+    let repDisplayName = userFlag || 'Agent';
+    if (userFlag) {
+      const { data: repUser } = await portal
+        .from('portal_users')
+        .select('crm_user_id, name')
+        .eq('org_id', orgId)
+        .ilike('name', `%${userFlag}%`)
+        .limit(1)
+        .single();
+      if (repUser) {
+        repCrmUserId = repUser.crm_user_id || null;
+        repDisplayName = repUser.name || userFlag;
+      }
+    }
+
+    // ── Send via Telnyx ───────────────────────────────────────────────────────
     const telRes = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${TELNYX_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: TELNYX_FROM, to, text: body }),
+      body: JSON.stringify({ from: telnyxFrom, to, text: body }),
     });
 
     if (!telRes.ok) {
@@ -43,8 +82,7 @@ export async function POST(req: NextRequest) {
     const telData = await telRes.json();
     const msgId = telData?.data?.id || 'unknown';
 
-    const portal = createServiceClient(PORTAL_URL, PORTAL_SERVICE_KEY, { auth: { persistSession: false } });
-
+    // ── Write to portal_messages ──────────────────────────────────────────────
     const sentMeta = {
       approval_state: 'sent',
       contact_phone: to,
@@ -57,42 +95,41 @@ export async function POST(req: NextRequest) {
     };
 
     if (draftMessageId) {
-      // Approving an existing draft — update in place, don't post a duplicate
+      // Approving an existing draft — update in place
       const { data: draft } = await portal.from('portal_messages').select('metadata').eq('id', draftMessageId).single();
       if (draft) {
         await portal.from('portal_messages').update({ metadata: { ...draft.metadata, ...sentMeta } }).eq('id', draftMessageId);
       }
     } else {
-      // Direct reply — no existing draft, post a new sent message
+      // Direct reply — post new sent message
       await portal.from('portal_messages').insert({
         channel_id: channelId,
-        org_id: ORG_ID,
+        org_id: orgId,
         sender_type: 'system',
-        sender_name: userFlag ? (userFlag === 'larry' ? 'Larry' : 'Shannon') : 'Agent',
+        sender_name: repDisplayName,
         content: body,
         metadata: sentMeta,
         processed: true,
       });
     }
 
-    // CRM log (best effort)
-    if (CRM_URL && CRM_KEY) {
+    // ── CRM log (best effort) ─────────────────────────────────────────────────
+    if (crmUrl && crmKey) {
       try {
-        const crm = createServiceClient(CRM_URL, CRM_KEY, { auth: { persistSession: false } });
+        const crm = createServiceClient(crmUrl, crmKey, { auth: { persistSession: false } });
         const digits = to.replace(/\D/g, '').slice(-10);
         let cId = contactId;
-        let existingOwner: string | null = null;
 
         if (!cId) {
           const { data: contacts } = await crm.from('contacts').select('id,owner_id').ilike('phone', `%${digits}%`).limit(1);
-          if (contacts?.[0]) { cId = contacts[0].id; existingOwner = contacts[0].owner_id; }
+          if (contacts?.[0]) cId = contacts[0].id;
         }
 
         if (cId) {
           const now = new Date().toISOString();
           await crm.from('activities').insert({ contact_id: cId, activity_type: 'sms_sent', title: `SMS sent to ${to}`, description: body, created_at: now });
           const patch: Record<string, any> = { last_contacted_at: now, last_contact_type: 'sms_sent' };
-          if (userFlag && USER_OWNER_IDS[userFlag]) patch.owner_id = USER_OWNER_IDS[userFlag];
+          if (repCrmUserId) patch.owner_id = repCrmUserId;
           await crm.from('contacts').update(patch).eq('id', cId);
         }
       } catch (e) {
