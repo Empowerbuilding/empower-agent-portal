@@ -10,11 +10,19 @@ export default async function Home() {
   }
 
   // Get all orgs this user belongs to
-  const { data: portalUsers } = await supabase
+  const { data: portalUsers, error: puError } = await supabase
     .from('portal_users')
     .select('org_id, role, organizations(slug)')
     .eq('supabase_auth_id', user.id)
     .order('created_at', { ascending: false });
+
+  // Only redirect to onboarding if there's genuinely no org — not on DB errors.
+  // A query failure returns data:null; without this guard a transient Supabase
+  // hiccup would send existing members into the new-org wizard.
+  if (puError) {
+    // Surface a simple retry page rather than dumping users into onboarding
+    redirect('/login?error=session');
+  }
 
   if (!portalUsers || portalUsers.length === 0) {
     // Logged in but no org yet — send to onboarding wizard
