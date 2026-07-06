@@ -22,6 +22,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
 
@@ -38,11 +39,11 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
       // Defer initial snap scroll by one frame so fixed-header padding-top
       // is fully applied before calculating scroll position (same fix as ChatWindow)
       requestAnimationFrame(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+        if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
       });
       isInitialLoad.current = false;
     } else {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -50,7 +51,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
-        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), 50);
+        setTimeout(() => { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, 50);
       }
     };
     document.addEventListener('visibilitychange', onVisible);
@@ -123,7 +124,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
         )}
       </div>
 
-      <div className="feed-list">
+      <div className="feed-list" ref={listRef}>
         {messages.length === 0 && <div className="empty-state"><span className="icon">{channel.icon}</span><span className="label">No updates yet</span></div>}
         {messages.map(msg => (
           <div key={msg.id} className="feed-card" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>

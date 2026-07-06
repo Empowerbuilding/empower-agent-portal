@@ -71,6 +71,7 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
 
@@ -78,11 +79,11 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
   useEffect(() => {
     if (isInitialLoad.current) {
       requestAnimationFrame(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+        if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
       });
       isInitialLoad.current = false;
     } else {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -90,7 +91,7 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
-        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), 50);
+        setTimeout(() => { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, 50);
       }
     };
     document.addEventListener('visibilitychange', onVisible);
@@ -175,7 +176,7 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
         )}
       </div>
 
-      <div className="feed-list">
+      <div className="feed-list" ref={listRef}>
         {messages.length === 0 && (
           <div className="empty-state">
             <span className="icon">{channel.icon}</span>

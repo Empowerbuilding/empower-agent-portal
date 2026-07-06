@@ -36,6 +36,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [agentTyping, setAgentTyping] = useState(false);
   const [listening, setListening] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -58,12 +59,12 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       // scroll position. Without this, PWA cold-opens can render the first
       // message behind the fixed header.
       requestAnimationFrame(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+        if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
       });
       isInitialLoad.current = false;
     } else {
       // Smooth scroll only for new incoming messages
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -90,7 +91,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       } else {
         setAgentTyping(false);
       }
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), 50);
+      setTimeout(() => { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, 50);
     }
   };
 
@@ -373,7 +374,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       </div>
 
       {/* Messages */}
-      <div className="messages-list">
+      <div className="messages-list" ref={listRef}>
         {messages.length === 0 && (
           <div className="empty-state">
             <span className="label" style={{ color: 'var(--muted)', fontSize: '13px' }}>No messages yet — start the conversation</span>

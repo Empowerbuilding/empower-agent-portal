@@ -76,6 +76,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const [vanessaDrafting, setVanessaDrafting] = useState<string | null>(null);
   const vanessaDraftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const smsListRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
   const supabase = createClient();
@@ -118,7 +119,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
 
   // Scroll to bottom when thread changes
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (smsListRef.current) smsListRef.current.scrollTop = smsListRef.current.scrollHeight;
   }, [activeConv?.messages.length, selectedPhone]);
 
   // Mobile toolbar: back button when viewing a thread
@@ -404,7 +405,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div ref={smsListRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {[...activeConv.messages]
           .sort((a, b) => a.created_at.localeCompare(b.created_at))
           .map(msg => {
