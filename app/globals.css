@@ -93,9 +93,11 @@ html, body {
   }
 }
 @media (max-width: 767px) {
-  /* Push content above Android gesture navigation bar */
+  /* Push content above Android gesture navigation bar.
+     env(safe-area-inset-bottom) returns 0 on this device, so use a hard-coded
+     fallback that covers any Android gesture nav bar height. */
   .app-shell {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: max(env(safe-area-inset-bottom), 48px);
   }
   .mobile-header {
     display: flex;
