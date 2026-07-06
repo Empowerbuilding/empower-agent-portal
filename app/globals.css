@@ -92,9 +92,6 @@ html, body {
   }
 }
 @media (max-width: 767px) {
-  .app-shell {
-    flex-direction: column;
-  }
   .mobile-header {
     display: flex;
     align-items: center;
@@ -106,7 +103,7 @@ html, body {
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-    z-index: 100;
+    /* Normal flow flex item — content below it naturally, no padding-top compensation needed */
   }
 }
 

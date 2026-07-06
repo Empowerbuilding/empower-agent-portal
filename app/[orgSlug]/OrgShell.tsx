@@ -72,33 +72,33 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Mobile top bar — flex sibling of main-content so layout pushes content down naturally */}
-      <div className="mobile-header">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          style={{
-            background: 'none', border: 'none', color: 'var(--muted)',
-            cursor: 'pointer', fontSize: '20px', padding: '4px', lineHeight: 1,
-            minWidth: 32, minHeight: 32,
-          }}
-          aria-label="Open menu"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {activeChannel ? `# ${activeChannel.display_name}` : org.name}
-          </div>
-        </div>
-        {/* Channel-specific action buttons injected by child components (includes presence button) */}
-        {toolbar && <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>{toolbar}</div>}
-      </div>
-
       <div className="main-content">
+        {/* Mobile top bar — normal flow flex item, not position:fixed, so content sits below it naturally */}
+        <div className="mobile-header">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--muted)',
+              cursor: 'pointer', fontSize: '20px', padding: '4px', lineHeight: 1,
+              minWidth: 32, minHeight: 32,
+            }}
+            aria-label="Open menu"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {activeChannel ? `# ${activeChannel.display_name}` : org.name}
+            </div>
+          </div>
+          {/* Channel-specific action buttons injected by child components (includes presence button) */}
+          {toolbar && <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>{toolbar}</div>}
+        </div>
+
         <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {children}
         </div>
