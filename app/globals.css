@@ -92,6 +92,12 @@ html, body {
   }
 }
 @media (max-width: 767px) {
+  /* Shift entire app content below the fixed header in one place.
+     box-sizing: border-box means height: 100dvh absorbs the padding,
+     so every child sees exactly (100dvh - 52px) of usable height. */
+  .app-shell {
+    padding-top: 52px;
+  }
   .mobile-header {
     display: flex;
     align-items: center;
@@ -568,15 +574,4 @@ html, body {
   border-top: 2px solid var(--accent);
 }
 
-/* ── Mobile scroll container padding (must come AFTER base styles to override them) ── */
-@media (max-width: 767px) {
-  .messages-list {
-    padding-top: calc(52px + 16px); /* fixed header (52px) + original top padding */
-  }
-  .feed-list {
-    padding-top: calc(52px + 12px);
-  }
-  .page-scroll {
-    padding-top: calc(52px + 12px);
-  }
-}
+
