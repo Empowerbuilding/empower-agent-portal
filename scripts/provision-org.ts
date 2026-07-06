@@ -236,6 +236,8 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     await ssh.execCommand(`rm -rf ${workspacePath}`);
     await ssh.execCommand(`cp -r ${TEMPLATE_PATH} ${workspacePath}`);
     await ssh.execCommand(`mkdir -p ${workspacePath}/memory ${workspacePath}/drafts ${workspacePath}/reports ${workspacePath}/proposals`);
+    // Patch hardcoded Barnhaus channel IDs in automation scripts to use this org's channels
+    await ssh.execCommand(`find ${workspacePath}/automation -name '*.py' | xargs sed -i 's/barnhaus-vanessa/${input.orgSlug}-vanessa/g' 2>/dev/null || true`);
 
     // Clear org-specific runtime state via SQLite (keep device pairing — stored in devices/paired.json)
     const clearScript = `import sqlite3
