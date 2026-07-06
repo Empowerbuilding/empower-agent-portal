@@ -168,7 +168,7 @@ export default function AgentFilesPage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {/* File list sidebar */}
       <div style={{
         width: 200, flexShrink: 0, borderRight: '1px solid var(--border)',
@@ -183,7 +183,7 @@ export default function AgentFilesPage() {
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '6px', paddingTop: '10px' }}>
           {loadingFiles ? (
             <div style={{ padding: '12px 8px', fontSize: '12px', color: 'var(--muted)' }}>Loading…</div>
           ) : fileError ? (
