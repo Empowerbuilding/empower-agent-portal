@@ -308,7 +308,17 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     {conv.has_pending && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, display: 'inline-block' }} />}
-                    {lastSnippet(conv)}
+                    {(() => {
+                      const last = [...conv.messages].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+                      if (!last) return null;
+                      const meta = (last.metadata || {}) as Record<string, any>;
+                      const isInbound = meta.direction === 'inbound';
+                      const arrow = isInbound ? '← ' : '→ ';
+                      const arrowColor = isInbound ? '#22c55e' : '#ef4444';
+                      const body = extractSmsBody(last.content);
+                      const snippet = body.slice(0, 42) + (body.length > 42 ? '…' : '');
+                      return <><span style={{ color: arrowColor, fontWeight: 700, flexShrink: 0 }}>{arrow}</span>{snippet}</>;
+                    })()}
                   </div>
                 </div>
               </div>
