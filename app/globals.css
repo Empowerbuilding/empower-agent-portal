@@ -107,16 +107,6 @@ html, body {
     right: 0;
     z-index: 100;
   }
-  /* Pad scroll containers directly so content can never hide under the fixed header */
-  .messages-list {
-    padding-top: calc(52px + 16px);
-  }
-  .page-scroll {
-    padding-top: calc(52px + 12px);
-  }
-  .feed-list {
-    padding-top: calc(52px + 12px);
-  }
 }
 
 /* ── Main content ── */
@@ -576,4 +566,17 @@ html, body {
 
 .channel-drop-target {
   border-top: 2px solid var(--accent);
+}
+
+/* ── Mobile scroll container padding (must come AFTER base styles to override them) ── */
+@media (max-width: 767px) {
+  .messages-list {
+    padding-top: calc(52px + 16px); /* fixed header (52px) + original top padding */
+  }
+  .feed-list {
+    padding-top: calc(52px + 12px);
+  }
+  .page-scroll {
+    padding-top: calc(52px + 12px);
+  }
 }
