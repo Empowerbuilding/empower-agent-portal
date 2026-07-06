@@ -21,7 +21,7 @@ function renderInline(text: string): React.ReactNode[] {
   while ((match = regex.exec(text)) !== null) {
     if (match.index > last) parts.push(text.slice(last, match.index));
     if (match[2] && match[3]) {
-      parts.push(<a key={key++} href={match[3]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{match[2]}</a>);
+      parts.push(<a key={key++} href={match[3]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>{match[2]}</a>);
     } else if (match[4]) parts.push(<strong key={key++}>{match[4]}</strong>);
     else if (match[5]) parts.push(<em key={key++}>{match[5]}</em>);
     else if (match[6]) parts.push(<code key={key++} style={{ background: 'var(--border)', borderRadius: '3px', padding: '1px 5px', fontSize: '0.9em', fontFamily: 'monospace' }}>{match[6]}</code>);
@@ -155,7 +155,7 @@ export default function Markdown({ content, className }: Props) {
       blocks.push(
         <div key={lineKey++} style={{ display: 'flex', gap: '6px', marginBottom: '2px' }}>
           <span style={{ color: 'var(--muted)', flexShrink: 0 }}>•</span>
-          <span>{renderInline(line.replace(/^[-*•]\s/, ''))}</span>
+          <span style={{ minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{renderInline(line.replace(/^[-*•]\s/, ''))}</span>
         </div>
       );
       i++; continue;
@@ -167,7 +167,7 @@ export default function Markdown({ content, className }: Props) {
       blocks.push(
         <div key={lineKey++} style={{ display: 'flex', gap: '6px', marginBottom: '2px' }}>
           <span style={{ color: 'var(--muted)', flexShrink: 0, minWidth: '16px' }}>{numMatch[1]}.</span>
-          <span>{renderInline(numMatch[2])}</span>
+          <span style={{ minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{renderInline(numMatch[2])}</span>
         </div>
       );
       i++; continue;
@@ -178,5 +178,5 @@ export default function Markdown({ content, className }: Props) {
     i++;
   }
 
-  return <div className={className} style={{ lineHeight: 1.5 }}>{blocks}</div>;
+  return <div className={className} style={{ lineHeight: 1.5, overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0 }}>{blocks}</div>;
 }
