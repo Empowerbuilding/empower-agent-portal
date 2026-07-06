@@ -95,24 +95,16 @@ html, body {
     display: flex;
     align-items: center;
     gap: 12px;
-    /* Side padding only — top padding handled by safe-area-inset-top below */
     padding: 0 16px;
-    /* Total height = 52px visible bar + status bar height on edge-to-edge Android PWA */
-    height: calc(52px + env(safe-area-inset-top));
-    min-height: calc(52px + env(safe-area-inset-top));
-    padding-top: env(safe-area-inset-top);
+    height: 52px;
+    min-height: 52px;
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border);
-    /* Fixed position — immune to any flex/layout issue or React re-render */
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-  }
-  /* Compensate for the fixed header so content starts below it */
-  .main-content {
-    padding-top: calc(52px + env(safe-area-inset-top));
+    flex-shrink: 0;
+    /* In-flow — no position:fixed, no padding-top compensation needed.
+       Scrolling happens inside inner containers, not main-content itself,
+       so an in-flow header is always visible and works in both browser
+       and Android PWA standalone mode without any viewport tricks. */
   }
 }
 
