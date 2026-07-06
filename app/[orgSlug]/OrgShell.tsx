@@ -26,21 +26,7 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
     registerServiceWorker();
   }, []);
 
-  // Android PWA edge-to-edge fix.
-  // In standalone PWA mode, the layout viewport starts at y=0 (behind the status bar),
-  // but position:fixed uses the visual viewport which starts below the status bar.
-  // window.visualViewport.offsetTop gives the exact gap between them (= status bar height).
-  // We write it to --safe-top so CSS can use it for header height + content padding.
-  // In Chrome browser mode offsetTop=0, so this is a no-op there.
-  useEffect(() => {
-    function applySafeTop() {
-      const offset = (window.visualViewport?.offsetTop ?? 0);
-      document.documentElement.style.setProperty('--safe-top', `${offset}px`);
-    }
-    applySafeTop();
-    window.visualViewport?.addEventListener('resize', applySafeTop);
-    return () => window.visualViewport?.removeEventListener('resize', applySafeTop);
-  }, []);
+  // No JS-based safe-top detection needed — layout is handled purely in CSS.
 
   // Presence heartbeat — ping every 30s while the portal is open so other
   // team members can see who's currently online (see Settings > Team Members)

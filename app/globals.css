@@ -36,6 +36,7 @@ html, body {
   display: flex;
   height: 100dvh; /* dynamic viewport height — handles mobile browser chrome */
   overflow: hidden;
+  overscroll-behavior: none; /* prevent rubber-band scroll revealing content behind fixed header on Android */
   position: relative;
 }
 
