@@ -33,7 +33,7 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
       const vv = window.visualViewport;
       if (!vv) return;
       const keyboardOpen = (window.innerHeight - vv.height) > 150;
-      document.documentElement.style.setProperty('--mob-btm', keyboardOpen ? '0px' : '28px');
+      document.documentElement.style.setProperty('--mob-btm', keyboardOpen ? '0px' : '16px');
     }
     updateBottomPad();
     window.visualViewport?.addEventListener('resize', updateBottomPad);
