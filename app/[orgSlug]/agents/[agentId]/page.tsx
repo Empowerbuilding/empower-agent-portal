@@ -35,6 +35,17 @@ export default function AgentFilesPage() {
   const charCount = content.length;
   const isDirty = content !== originalContent;
 
+  // Bump this counter when the app regains focus (e.g. returning from PDF viewer)
+  // so the toolbar effect re-runs and re-injects the toolbar into the mobile header.
+  const [layoutKey, setLayoutKey] = useState(0);
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setLayoutKey(k => k + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   // Inject file toolbar into the mobile header so it's always visible above the fixed
   // header — prevents it from rendering behind the 52px fixed header on PWA cold-open.
   useEffect(() => {
@@ -62,7 +73,7 @@ export default function AgentFilesPage() {
       </div>
     );
     return () => setToolbar(null);
-  }, [mobileView, activeFile, isDirty, saving, charCount]);
+  }, [mobileView, activeFile, isDirty, saving, charCount, layoutKey]);
 
   useEffect(() => {
     supabase.from('agents').select('display_name').eq('id', agentId).single()

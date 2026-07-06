@@ -32,7 +32,30 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
     return () => setToolbar(null);
   }, []);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  const isInitialLoad = useRef(true);
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      // Defer initial snap scroll by one frame so fixed-header padding-top
+      // is fully applied before calculating scroll position (same fix as ChatWindow)
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+      });
+      isInitialLoad.current = false;
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Re-scroll when app comes back into focus (e.g. returning from PDF viewer)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), 50);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
   useEffect(() => { if (!deleteMode) setSelected(new Set()); }, [deleteMode]);
 
   useEffect(() => {

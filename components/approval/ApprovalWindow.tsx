@@ -74,7 +74,28 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  const isInitialLoad = useRef(true);
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+      });
+      isInitialLoad.current = false;
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Re-scroll when app comes back into focus
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), 50);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
   useEffect(() => { if (!deleteMode) setSelected(new Set()); }, [deleteMode]);
 
   useEffect(() => {
