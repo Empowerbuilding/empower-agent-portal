@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useMobileToolbar } from '@/context/MobileToolbar';
 
 interface FileEntry {
   name: string;
@@ -16,6 +17,7 @@ export default function AgentFilesPage() {
   const agentId = params.agentId as string;
   const orgSlug = params.orgSlug as string;
   const supabase = createClient();
+  const { setToolbar } = useMobileToolbar();
 
   const [agentName, setAgentName] = useState('');
   const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
@@ -32,6 +34,35 @@ export default function AgentFilesPage() {
 
   const charCount = content.length;
   const isDirty = content !== originalContent;
+
+  // Inject file toolbar into the mobile header so it's always visible above the fixed
+  // header — prevents it from rendering behind the 52px fixed header on PWA cold-open.
+  useEffect(() => {
+    if (mobileView !== 'editor' || !activeFile) {
+      setToolbar(null);
+      return;
+    }
+    setToolbar(
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '12px', color: charCount > 25000 ? '#da3633' : charCount > 15000 ? '#f59e0b' : 'var(--muted)', fontWeight: charCount > 15000 ? 600 : 400 }}>
+          {charCount.toLocaleString()} chars
+        </span>
+        <button
+          onClick={saveFile}
+          disabled={!isDirty || saving || !activeFile}
+          style={{
+            padding: '5px 12px', background: isDirty ? 'var(--accent)' : 'var(--border)',
+            border: 'none', borderRadius: '6px', color: isDirty ? '#fff' : 'var(--muted)',
+            fontWeight: 700, cursor: isDirty && !saving ? 'pointer' : 'not-allowed',
+            fontSize: '12px', opacity: saving ? 0.7 : 1,
+          }}
+        >
+          {saving ? 'Saving…' : 'Save & Apply'}
+        </button>
+      </div>
+    );
+    return () => setToolbar(null);
+  }, [mobileView, activeFile, isDirty, saving, charCount]);
 
   useEffect(() => {
     supabase.from('agents').select('display_name').eq('id', agentId).single()
@@ -174,8 +205,8 @@ export default function AgentFilesPage() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}
         className={mobileView === 'list' ? 'agent-files-editor hidden-mobile' : 'agent-files-editor'}
       >
-        {/* Toolbar */}
-        <div style={{
+        {/* Toolbar — hidden on mobile (injected into fixed mobile header via setToolbar) */}
+        <div className="hide-mobile" style={{
           padding: '10px 16px', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
           background: 'var(--sidebar-bg)', flexShrink: 0,

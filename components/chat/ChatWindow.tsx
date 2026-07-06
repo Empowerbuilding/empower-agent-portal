@@ -53,8 +53,13 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const isInitialLoad = useRef(true);
   useEffect(() => {
     if (isInitialLoad.current) {
-      // Snap instantly on first load — no visible scroll animation
-      bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+      // Defer initial snap scroll by one animation frame so the browser has
+      // applied CSS layout (incl. mobile header padding-top) before we calculate
+      // scroll position. Without this, PWA cold-opens can render the first
+      // message behind the fixed header.
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+      });
       isInitialLoad.current = false;
     } else {
       // Smooth scroll only for new incoming messages

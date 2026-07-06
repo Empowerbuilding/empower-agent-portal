@@ -544,10 +544,12 @@ html, body {
 
 /* ── Agent file editor — mobile ── */
 .show-mobile { display: none; }
+.hide-mobile { display: flex; } /* visible on desktop, hidden on mobile */
 
 @media (max-width: 767px) {
   .show-mobile { display: block; }
   .hidden-mobile { display: none !important; }
+  .hide-mobile { display: none !important; }
 
   .agent-files-sidebar {
     width: 100% !important;
