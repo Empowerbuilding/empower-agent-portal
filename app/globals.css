@@ -96,9 +96,6 @@ html, body {
   /* Shift entire app content below the fixed header in one place.
      box-sizing: border-box means height: 100dvh absorbs the padding,
      so every child sees exactly (100dvh - 52px) of usable height. */
-  .app-shell {
-    padding-top: 52px;
-  }
   .mobile-header {
     display: flex;
     align-items: center;
@@ -108,11 +105,8 @@ html, body {
     min-height: 52px;
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border);
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
+    flex-shrink: 0;
+    /* Normal flow flex item — no position:fixed/sticky, no padding compensation needed */
   }
 }
 
