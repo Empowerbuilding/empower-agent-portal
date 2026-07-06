@@ -298,7 +298,7 @@ print('cleared')
           compaction: { mode: 'safeguard', truncateAfterCompaction: true, maxActiveTranscriptBytes: '500kb' },
         },
       },
-      tools: { profile: 'coding', exec: { security: 'full', ask: 'off' } },
+      tools: { profile: 'full', exec: { security: 'full', ask: 'off' } },
       commands: { native: 'auto', nativeSkills: 'auto', restart: true, ownerDisplay: 'raw' },
       session: { dmScope: 'per-channel-peer' },
       channels: {
