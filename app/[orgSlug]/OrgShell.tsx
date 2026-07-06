@@ -85,7 +85,7 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
           {toolbar && <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>{toolbar}</div>}
         </div>
 
-        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'clip', display: 'flex', flexDirection: 'column' }}>
           {children}
         </div>
       </div>

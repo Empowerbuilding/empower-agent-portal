@@ -115,7 +115,7 @@ html, body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: clip; /* NOT hidden — clip doesn't create a scroll container, so scrollIntoView can't scroll main-content and push the mobile header off-screen */
   min-width: 0;
 }
 
