@@ -97,9 +97,9 @@ html, body {
     align-items: center;
     gap: 12px;
     padding: 0 16px;
-    padding-top: var(--safe-top);
-    height: calc(52px + var(--safe-top));
-    min-height: calc(52px + var(--safe-top));
+    padding-top: env(safe-area-inset-top);
+    height: calc(52px + env(safe-area-inset-top));
+    min-height: calc(52px + env(safe-area-inset-top));
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border);
     position: fixed;
@@ -109,7 +109,7 @@ html, body {
     z-index: 100;
   }
   .main-content {
-    padding-top: calc(52px + var(--safe-top));
+    padding-top: calc(52px + env(safe-area-inset-top));
   }
 }
 
