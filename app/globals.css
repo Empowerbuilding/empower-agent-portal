@@ -93,9 +93,10 @@ html, body {
   }
 }
 @media (max-width: 767px) {
-  /* Shift entire app content below the fixed header in one place.
-     box-sizing: border-box means height: 100dvh absorbs the padding,
-     so every child sees exactly (100dvh - 52px) of usable height. */
+  /* Push content above Android gesture navigation bar */
+  .app-shell {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
   .mobile-header {
     display: flex;
     align-items: center;
