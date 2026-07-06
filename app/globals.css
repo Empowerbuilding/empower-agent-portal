@@ -97,13 +97,25 @@ html, body {
     align-items: center;
     gap: 12px;
     padding: 0 16px;
-    padding-top: env(safe-area-inset-top);
-    height: calc(52px + env(safe-area-inset-top));
-    min-height: calc(52px + env(safe-area-inset-top));
+    height: 52px;
+    min-height: 52px;
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    /* Normal flow flex item — content below it naturally, no padding-top compensation needed */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+  }
+  /* Pad scroll containers directly so content can never hide under the fixed header */
+  .messages-list {
+    padding-top: calc(52px + 16px);
+  }
+  .page-scroll {
+    padding-top: calc(52px + 12px);
+  }
+  .feed-list {
+    padding-top: calc(52px + 12px);
   }
 }
 
