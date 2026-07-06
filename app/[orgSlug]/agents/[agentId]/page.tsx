@@ -54,21 +54,27 @@ export default function AgentFilesPage() {
       return;
     }
     setToolbar(
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '12px', color: charCount > 25000 ? '#da3633' : charCount > 15000 ? '#f59e0b' : 'var(--muted)', fontWeight: charCount > 15000 ? 600 : 400 }}>
-          {charCount.toLocaleString()} chars
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <button
+          onClick={() => setMobileView('list')}
+          style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '13px', padding: '4px 6px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}
+        >
+          ← <span style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px' }}>{activeFile}</span>
+        </button>
+        <span style={{ fontSize: '11px', color: charCount > 25000 ? '#da3633' : charCount > 15000 ? '#f59e0b' : 'var(--muted)', fontWeight: charCount > 15000 ? 600 : 400, flexShrink: 0 }}>
+          {charCount.toLocaleString()}
         </span>
         <button
           onClick={saveFile}
           disabled={!isDirty || saving || !activeFile}
           style={{
-            padding: '5px 12px', background: isDirty ? 'var(--accent)' : 'var(--border)',
+            padding: '5px 10px', background: isDirty ? 'var(--accent)' : 'var(--border)',
             border: 'none', borderRadius: '6px', color: isDirty ? '#fff' : 'var(--muted)',
             fontWeight: 700, cursor: isDirty && !saving ? 'pointer' : 'not-allowed',
-            fontSize: '12px', opacity: saving ? 0.7 : 1,
+            fontSize: '12px', opacity: saving ? 0.7 : 1, flexShrink: 0,
           }}
         >
-          {saving ? 'Saving…' : 'Save & Apply'}
+          {saving ? 'Saving…' : 'Save'}
         </button>
       </div>
     );
