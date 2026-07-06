@@ -71,29 +71,33 @@ const DEFAULT_CHANNELS = [
   { suffix: 'sms-actions',     display: 'SMS Actions',      type: 'chat',     icon: '📨', position: 99 },
 ];
 
-const DEFAULT_CRONS = [
-  {
-    id: 'morning-briefing',
-    name: 'Morning Briefing',
-    scheduleFlag: '--cron "0 8 * * 1-5"',
-    tz: 'America/Chicago',
-    message: "Send the morning briefing: today's priority leads, any follow-ups due, and anything urgent from yesterday.",
-  },
-  {
-    id: 'inbox-scan',
-    name: 'Inbox Scan',
-    scheduleFlag: '--every "10m"',
-    tz: '',
-    message: 'Check Gmail for new emails from leads. For each new one, post a brief alert to the lead alerts channel.',
-  },
-  {
-    id: 'eod-report',
-    name: 'End-of-Day Report',
-    scheduleFlag: '--cron "0 17 * * 1-5"',
-    tz: 'America/Chicago',
-    message: 'Generate the end-of-day pipeline report: calls made, emails sent, new leads, and what needs follow-up tomorrow.',
-  },
-];
+// NOTE: crons use --no-deliver so the agent posts results itself via the message tool.
+// Each message explicitly names the target portal channel so isolated sessions know where to post.
+function buildDefaultCrons(orgSlug: string) {
+  return [
+    {
+      id: 'morning-briefing',
+      name: 'Morning Briefing',
+      scheduleFlag: '--cron "0 8 * * 1-5"',
+      tz: 'America/Chicago',
+      message: `Send the morning briefing to channel \`${orgSlug}-vanessa-general\`: today's priority leads, any follow-ups due, and anything urgent from yesterday.`,
+    },
+    {
+      id: 'inbox-scan',
+      name: 'Inbox Scan',
+      scheduleFlag: '--every "30m"',
+      tz: '',
+      message: `Check Gmail for new emails from leads. For each new one, post a brief alert to portal channel \`${orgSlug}-vanessa-general\`.`,
+    },
+    {
+      id: 'eod-report',
+      name: 'End-of-Day Report',
+      scheduleFlag: '--cron "0 17 * * 1-5"',
+      tz: 'America/Chicago',
+      message: `Generate the end-of-day pipeline report: calls made, emails sent, new leads, and what needs follow-up tomorrow. Post the report to portal channel \`${orgSlug}-vanessa-general\`.`,
+    },
+  ];
+}
 
 
 function buildBootstrapFiles(input: ProvisionInput): Record<string, string> {
@@ -278,6 +282,10 @@ print('cleared')
       `${input.orgSlug}-vanessa-general`,
       ...input.reps.map(r => `${input.orgSlug}-vanessa-${r.name.toLowerCase().replace(/\s+/g, '-')}`),
       `${input.orgSlug}-vanessa-sms-drafts`,
+      `${input.orgSlug}-vanessa-lead-alerts`,
+      `${input.orgSlug}-vanessa-sms-inbox`,
+      `${input.orgSlug}-vanessa-call-recordings`,
+      `${input.orgSlug}-vanessa-sms-actions`,
     ];
 
     const ocConfig = {
@@ -350,10 +358,13 @@ print('cleared')
 
     // ── STEP 9: Seed default crons ───────────────────────────────────────────
     const enabledCrons = input.enabledCrons ?? ['morning-briefing', 'inbox-scan', 'eod-report'];
-    for (const cron of DEFAULT_CRONS) {
+    const defaultCrons = buildDefaultCrons(input.orgSlug);
+    for (const cron of defaultCrons) {
       if (!enabledCrons.includes(cron.id)) continue;
       const tzFlag = cron.tz ? `--tz "${cron.tz}"` : '';
-      const cmd = `docker exec ${containerName} node /app/openclaw.mjs cron add --name "${cron.name}" ${cron.scheduleFlag} ${tzFlag} --session isolated --message "${cron.message.replace(/"/g, '\\"')}"`;  
+      // Use --no-deliver: portal channel doesn't support announce delivery.
+      // The agent posts results itself via the message tool using the channel name in the message.
+      const cmd = `docker exec ${containerName} node /app/openclaw.mjs cron add --name "${cron.name}" ${cron.scheduleFlag} ${tzFlag} --session isolated --no-deliver --message "${cron.message.replace(/"/g, '\\"')}"`;  
       await ssh.execCommand(cmd);
     }
 
