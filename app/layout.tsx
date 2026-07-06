@@ -17,11 +17,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: 'var(--bg)',
+  themeColor: '#26272b',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover', // required for env(safe-area-inset-top) on Android PWA edge-to-edge
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

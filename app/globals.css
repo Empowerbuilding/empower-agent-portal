@@ -95,9 +95,12 @@ html, body {
     display: flex;
     align-items: center;
     gap: 12px;
+    /* Side padding only — top padding handled by safe-area-inset-top below */
     padding: 0 16px;
-    height: 52px;
-    min-height: 52px;
+    /* Total height = 52px visible bar + status bar height on edge-to-edge Android PWA */
+    height: calc(52px + env(safe-area-inset-top));
+    min-height: calc(52px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border);
     /* Fixed position — immune to any flex/layout issue or React re-render */
@@ -109,7 +112,7 @@ html, body {
   }
   /* Compensate for the fixed header so content starts below it */
   .main-content {
-    padding-top: 52px;
+    padding-top: calc(52px + env(safe-area-inset-top));
   }
 }
 
