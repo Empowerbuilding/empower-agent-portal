@@ -92,6 +92,9 @@ html, body {
   }
 }
 @media (max-width: 767px) {
+  .app-shell {
+    flex-direction: column;
+  }
   .mobile-header {
     display: flex;
     align-items: center;
@@ -102,14 +105,8 @@ html, body {
     min-height: calc(52px + env(safe-area-inset-top));
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border);
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    flex-shrink: 0;
     z-index: 100;
-  }
-  .main-content {
-    padding-top: calc(52px + env(safe-area-inset-top));
   }
 }
 
