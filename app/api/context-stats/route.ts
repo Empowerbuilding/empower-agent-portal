@@ -12,11 +12,13 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Get all portal channels the user has access to
-    const { data: portalUser } = await supabase
+    // Use maybeSingle + order so this doesn't break when a user belongs to multiple orgs
+    const { data: portalUsers } = await supabase
       .from('portal_users')
       .select('id, org_id')
       .eq('supabase_auth_id', user.id)
-      .single();
+      .order('created_at', { ascending: true });
+    const portalUser = portalUsers?.[0] ?? null;
     if (!portalUser) return NextResponse.json({});
 
     const { data: channels } = await supabase

@@ -14,11 +14,12 @@ export async function POST(req: NextRequest) {
     if (!channelId) return NextResponse.json({ error: 'Missing channelId' }, { status: 400 });
 
     // Verify user has access to this channel
-    const { data: portalUser } = await supabase
+    const { data: portalUsers } = await supabase
       .from('portal_users')
       .select('id, org_id, role')
       .eq('supabase_auth_id', user.id)
-      .single();
+      .order('created_at', { ascending: true });
+    const portalUser = portalUsers?.[0] ?? null;
     if (!portalUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
     const { data: membership } = await supabase
