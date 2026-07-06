@@ -26,7 +26,7 @@ html, body {
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   height: 100%;
-  overflow: hidden;
+  overflow: clip; /* clip not hidden — prevents scrollIntoView from scrolling html/body and pushing app content off-screen */
   max-width: 100vw;
   overflow-x: hidden;
 }
@@ -35,8 +35,8 @@ html, body {
 .app-shell {
   display: flex;
   height: 100dvh; /* dynamic viewport height — handles mobile browser chrome */
-  overflow: hidden;
-  overscroll-behavior: none; /* prevent rubber-band scroll revealing content behind fixed header on Android */
+  overflow: clip; /* clip (not hidden) — doesn't create scroll container, so scrollIntoView can't scroll app-shell and push header off-screen */
+  overscroll-behavior: none;
   position: relative;
 }
 
