@@ -26,7 +26,19 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
     registerServiceWorker();
   }, []);
 
-  // No JS-based safe-top detection needed — layout is handled purely in CSS.
+  // Dynamic bottom padding — keeps content above Android gesture nav bar (28px),
+  // but drops to 0 when keyboard is open so the input bar doesn't jump.
+  useEffect(() => {
+    function updateBottomPad() {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      const keyboardOpen = (window.innerHeight - vv.height) > 150;
+      document.documentElement.style.setProperty('--mob-btm', keyboardOpen ? '0px' : '28px');
+    }
+    updateBottomPad();
+    window.visualViewport?.addEventListener('resize', updateBottomPad);
+    return () => window.visualViewport?.removeEventListener('resize', updateBottomPad);
+  }, []);
 
   // Presence heartbeat — ping every 30s while the portal is open so other
   // team members can see who's currently online (see Settings > Team Members)
