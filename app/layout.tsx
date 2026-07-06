@@ -22,6 +22,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover', // required for env(safe-area-inset-top) on Android PWA edge-to-edge
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
