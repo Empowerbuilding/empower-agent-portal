@@ -229,7 +229,8 @@ html, body {
   border-radius: 4px;
   transition: background 0.1s;
 }
-.msg-row:hover { background: rgba(255,255,255,0.02); }
+.msg-row.agent { background: rgba(255,255,255,0.03); }
+.msg-row:hover { background: rgba(255,255,255,0.05); }
 .msg-row.grouped { padding-top: 0; }
 
 /* Grouped messages: indent to align with text above, no avatar space wasted */
