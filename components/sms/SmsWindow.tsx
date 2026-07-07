@@ -63,6 +63,20 @@ function extractSmsBody(content: string): string {
   return m ? m[1].trim() : content;
 }
 
+function extractMediaUrls(content: string): string[] {
+  // n8n appends media URLs as plain lines after the code fence block
+  const urls: string[] = [];
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.match(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|mp4|mov|heic)(\?.*)?$/i)
+      || trimmed.match(/^https?:\/\/[^\s]+\/[^\s]*(media|mms|telnyx)[^\s]*/i)) {
+      urls.push(trimmed);
+    }
+  }
+  return urls;
+}
+
 export default function SmsWindow({ channel, initialMessages, currentUser, orgId }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
@@ -199,10 +213,13 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     setAskingVanessa(msg.id);
     try {
       const body = extractSmsBody(msg.content);
+      const mediaUrls = extractMediaUrls(msg.content);
       // Route to background channel — Vanessa monitors it, Larry/Shannon never see it
       const phone = activeConv.contact_phone;
       const senderUser = channel.id.includes('larry') ? 'larry' : 'shannon';
-      const prompt = `SMS action from ${currentUser.name}: Draft a reply to this inbound text from ${activeConv.contact_name} (${phone}): "${body}". Run send_sms.py --draft --to "${phone}" --user ${senderUser} and post it to the SMS inbox. No reply needed here.`;
+      const mediaNote = mediaUrls.length > 0 ? ` They also sent ${mediaUrls.length} image(s): ${mediaUrls.join(', ')}.` : '';
+      const bodyNote = body ? `"${body}"` : '(no text — image/media only)';
+      const prompt = `SMS action from ${currentUser.name}: Draft a reply to this inbound text from ${activeConv.contact_name} (${phone}): ${bodyNote}.${mediaNote} Run send_sms.py --draft --to "${phone}" --user ${senderUser} and post it to the SMS inbox. No reply needed here.`;
       await supabase.from('portal_messages').insert({
         channel_id: 'barnhaus-vanessa-sms-actions',
         org_id: orgId,
