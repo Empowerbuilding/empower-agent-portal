@@ -69,6 +69,7 @@ const DEFAULT_CHANNELS = [
   { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',     icon: '🔔', position: 7 },
   { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',     icon: '📞', position: 8 },
   { suffix: 'sms-actions',     display: 'SMS Actions',      type: 'chat',     icon: '📨', position: 99 },
+  { suffix: 'proposals',       display: 'Proposals',        type: 'feed',     icon: '📄', position: 9  },
 ];
 
 // NOTE: crons use --no-deliver so the agent posts results itself via the message tool.
@@ -333,6 +334,37 @@ print('cleared')
     fs.writeFileSync(ocConfigTmp, JSON.stringify(ocConfig, null, 2), 'utf8');
     await ssh.putFile(ocConfigTmp, `${ocPath}/openclaw.json`);
     fs.unlinkSync(ocConfigTmp);
+
+    // ── STEP 6c: Write org_config.json for automation scripts ─────────────────
+    // All automation scripts (portal_utils, send_sms, log_activity, etc.) read this
+    // file instead of hardcoding Barnhaus credentials. Written before container starts.
+    const orgConfig = {
+      org_slug:           input.orgSlug,
+      org_id:             org.id,
+      agent_name:         input.agentDisplayName,
+      portal_supabase_url: PORTAL_SUPABASE_URL,
+      portal_supabase_key: PORTAL_SUPABASE_KEY,
+      // CRM: populated when client connects CRM in Settings → Integrations
+      crm_supabase_url:   '',
+      crm_supabase_key:   '',
+      // Telnyx: populated from provisioned number; key from shared env
+      telnyx_api_key:     process.env.TELNYX_API_KEY || '',
+      telnyx_from_number: telnyxPhone || '',
+      reps: input.reps.map(r => ({
+        name:            r.name,
+        slug:            r.name.toLowerCase().replace(/\s+/g, '-'),
+        email:           r.email,
+        phone:           r.phone || '',
+        crm_id:          '',   // populated after CRM is connected
+        portal_channel:  `${input.orgSlug}-vanessa-${r.name.toLowerCase().replace(/\s+/g, '-')}`,
+        token_file:      `${r.name.toLowerCase().replace(/\s+/g, '_')}_token.json`,
+      })),
+    };
+    const orgConfigTmp = path.join(os.tmpdir(), `provision-org-config-${input.orgSlug}.json`);
+    fs.writeFileSync(orgConfigTmp, JSON.stringify(orgConfig, null, 2), 'utf8');
+    await ssh.putFile(orgConfigTmp, `${workspacePath}/automation/org_config.json`);
+    fs.unlinkSync(orgConfigTmp);
+    console.log('[provision] org_config.json written for', input.orgSlug);
 
     // ── STEP 7: Start Docker container ───────────────────────────────────────
     // Fix ownership to node user (uid 1000) before starting
