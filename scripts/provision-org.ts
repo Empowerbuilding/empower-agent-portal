@@ -365,6 +365,9 @@ print('cleared')
     const orgConfig = {
       org_slug:           input.orgSlug,
       org_id:             org.id,
+      org_name:           input.orgName,
+      org_website:        input.website || input.wizard?.website || '',
+      org_phone:          input.wizard?.phone || '',
       agent_name:         input.agentDisplayName,
       portal_supabase_url: PORTAL_SUPABASE_URL,
       portal_supabase_key: PORTAL_SUPABASE_KEY,
