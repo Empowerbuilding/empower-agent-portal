@@ -11,6 +11,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { provisionTelnyxNumber } from './provision-telnyx-number';
+import { provisionSupabaseCrm } from './provision-supabase-crm';
 import { NodeSSH } from 'node-ssh';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -183,7 +184,30 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       console.error('[provision] Telnyx provisioning failed (non-fatal):', e);
     }
 
-    // ── STEP 3: Create default portal channels ───────────────────────────────
+    // ── STEP 2c: Provision Supabase CRM project ────────────────────────────────
+    let crmSupabaseUrl = '';
+    let crmServiceRoleKey = '';
+    let crmDbPassword = '';
+    try {
+      if (process.env.SUPABASE_MANAGEMENT_API_KEY) {
+        console.log('[provision] Provisioning CRM Supabase project...');
+        const crm = await provisionSupabaseCrm(input.orgSlug);
+        crmSupabaseUrl    = crm.supabaseUrl;
+        crmServiceRoleKey = crm.serviceRoleKey;
+        crmDbPassword     = crm.dbPassword;
+        await supabase.from('agents').update({
+          crm_supabase_url: crmSupabaseUrl,
+          crm_supabase_key: crmServiceRoleKey,
+        }).eq('id', agent.id);
+        console.log('[provision] CRM project ready:', crmSupabaseUrl);
+      } else {
+        console.warn('[provision] SUPABASE_MANAGEMENT_API_KEY not set — skipping CRM provisioning');
+      }
+    } catch (e) {
+      console.error('[provision] CRM provisioning failed (non-fatal):', e);
+    }
+
+        // ── STEP 3: Create default portal channels ───────────────────────────────
     const channelRows = DEFAULT_CHANNELS.map(ch => ({
       id: `${input.orgSlug}-vanessa-${ch.suffix}`,
       org_id: org.id,
@@ -344,9 +368,8 @@ print('cleared')
       agent_name:         input.agentDisplayName,
       portal_supabase_url: PORTAL_SUPABASE_URL,
       portal_supabase_key: PORTAL_SUPABASE_KEY,
-      // CRM: populated when client connects CRM in Settings → Integrations
-      crm_supabase_url:   '',
-      crm_supabase_key:   '',
+      crm_supabase_url:   crmSupabaseUrl,
+      crm_supabase_key:   crmServiceRoleKey,
       // Telnyx: populated from provisioned number; key from shared env
       telnyx_api_key:     process.env.TELNYX_API_KEY || '',
       telnyx_from_number: telnyxPhone || '',
