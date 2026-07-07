@@ -78,7 +78,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
 
   return (
     <div
-      className={`msg-row${grouped ? ' grouped' : ''}`}
+      className={`msg-row${grouped ? ' grouped' : ''} ${isUser ? 'user' : 'agent'}`}
       style={{ paddingLeft: deleteMode && !grouped ? '28px' : undefined, position: 'relative' }}
     >
       {deleteMode && (
