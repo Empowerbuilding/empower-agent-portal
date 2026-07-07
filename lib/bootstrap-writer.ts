@@ -46,10 +46,10 @@ function repsSection(reps: WizardRep[]): string {
   ).join('\n');
 }
 
-function repRoutingSection(orgSlug: string, reps: WizardRep[]): string {
+function repRoutingSection(orgSlug: string, agentSlug: string, reps: WizardRep[]): string {
   return reps.map(r => {
     const slug = r.name.toLowerCase().replace(/\s+/g, '-');
-    return `- **${r.name}** → channel \`${orgSlug}-vanessa-${slug}\` — email: ${r.email}`;
+    return `- **${r.name}** → channel \`${orgSlug}-${agentSlug}-${slug}\` — email: ${r.email}`;
   }).join('\n');
 }
 
@@ -167,7 +167,7 @@ When operating in a portal channel, NEVER post to another rep's channel.
 Each rep's activity stays in their own channel. No cross-posting. Ever.
 
 ## Rep Routing
-${repRoutingSection(a.orgSlug, a.reps)}
+${repRoutingSection(a.orgSlug, a.agentName.toLowerCase().replace(/\s+/g, '-'), a.reps)}
 
 ## ⚡ INSTANT ACTIONS
 
