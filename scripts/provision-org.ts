@@ -75,28 +75,28 @@ const DEFAULT_CHANNELS = [
 
 // NOTE: crons use --no-deliver so the agent posts results itself via the message tool.
 // Each message explicitly names the target portal channel so isolated sessions know where to post.
-function buildDefaultCrons(orgSlug: string) {
+function buildDefaultCrons(orgSlug: string, agentSlug: string = 'vanessa') {
   return [
     {
       id: 'morning-briefing',
       name: 'Morning Briefing',
       scheduleFlag: '--cron "0 8 * * 1-5"',
       tz: 'America/Chicago',
-      message: `Send the morning briefing to channel \`${orgSlug}-vanessa-general\`: today's priority leads, any follow-ups due, and anything urgent from yesterday.`,
+      message: `Send the morning briefing to channel \`${orgSlug}-${agentSlug}-general\`: today's priority leads, any follow-ups due, and anything urgent from yesterday.`,
     },
     {
       id: 'inbox-scan',
       name: 'Inbox Scan',
       scheduleFlag: '--every "30m"',
       tz: '',
-      message: `Check Gmail for new emails from leads. For each new one, post a brief alert to portal channel \`${orgSlug}-vanessa-general\`.`,
+      message: `Check Gmail for new emails from leads. For each new one, post a brief alert to portal channel \`${orgSlug}-${agentSlug}-general\`.`,
     },
     {
       id: 'eod-report',
       name: 'End-of-Day Report',
       scheduleFlag: '--cron "0 17 * * 1-5"',
       tz: 'America/Chicago',
-      message: `Generate the end-of-day pipeline report: calls made, emails sent, new leads, and what needs follow-up tomorrow. Post the report to portal channel \`${orgSlug}-vanessa-general\`.`,
+      message: `Generate the end-of-day pipeline report: calls made, emails sent, new leads, and what needs follow-up tomorrow. Post the report to portal channel \`${orgSlug}-${agentSlug}-general\`.`,
     },
   ];
 }
@@ -129,6 +129,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
   const ssh = new NodeSSH();
 
   const containerName = `portal-agent-${input.orgSlug}`;
+  const agentSlug = input.agentDisplayName.toLowerCase().replace(/\s+/g, '-');
   const workspacePath = `/root/.portal-agent-${input.orgSlug}/workspace`;
   const ocPath = `/root/.portal-agent-${input.orgSlug}`;
 
@@ -209,10 +210,10 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
 
         // ── STEP 3: Create default portal channels ───────────────────────────────
     const channelRows = DEFAULT_CHANNELS.map(ch => ({
-      id: `${input.orgSlug}-vanessa-${ch.suffix}`,
+      id: `${input.orgSlug}-${agentSlug}-${ch.suffix}`,
       org_id: org.id,
       agent_id: agent.id,
-      name: `${input.orgSlug}-vanessa-${ch.suffix}`,
+      name: `${input.orgSlug}-${agentSlug}-${ch.suffix}`,
       display_name: ch.display,
       channel_type: ch.type,
       icon: ch.icon,
@@ -224,10 +225,10 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     input.reps.forEach((rep, i) => {
       const slug = rep.name.toLowerCase().replace(/\s+/g, '-');
       channelRows.push({
-        id: `${input.orgSlug}-vanessa-${slug}`,
+        id: `${input.orgSlug}-${agentSlug}-${slug}`,
         org_id: org.id,
         agent_id: agent.id,
-        name: `${input.orgSlug}-vanessa-${slug}`,
+        name: `${input.orgSlug}-${agentSlug}-${slug}`,
         display_name: rep.name,
         channel_type: 'chat',
         icon: '💼',
@@ -266,7 +267,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     await ssh.execCommand(`cp -r ${TEMPLATE_PATH} ${workspacePath}`);
     await ssh.execCommand(`mkdir -p ${workspacePath}/memory ${workspacePath}/drafts ${workspacePath}/reports ${workspacePath}/proposals`);
     // Patch hardcoded Barnhaus channel IDs in automation scripts to use this org's channels
-    await ssh.execCommand(`find ${workspacePath}/automation -name '*.py' | xargs sed -i 's/barnhaus-vanessa/${input.orgSlug}-vanessa/g' 2>/dev/null || true`);
+    await ssh.execCommand(`find ${workspacePath}/automation -name '*.py' | xargs sed -i 's/barnhaus-vanessa/${input.orgSlug}-${agentSlug}/g' 2>/dev/null || true`);
 
     // Clear org-specific runtime state via SQLite (keep device pairing — stored in devices/paired.json)
     const clearScript = `import sqlite3
@@ -304,13 +305,13 @@ print('cleared')
 
     // ── STEP 6b: Write openclaw.json for this org ────────────────────────────
     const channelIds = [
-      `${input.orgSlug}-vanessa-general`,
-      ...input.reps.map(r => `${input.orgSlug}-vanessa-${r.name.toLowerCase().replace(/\s+/g, '-')}`),
-      `${input.orgSlug}-vanessa-sms-drafts`,
-      `${input.orgSlug}-vanessa-lead-alerts`,
-      `${input.orgSlug}-vanessa-sms-inbox`,
-      `${input.orgSlug}-vanessa-call-recordings`,
-      `${input.orgSlug}-vanessa-sms-actions`,
+      `${input.orgSlug}-${agentSlug}-general`,
+      ...input.reps.map(r => `${input.orgSlug}-${agentSlug}-${r.name.toLowerCase().replace(/\s+/g, '-')}`),
+      `${input.orgSlug}-${agentSlug}-sms-drafts`,
+      `${input.orgSlug}-${agentSlug}-lead-alerts`,
+      `${input.orgSlug}-${agentSlug}-sms-inbox`,
+      `${input.orgSlug}-${agentSlug}-call-recordings`,
+      `${input.orgSlug}-${agentSlug}-sms-actions`,
     ];
 
     const ocConfig = {
@@ -382,7 +383,7 @@ print('cleared')
         email:           r.email,
         phone:           r.phone || '',
         crm_id:          '',   // populated after CRM is connected
-        portal_channel:  `${input.orgSlug}-vanessa-${r.name.toLowerCase().replace(/\s+/g, '-')}`,
+        portal_channel:  `${input.orgSlug}-${agentSlug}-${r.name.toLowerCase().replace(/\s+/g, '-')}`,
         token_file:      `${r.name.toLowerCase().replace(/\s+/g, '_')}_token.json`,
       })),
     };
@@ -416,7 +417,7 @@ print('cleared')
 
     // ── STEP 9: Seed default crons ───────────────────────────────────────────
     const enabledCrons = input.enabledCrons ?? ['morning-briefing', 'inbox-scan', 'eod-report'];
-    const defaultCrons = buildDefaultCrons(input.orgSlug);
+    const defaultCrons = buildDefaultCrons(input.orgSlug, agentSlug);
     for (const cron of defaultCrons) {
       if (!enabledCrons.includes(cron.id)) continue;
       const tzFlag = cron.tz ? `--tz "${cron.tz}"` : '';
