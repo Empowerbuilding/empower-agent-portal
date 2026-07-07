@@ -335,7 +335,7 @@ print('cleared')
           orgId: org.id,
           agentName: input.agentDisplayName,
           channelIds,
-          pollInterval: 1500,
+          pollInterval: 500,
         },
       },
       gateway: {
