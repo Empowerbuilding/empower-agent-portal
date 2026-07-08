@@ -102,6 +102,7 @@ export default function OnboardingPage() {
   const [launchStatus, setLaunchStatus] = useState('');
   const [error, setError] = useState('');
   const [launched, setLaunched] = useState<{ agentId: string; orgSlug: string; redirectTo: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   function update(patch: Partial<WizardState>) {
     setState(s => ({ ...s, ...patch }));
@@ -326,7 +327,6 @@ export default function OnboardingPage() {
 
 
   function Step4Knowledge() {
-    const [uploading, setUploading] = useState(false);
 
     async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
       const file = e.target.files?.[0];
