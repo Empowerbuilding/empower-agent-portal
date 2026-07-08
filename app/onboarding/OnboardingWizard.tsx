@@ -47,7 +47,7 @@ const FOCUS_OPTIONS = [
 
 const DEFAULT_CRONS = [
   { id: 'morning-briefing', label: 'Morning Briefing', desc: 'Weekdays at 8am — priority leads, follow-ups due, anything urgent' },
-  { id: 'inbox-scan', label: 'Inbox Scan', desc: 'Every 10 min — check Gmail for new lead emails' },
+  { id: 'inbox-scan', label: 'Inbox Scan', desc: 'Every 30 min — check Gmail for new lead emails' },
   { id: 'eod-report', label: 'End-of-Day Report', desc: 'Weekdays at 5pm — calls made, emails sent, pipeline summary' },
 ];
 
