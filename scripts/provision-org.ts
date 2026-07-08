@@ -394,6 +394,11 @@ print('cleared')
         bind: 'loopback',
         auth: { mode: 'token', token: `portal-agent-${input.orgSlug}-2026` },
       },
+      models: {
+        providers: {
+          google: { maxTokens: 4096 },
+        },
+      },
       plugins: {
         entries: {
           google: { enabled: true },
