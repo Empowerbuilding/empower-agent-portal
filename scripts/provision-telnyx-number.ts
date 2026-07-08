@@ -60,7 +60,7 @@ async function orderNumber(phoneNumber: string): Promise<string> {
  * Assign the ordered number to the shared SMS messaging profile
  */
 async function assignSmsProfile(telnyxNumberId: string): Promise<void> {
-  const res = await fetch(`${TELNYX_BASE}/phone_numbers/${telnyxNumberId}`, {
+  const res = await fetch(`${TELNYX_BASE}/phone_numbers/${telnyxNumberId}/messaging`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${TELNYX_API_KEY}`,
