@@ -428,7 +428,8 @@ print('cleared')
     // Fix ownership to node user (uid 1000) before starting
     await ssh.execCommand(`chown -R 1000:1000 ${ocPath}`);
 
-    const dockerRun = `docker run -d --name ${containerName} --restart unless-stopped -v ${ocPath}:/home/node/.openclaw ${AGENT_IMAGE}`;
+    const gatewayToken = `portal-agent-${input.orgSlug}-2026`;
+    const dockerRun = `docker run -d --name ${containerName} --restart unless-stopped -e OPENCLAW_GATEWAY_TOKEN=${gatewayToken} -v ${ocPath}:/home/node/.openclaw ${AGENT_IMAGE}`;
     const { stderr: dockerErr } = await ssh.execCommand(dockerRun);
     if (dockerErr && !dockerErr.includes('already in use')) {
       console.warn('Docker run warning:', dockerErr);
