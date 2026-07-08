@@ -14,6 +14,11 @@ const TELNYX_BASE = 'https://api.telnyx.com/v2'
 const SHARED_VOICE_APP_ID = '2996679323039040927'   // "Empower Shared Voice"
 const SHARED_SMS_PROFILE_ID = '40019f2d-ab2d-4418-8872-62bde04f05eb'  // "Empower Shared SMS"
 
+// 10DLC campaign — all provisioned numbers get assigned here for carrier SMS delivery
+// TODO: swap to Empower campaign ID once Empower brand identity is verified (~24-48h)
+// Empower brand ID: 4b20019f-429c-ff9e-f3d9-69d08963517b (pending verification)
+const SMS_CAMPAIGN_ID = '4b30019c-828a-35dd-d218-7237f34047fd'  // Barnhaus campaign (temp)
+
 interface ProvisionResult {
   phoneNumber: string
   telnyxNumberId: string
@@ -66,6 +71,28 @@ async function orderNumber(phoneNumber: string): Promise<string> {
 }
 
 /**
+ * Assign the ordered number to the 10DLC campaign for carrier SMS delivery
+ */
+async function assignCampaign(phoneNumber: string): Promise<void> {
+  const res = await fetch('https://api.telnyx.com/10dlc/phoneNumberCampaign', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${TELNYX_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ phoneNumber, campaignId: SMS_CAMPAIGN_ID })
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    // Non-fatal — log but don't fail provisioning
+    console.warn('[telnyx] Campaign assignment warning:', JSON.stringify(err))
+  } else {
+    const data = await res.json()
+    console.log('[telnyx] Campaign assigned:', data?.assignmentStatus)
+  }
+}
+
+/**
  * Assign the ordered number to the shared SMS messaging profile
  */
 async function assignSmsProfile(telnyxNumberId: string): Promise<void> {
@@ -101,6 +128,9 @@ export async function provisionTelnyxNumber(): Promise<ProvisionResult> {
 
   console.log('[telnyx] Assigning SMS profile...')
   await assignSmsProfile(telnyxNumberId)
+
+  console.log('[telnyx] Assigning 10DLC campaign...')
+  await assignCampaign(phoneNumber)
 
   console.log('[telnyx] Done:', phoneNumber)
   return { phoneNumber, telnyxNumberId }
