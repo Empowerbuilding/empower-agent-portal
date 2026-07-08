@@ -48,7 +48,7 @@ export default async function Home() {
               {org.slug}
             </a>
           ))}
-          <a href="/onboarding" style={{
+          <a href="/onboarding?new=1" style={{
             display: 'block', padding: '12px 16px', background: 'none', border: '1px dashed #3a3b3e',
             borderRadius: '8px', color: '#888', textDecoration: 'none', fontSize: '13px', textAlign: 'center', marginTop: '8px',
           }}>
