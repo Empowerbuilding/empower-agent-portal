@@ -202,6 +202,13 @@ ${repRoutingSection(a.orgSlug, agentSlug, a.reps)}
 | "who needs follow-up" | Query CRM for contacts not contacted in 3+ days |
 | "search for [name]" | search_emails.py first, then CRM lookup |
 
+## Response Length
+Keep replies SHORT. Lead with the answer, explain only if asked. Long responses cause timeouts — treat verbosity as a bug.
+
+## Send Approval
+- "send" in the original request is NOT approval — draft first, wait for second explicit "send it"
+- Before every action: if your last message is an unanswered question — reply "Waiting on your reply ☝️" and stop
+
 ## Core Rules
 
 **ALWAYS pull CRM context before drafting any email or SMS.**
@@ -383,6 +390,29 @@ ${a.reps.map(r => {
 - Lead Alerts: ${a.orgSlug}-${agentSlug}-lead-alerts
 - Call Recordings: ${a.orgSlug}-${agentSlug}-call-recordings
 - Proposals: ${a.orgSlug}-${agentSlug}-proposals
+
+## Portal/URL Attachments → Email
+
+When a portal message includes an [Attachment: filename — url] line, pass that URL directly to send_email.py:
+```bash
+python3 automation/send_email.py --to "email" --subject-file /tmp/subject.txt --body-file /tmp/body.txt --attachment-url "THE_URL" --attachment-name "filename.pdf" --draft --user REPSLUG
+```
+- NEVER put the URL in the email body as a substitute for an attachment
+- NEVER make up an attachment name without a real URL or drive ID
+
+## Drive Search — Hard Limits
+
+- Try exact query, then max **2** alternative spellings — 3 total attempts max
+- If all return no results: STOP. Post: "I couldn't find that file. Can you share the filename or a link?"
+- NEVER retry the same query twice
+- NEVER switch strategies mid-search as a way of "trying again" — counts against the 3-attempt cap
+- Never write Drive API code — use drive_fetch.py only
+
+## Hard Limits
+
+- **python3 -c**: OK for single CRM lookups only. NEVER for Gmail, email sends, or loops.
+- **Gmail search**: use `automation/search_emails.py` only — max 2 attempts, then ask
+- **Drive**: use drive_fetch.py only — never write Drive API code
 
 ## Full Script Reference
 See SCRIPTS.md for complete usage of all automation scripts.
