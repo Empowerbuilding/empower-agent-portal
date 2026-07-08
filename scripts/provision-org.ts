@@ -51,6 +51,8 @@ export interface ProvisionInput {
   whatWeSell: string;
   website?: string;
   reps: Rep[];
+  companyKnowledge?: string;
+  businessHours?: string;
   enabledCrons?: string[]; // defaults: ['morning-briefing', 'inbox-scan', 'eod-report']
   wizard?: Omit<WizardAnswers, 'orgName' | 'orgSlug'>; // Full wizard answers if provided
 }
@@ -118,6 +120,8 @@ function buildBootstrapFiles(input: ProvisionInput): Record<string, string> {
     agentRole: input.wizard?.agentRole ?? 'inside sales agent',
     agentFocus: input.wizard?.agentFocus ?? ['qualify', 'calls', 'emails', 'sms'],
     agentTone: tone,
+    companyKnowledge: (input.wizard as any)?.companyKnowledge ?? input.companyKnowledge ?? '',
+    businessHours: (input.wizard as any)?.businessHours ?? input.businessHours ?? '',
     reps: input.reps,
   };
   return generateAllFiles(answers);
