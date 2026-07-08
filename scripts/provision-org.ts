@@ -66,13 +66,8 @@ export interface ProvisionResult {
 }
 
 const DEFAULT_CHANNELS = [
-  { suffix: 'general',         display: 'General',          type: 'chat',     icon: '💬', position: 1 },
-  { suffix: 'sms-inbox',       display: 'SMS Inbox',        type: 'sms',      icon: '📱', position: 5 },
-  { suffix: 'sms-drafts',      display: 'SMS Drafts',       type: 'sms',      icon: '✉️',  position: 6 },
   { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',     icon: '🔔', position: 7 },
   { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',     icon: '📞', position: 8 },
-  { suffix: 'sms-actions',     display: 'SMS Actions',      type: 'chat',     icon: '📨', position: 99 },
-  { suffix: 'proposals',       display: 'Proposals',        type: 'feed',     icon: '📄', position: 9  },
 ];
 
 // NOTE: crons use --no-deliver so the agent posts results itself via the message tool.
@@ -84,21 +79,21 @@ function buildDefaultCrons(orgSlug: string, agentSlug: string = 'vanessa') {
       name: 'Morning Briefing',
       scheduleFlag: '--cron "0 8 * * 1-5"',
       tz: 'America/Chicago',
-      message: `Send the morning briefing to channel \`${orgSlug}-${agentSlug}-general\`: today's priority leads, any follow-ups due, and anything urgent from yesterday.`,
+      message: `Send the morning briefing to the rep channels: today's priority leads, any follow-ups due, and anything urgent from yesterday.`,
     },
     {
       id: 'inbox-scan',
       name: 'Inbox Scan',
       scheduleFlag: '--every "30m"',
       tz: '',
-      message: `Check Gmail for new emails from leads. For each new one, post a brief alert to portal channel \`${orgSlug}-${agentSlug}-general\`.`,
+      message: `Check Gmail for new emails from leads. For each new one, post a brief alert to the lead-alerts channel.`,
     },
     {
       id: 'eod-report',
       name: 'End-of-Day Report',
       scheduleFlag: '--cron "0 17 * * 1-5"',
       tz: 'America/Chicago',
-      message: `Generate the end-of-day pipeline report: calls made, emails sent, new leads, and what needs follow-up tomorrow. Post the report to portal channel \`${orgSlug}-${agentSlug}-general\`.`,
+      message: `Generate the end-of-day pipeline report: calls made, emails sent, new leads, and what needs follow-up tomorrow. Post the report to the rep channels.`,
     },
   ];
 }
@@ -235,9 +230,10 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       active: true,
     }));
 
-    // Add per-rep chat channels
+    // Add per-rep chat + SMS channels (Barnhaus model: one chat + one SMS per rep)
     input.reps.forEach((rep, i) => {
       const slug = rep.name.toLowerCase().replace(/\s+/g, '-');
+      // Chat channel (where rep interacts with agent, requests drafts, etc.)
       channelRows.push({
         id: `${input.orgSlug}-${agentSlug}-${slug}`,
         org_id: org.id,
@@ -247,6 +243,18 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
         channel_type: 'chat',
         icon: '💼',
         position: i + 2,
+        active: true,
+      });
+      // SMS channel (displays inbound/outbound SMS threads for this rep)
+      channelRows.push({
+        id: `${input.orgSlug}-${agentSlug}-${slug}-sms`,
+        org_id: org.id,
+        agent_id: agent.id,
+        name: `${input.orgSlug}-${agentSlug}-${slug}-sms`,
+        display_name: `${rep.name} SMS`,
+        channel_type: 'sms',
+        icon: '📱',
+        position: i + 3,
         active: true,
       });
     });
@@ -336,13 +344,15 @@ print('cleared')
 
     // ── STEP 6b: Write openclaw.json for this org ────────────────────────────
     const channelIds = [
-      `${input.orgSlug}-${agentSlug}-general`,
-      ...input.reps.map(r => `${input.orgSlug}-${agentSlug}-${r.name.toLowerCase().replace(/\s+/g, '-')}`),
-      `${input.orgSlug}-${agentSlug}-sms-drafts`,
+      ...input.reps.flatMap(r => {
+        const slug = r.name.toLowerCase().replace(/\s+/g, '-');
+        return [
+          `${input.orgSlug}-${agentSlug}-${slug}`,
+          `${input.orgSlug}-${agentSlug}-${slug}-sms`,
+        ];
+      }),
       `${input.orgSlug}-${agentSlug}-lead-alerts`,
-      `${input.orgSlug}-${agentSlug}-sms-inbox`,
       `${input.orgSlug}-${agentSlug}-call-recordings`,
-      `${input.orgSlug}-${agentSlug}-sms-actions`,
     ];
 
     const ocConfig = {
