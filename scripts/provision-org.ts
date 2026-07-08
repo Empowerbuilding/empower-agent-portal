@@ -301,6 +301,48 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       await supabase.from('portal_channel_members').insert(memberRows);
     }
 
+    // ── STEP 4b: Create rep logins and assign to their channels ────────────
+    for (const rep of input.reps) {
+      const repSlug = rep.name.toLowerCase().replace(/\s+/g, '-');
+
+      // Create Supabase auth user for the rep (invite email sent automatically)
+      const { data: authData, error: authErr } = await supabase.auth.admin.inviteUserByEmail(rep.email, {
+        data: { name: rep.name, org_slug: input.orgSlug, role: 'rep' },
+      });
+      if (authErr && !authErr.message.includes('already been registered')) {
+        console.warn("Rep auth create warning for " + rep.email + ": " + authErr.message);
+      }
+
+      const repAuthId = authData?.user?.id;
+
+      // Create portal_users record
+      const { data: repPortalUser } = await supabase.from('portal_users').upsert({
+        org_id: org.id,
+        supabase_auth_id: repAuthId ?? null,
+        name: rep.name,
+        email: rep.email,
+        role: 'rep',
+        active: true,
+      }, { onConflict: 'org_id,email', ignoreDuplicates: false }).select('id').maybeSingle();
+
+      if (repPortalUser?.id) {
+        // Add rep to: their chat channel, their SMS channel, and all shared channels
+        const repChannels = channelRows.filter(ch =>
+          ch.slug === (input.orgSlug + "-" + agentSlug + "-" + repSlug) ||
+          ch.slug === (input.orgSlug + "-" + agentSlug + "-" + repSlug + "-sms") ||
+          ch.channel_type === 'lead_alerts' ||
+          ch.channel_type === 'call_recordings'
+        );
+        if (repChannels.length > 0) {
+          const repMemberRows = repChannels.map(ch => ({
+            channel_id: ch.id,
+            user_id: repPortalUser.id,
+          }));
+          await supabase.from('portal_channel_members').insert(repMemberRows).then(() => {});
+        }
+      }
+    }
+
     // ── STEP 5: Clone full .openclaw dir from sales-agent ──────────────────
     const sshPrivateKey = getSSHPrivateKey();
     if (!sshPrivateKey) throw new Error('No SSH key available — set RESET_SSH_KEY env var');
