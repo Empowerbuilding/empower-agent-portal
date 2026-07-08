@@ -244,7 +244,7 @@ export default function IntegrationsPage() {
   const filtered = activeCategory === 'all'
     ? INTEGRATIONS
     : INTEGRATIONS.filter(i => {
-        if (activeCategory === 'sms') return i.category === 'sms' || i.category === 'voice';
+        if (activeCategory === 'sms') return i.category === 'sms';
         return i.category === activeCategory;
       });
 
