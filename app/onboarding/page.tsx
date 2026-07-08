@@ -7,16 +7,23 @@ export const dynamic = 'force-dynamic';
 /**
  * Server-side guard: if the user is already a member of an org,
  * send them there instead of showing the new-org wizard.
- * This prevents existing members (Larry, Shannon, etc.) from getting
- * stuck on the onboarding screen if they land here via a bad redirect
- * or direct URL.
+ * ?new=1 bypasses the redirect — used when an existing user explicitly
+ * clicks "New Organization" from the org picker.
+ * Without that param, existing members (Larry, Shannon, etc.) get bounced
+ * back to their org so they don't land on the wizard by accident.
  */
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     redirect('/login');
+  }
+
+  // ?new=1 = user explicitly clicked "New Organization" — skip the guard
+  const params = await searchParams;
+  if (params?.new === '1') {
+    return <OnboardingWizard />;
   }
 
   const { data: portalUsers } = await supabase
