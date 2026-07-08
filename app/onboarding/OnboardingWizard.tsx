@@ -564,6 +564,12 @@ export default function OnboardingPage() {
 
       {/* Nav */}
       <div style={{ width: '100%', maxWidth: '520px', display: 'flex', gap: '10px', marginTop: '16px' }}>
+        {step === 1 && !launching && (
+          <button onClick={() => router.push('/')}
+            style={{ flex: 1, padding: '13px', background: 'none', border: '1px solid #30363d', borderRadius: '10px', color: '#8b949e', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
+            ← Back to portal
+          </button>
+        )}
         {step > 1 && !launching && (
           <button onClick={() => { setStep(s => s - 1); setError(''); }}
             style={{ flex: 1, padding: '13px', background: 'none', border: '1px solid #30363d', borderRadius: '10px', color: '#8b949e', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>

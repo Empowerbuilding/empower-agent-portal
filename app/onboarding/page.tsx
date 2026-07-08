@@ -7,9 +7,11 @@ export const dynamic = 'force-dynamic';
 /**
  * Server-side guard: if the user is already a member of an org,
  * send them there instead of showing the new-org wizard.
- * Exception: ?new=1 means the user explicitly clicked "New Organization" — skip the redirect.
+ * This prevents existing members (Larry, Shannon, etc.) from getting
+ * stuck on the onboarding screen if they land here via a bad redirect
+ * or direct URL.
  */
-export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
+export default async function OnboardingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -17,26 +19,22 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     redirect('/login');
   }
 
-  // ?new=1 = user explicitly clicked "New Organization" — bypass the redirect
-  const params = await searchParams;
-  const forceNew = params?.new === '1';
+  const { data: portalUsers } = await supabase
+    .from('portal_users')
+    .select('org_id, organizations(slug)')
+    .eq('supabase_auth_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (!forceNew) {
-    const { data: portalUsers } = await supabase
-      .from('portal_users')
-      .select('org_id, organizations(slug)')
-      .eq('supabase_auth_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (portalUsers) {
-      const org = (portalUsers.organizations as unknown) as { slug: string } | null;
-      if (org?.slug) {
-        redirect(`/${org.slug}`);
-      }
-      // Has a row but no org slug — fall through to wizard (edge case)
+  if (portalUsers) {
+    const org = (portalUsers.organizations as unknown) as { slug: string } | null;
+    if (org?.slug) {
+      redirect(`/${org.slug}`);
     }
+    // Has a portal_users row but org join came back null — redirect to home
+    // rather than dropping an existing member into the new-org wizard.
+    redirect('/');
   }
 
   return <OnboardingWizard />;
