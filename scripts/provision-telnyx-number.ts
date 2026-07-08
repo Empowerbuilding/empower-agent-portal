@@ -53,7 +53,16 @@ async function orderNumber(phoneNumber: string): Promise<string> {
   
   const orderedNumber = data?.data?.phone_numbers?.[0]
   if (!orderedNumber) throw new Error('No number in order response')
-  return orderedNumber.id
+  // The order line-item id is NOT the phone number resource id.
+  // We must look it up by the actual phone number string.
+  const lookupRes = await fetch(
+    `${TELNYX_BASE}/phone_numbers?filter%5Bphone_number%5D=${encodeURIComponent(phoneNumber)}`,
+    { headers: { Authorization: `Bearer ${TELNYX_API_KEY}` } }
+  )
+  const lookupData = await lookupRes.json()
+  const phoneNumberId = lookupData?.data?.[0]?.id
+  if (!phoneNumberId) throw new Error(`Could not resolve phone number resource id for ${phoneNumber}`)
+  return phoneNumberId
 }
 
 /**
