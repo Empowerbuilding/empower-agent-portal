@@ -85,7 +85,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const TOTAL = 7;
+  const TOTAL = 6;
 
   const [state, setState] = useState<WizardState>({
     orgName: '', orgSlug: '', industry: 'Custom Home Building',
@@ -508,10 +508,10 @@ export default function OnboardingPage() {
 
   const stepTitles = [
     'Your Company', 'Your Agent', 'Your Team',
-    'Knowledge & Rules', 'Integrations', 'Automations', 'Review & Launch',
+    'Knowledge & Rules', 'Automations', 'Review & Launch',
   ];
 
-  const stepComponents = [Step1, Step2, Step3, Step4Knowledge, Step4, Step5, Step6];
+  const stepComponents = [Step1, Step2, Step3, Step4Knowledge, Step5, Step6];
 
   // Post-launch: show Gmail connect screen before entering the org
   if (launched) {
