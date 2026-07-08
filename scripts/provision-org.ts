@@ -522,7 +522,28 @@ print('cleared')
       // Use --no-deliver: portal channel doesn't support announce delivery.
       // The agent posts results itself via the message tool using the channel name in the message.
       const cmd = `docker exec ${containerName} node /app/openclaw.mjs cron add --name "${cron.name}" ${cron.scheduleFlag} ${tzFlag} --session isolated --no-deliver --message "${cron.message.replace(/"/g, '\\"')}"`;  
-      await ssh.execCommand(cmd);
+      const cronResult = await ssh.execCommand(cmd);
+      // Extract the cron ID from stdout
+      const cronIdMatch = cronResult.stdout.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      const cronId = cronIdMatch ? cronIdMatch[1] : crypto.randomUUID();
+      // Sync into portal DB so the Automations page shows the job
+      const scheduleExpr = cron.scheduleFlag.replace(/--cron |--every /g, '').replace(/"/g, '');
+      await supabase.from('agent_cron_jobs').upsert({
+        id: cronId,
+        agent_id: agent.id,
+        agent_name: agentSlug,
+        org_id: org.id,
+        name: cron.name,
+        enabled: true,
+        schedule_expr: scheduleExpr,
+        schedule_tz: cron.tz || '',
+        session_target: 'isolated',
+        wake_mode: 'now',
+        last_run_status: 'idle',
+        consecutive_errors: 0,
+        source: 'provisioner',
+        synced_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
     }
 
     // ── STEP 10: Seed Google OAuth credentials into agent_env_vars ──────────
