@@ -268,6 +268,23 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       throw new Error(`Create portal user failed: ${puErr.message}`);
     }
 
+    // Fetch the new portal user's id to use for channel membership
+    const { data: newPortalUser } = await supabase
+      .from('portal_users')
+      .select('id')
+      .eq('org_id', org.id)
+      .eq('supabase_auth_id', input.ownerSupabaseAuthId)
+      .maybeSingle();
+
+    // Add owner to all channels
+    if (newPortalUser?.id) {
+      const memberRows = channelRows.map(ch => ({
+        channel_id: ch.id,
+        user_id: newPortalUser.id,
+      }));
+      await supabase.from('portal_channel_members').insert(memberRows);
+    }
+
     // ── STEP 5: Clone full .openclaw dir from sales-agent ──────────────────
     const sshPrivateKey = getSSHPrivateKey();
     if (!sshPrivateKey) throw new Error('No SSH key available — set RESET_SSH_KEY env var');
