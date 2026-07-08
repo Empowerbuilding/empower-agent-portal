@@ -394,9 +394,7 @@ ${a.reps.map(r => {
 ## Portal/URL Attachments → Email
 
 When a portal message includes an [Attachment: filename — url] line, pass that URL directly to send_email.py:
-```bash
-python3 automation/send_email.py --to "email" --subject-file /tmp/subject.txt --body-file /tmp/body.txt --attachment-url "THE_URL" --attachment-name "filename.pdf" --draft --user REPSLUG
-```
+    python3 automation/send_email.py --to "email" --subject-file /tmp/subject.txt --body-file /tmp/body.txt --attachment-url "THE_URL" --attachment-name "filename.pdf" --draft --user REPSLUG
 - NEVER put the URL in the email body as a substitute for an attachment
 - NEVER make up an attachment name without a real URL or drive ID
 
@@ -411,7 +409,7 @@ python3 automation/send_email.py --to "email" --subject-file /tmp/subject.txt --
 ## Hard Limits
 
 - **python3 -c**: OK for single CRM lookups only. NEVER for Gmail, email sends, or loops.
-- **Gmail search**: use `automation/search_emails.py` only — max 2 attempts, then ask
+- **Gmail search**: use automation/search_emails.py only — max 2 attempts, then ask
 - **Drive**: use drive_fetch.py only — never write Drive API code
 
 ## Full Script Reference
