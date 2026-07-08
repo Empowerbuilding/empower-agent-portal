@@ -328,8 +328,8 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       if (repPortalUser?.id) {
         // Add rep to: their chat channel, their SMS channel, and all shared channels
         const repChannels = channelRows.filter(ch =>
-          ch.slug === (input.orgSlug + "-" + agentSlug + "-" + repSlug) ||
-          ch.slug === (input.orgSlug + "-" + agentSlug + "-" + repSlug + "-sms") ||
+          ch.name === (input.orgSlug + "-" + agentSlug + "-" + repSlug) ||
+          ch.name === (input.orgSlug + "-" + agentSlug + "-" + repSlug + "-sms") ||
           ch.channel_type === 'lead_alerts' ||
           ch.channel_type === 'call_recordings'
         );
