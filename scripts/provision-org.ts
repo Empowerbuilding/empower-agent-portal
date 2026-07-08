@@ -418,6 +418,7 @@ print('cleared')
       // Telnyx: populated from provisioned number; key from shared env
       telnyx_api_key:     process.env.TELNYX_API_KEY || '',
       telnyx_from_number: telnyxPhone || '',
+      telnyx_app_id:      '2996679323039040927', // Empower Shared Voice app
       reps: input.reps.map(r => ({
         name:            r.name,
         slug:            r.name.toLowerCase().replace(/\s+/g, '-'),
