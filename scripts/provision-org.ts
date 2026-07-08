@@ -65,9 +65,9 @@ export interface ProvisionResult {
   error?: string;
 }
 
-const DEFAULT_CHANNELS = [
-  { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',     icon: '🔔', position: 7 },
-  { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',     icon: '📞', position: 8 },
+const ALL_SHARED_CHANNELS = [
+  { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',  icon: '🔔', position: 7, requiredFocus: null },       // always
+  { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',  icon: '📞', position: 8, requiredFocus: 'calls' },    // only if calls selected
 ];
 
 // NOTE: crons use --no-deliver so the agent posts results itself via the message tool.
@@ -217,23 +217,29 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       console.error('[provision] CRM provisioning failed (non-fatal):', e);
     }
 
-        // ── STEP 3: Create default portal channels ───────────────────────────────
-    const channelRows = DEFAULT_CHANNELS.map(ch => ({
-      id: `${input.orgSlug}-${agentSlug}-${ch.suffix}`,
-      org_id: org.id,
-      agent_id: agent.id,
-      name: `${input.orgSlug}-${agentSlug}-${ch.suffix}`,
-      display_name: ch.display,
-      channel_type: ch.type,
-      icon: ch.icon,
-      position: ch.position,
-      active: true,
-    }));
+        // ── STEP 3: Create channels based on agentFocus selections ──────────────
+    const focus: string[] = input.wizard?.agentFocus ?? ['qualify', 'emails', 'sms'];
 
-    // Add per-rep chat + SMS channels (Barnhaus model: one chat + one SMS per rep)
+    // Shared channels — lead-alerts always, call-recordings only if calls selected
+    const channelRows = ALL_SHARED_CHANNELS
+      .filter(ch => !ch.requiredFocus || focus.includes(ch.requiredFocus))
+      .map(ch => ({
+        id: `${input.orgSlug}-${agentSlug}-${ch.suffix}`,
+        org_id: org.id,
+        agent_id: agent.id,
+        name: `${input.orgSlug}-${agentSlug}-${ch.suffix}`,
+        display_name: ch.display,
+        channel_type: ch.type,
+        icon: ch.icon,
+        position: ch.position,
+        active: true,
+      }));
+
+    // Per-rep channels: chat always; SMS only if sms selected
+    const wantSms = focus.includes('sms');
     input.reps.forEach((rep, i) => {
       const slug = rep.name.toLowerCase().replace(/\s+/g, '-');
-      // Chat channel (where rep interacts with agent, requests drafts, etc.)
+      // Chat channel — always
       channelRows.push({
         id: `${input.orgSlug}-${agentSlug}-${slug}`,
         org_id: org.id,
@@ -245,18 +251,20 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
         position: i + 2,
         active: true,
       });
-      // SMS channel (displays inbound/outbound SMS threads for this rep)
-      channelRows.push({
-        id: `${input.orgSlug}-${agentSlug}-${slug}-sms`,
-        org_id: org.id,
-        agent_id: agent.id,
-        name: `${input.orgSlug}-${agentSlug}-${slug}-sms`,
-        display_name: `${rep.name} SMS`,
-        channel_type: 'sms',
-        icon: '📱',
-        position: i + 3,
-        active: true,
-      });
+      // SMS channel — only if sms in agentFocus
+      if (wantSms) {
+        channelRows.push({
+          id: `${input.orgSlug}-${agentSlug}-${slug}-sms`,
+          org_id: org.id,
+          agent_id: agent.id,
+          name: `${input.orgSlug}-${agentSlug}-${slug}-sms`,
+          display_name: `${rep.name} SMS`,
+          channel_type: 'sms',
+          icon: '📱',
+          position: i + 3,
+          active: true,
+        });
+      }
     });
 
     channelRows.sort((a, b) => a.position - b.position);
