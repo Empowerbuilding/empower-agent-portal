@@ -546,18 +546,40 @@ print('cleared')
       }, { onConflict: 'id' });
     }
 
-    // ── STEP 10: Seed Google OAuth credentials into agent_env_vars ──────────
-    // These come from the shared Empower Google OAuth client (baked into template)
+    // ── STEP 10: Seed integration credentials into agent_env_vars ──────────
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
     const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const now = new Date().toISOString();
+    const envVarsToSeed: any[] = [];
+
+    // Google OAuth
     if (googleClientId && googleClientSecret) {
-      await supabase.from('agent_env_vars').upsert([
+      envVarsToSeed.push(
         { agent_id: agent.id, key: 'GOOGLE_CLIENT_ID', value: googleClientId, value_encrypted: '', display_name: 'Google Client ID', integration_id: 'google', is_secret: false, updated_at: now },
         { agent_id: agent.id, key: 'GOOGLE_CLIENT_SECRET', value: googleClientSecret, value_encrypted: '', display_name: 'Google Client Secret', integration_id: 'google', is_secret: true, updated_at: now },
-      ], { onConflict: 'agent_id,key' });
+      );
     } else {
       console.warn('[provision] GOOGLE_CLIENT_ID/SECRET not set — skipping Google OAuth seeding');
+    }
+
+    // Telnyx — use keys that match lib/integrations.ts field definitions
+    if (telnyxPhone) {
+      envVarsToSeed.push(
+        { agent_id: agent.id, key: 'TELNYX_API_KEY', value: process.env.TELNYX_API_KEY || '', value_encrypted: '', display_name: 'API Key', integration_id: 'telnyx', is_secret: true, updated_at: now },
+        { agent_id: agent.id, key: 'TELNYX_FROM_NUMBER', value: telnyxPhone, value_encrypted: '', display_name: 'From Phone Number', integration_id: 'telnyx', is_secret: false, updated_at: now },
+      );
+    }
+
+    // CRM Supabase — use keys that match lib/integrations.ts field definitions
+    if (crmSupabaseUrl && crmServiceRoleKey) {
+      envVarsToSeed.push(
+        { agent_id: agent.id, key: 'SUPABASE_URL', value: crmSupabaseUrl, value_encrypted: '', display_name: 'Project URL', integration_id: 'supabase', is_secret: false, updated_at: now },
+        { agent_id: agent.id, key: 'SUPABASE_SERVICE_KEY', value: crmServiceRoleKey, value_encrypted: '', display_name: 'Service Role Key', integration_id: 'supabase', is_secret: true, updated_at: now },
+      );
+    }
+
+    if (envVarsToSeed.length > 0) {
+      await supabase.from('agent_env_vars').upsert(envVarsToSeed, { onConflict: 'agent_id,key' });
     }
 
     // ── STEP 11: Mark agent running ───────────────────────────────────────────
