@@ -1,12 +1,11 @@
 /**
  * lib/integrations.ts — Integration registry
- * Defines all supported integrations and their required fields.
- * Add a new entry here to make it available in the UI automatically.
+ * Defines supported integrations and their required fields.
  */
 
 export interface IntegrationField {
-  key: string;           // env var key stored in agent_env_vars
-  label: string;         // UI label
+  key: string;
+  label: string;
   type: 'text' | 'password' | 'email' | 'url';
   placeholder?: string;
   required?: boolean;
@@ -18,11 +17,11 @@ export interface Integration {
   name: string;
   description: string;
   icon: string;
-  category: 'email' | 'sms' | 'ai' | 'database' | 'productivity' | 'voice' | 'automation';
+  category: 'email' | 'sms' | 'database' | 'productivity';
   fields: IntegrationField[];
   docsUrl?: string;
   note?: string;
-  authType?: 'apikey' | 'oauth';  // oauth = separate flow, not built yet
+  authType?: 'apikey' | 'oauth';
 }
 
 export const INTEGRATIONS: Integration[] = [
@@ -51,31 +50,8 @@ export const INTEGRATIONS: Integration[] = [
     docsUrl: 'https://developers.telnyx.com',
   },
   {
-    id: 'assemblyai',
-    name: 'AssemblyAI',
-    description: 'Call transcription and speaker diarization',
-    icon: '🎙️',
-    category: 'voice',
-    fields: [
-      { key: 'ASSEMBLYAI_API_KEY', label: 'API Key', type: 'password', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', required: true },
-      { key: 'ASSEMBLYAI_CALLBACK_URL', label: 'Webhook Callback URL', type: 'url', placeholder: 'https://n8n.example.com/webhook/assemblyai', hint: 'n8n webhook that receives transcript results' },
-    ],
-    docsUrl: 'https://www.assemblyai.com/app',
-  },
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    description: 'GPT models, embeddings, and image generation',
-    icon: '🤖',
-    category: 'ai',
-    fields: [
-      { key: 'OPENAI_API_KEY', label: 'API Key', type: 'password', placeholder: 'sk-proj-...', required: true },
-    ],
-    docsUrl: 'https://platform.openai.com/api-keys',
-  },
-  {
     id: 'supabase',
-    name: 'Supabase',
+    name: 'Supabase (CRM)',
     description: 'Database and CRM backend',
     icon: '🗄️',
     category: 'database',
@@ -86,29 +62,14 @@ export const INTEGRATIONS: Integration[] = [
     docsUrl: 'https://supabase.com/dashboard/project/_/settings/api',
   },
   {
-    id: 'n8n',
-    name: 'n8n',
-    description: 'Automation workflows and webhooks',
-    icon: '⚙️',
-    category: 'automation',
-    fields: [
-      { key: 'N8N_BASE_URL', label: 'n8n Instance URL', type: 'url', placeholder: 'https://n8n.yourdomain.com', required: true },
-      { key: 'N8N_API_KEY', label: 'API Key', type: 'password', placeholder: 'eyJ...' },
-    ],
-    docsUrl: 'https://docs.n8n.io/api/',
-  },
-  {
     id: 'google',
     name: 'Google Workspace',
     description: 'Gmail, Calendar, and Drive',
     icon: '📧',
     category: 'productivity',
     authType: 'oauth',
-    fields: [
-      { key: 'GOOGLE_CLIENT_ID', label: 'OAuth Client ID', type: 'text', placeholder: 'xxx.apps.googleusercontent.com', required: true },
-      { key: 'GOOGLE_CLIENT_SECRET', label: 'OAuth Client Secret', type: 'password', required: true },
-    ],
-    note: 'Create an OAuth 2.0 app in Google Cloud Console. Add redirect URI: https://portal.empowerbuilding.ai/api/oauth/google/callback',
+    fields: [],
+    note: 'Connect via OAuth — click Connect to authorize your Google account.',
     docsUrl: 'https://console.cloud.google.com/apis/credentials',
   },
   {
@@ -123,7 +84,7 @@ export const INTEGRATIONS: Integration[] = [
       { key: 'MS_CLIENT_SECRET', label: 'Azure App Client Secret', type: 'password', required: true },
       { key: 'MS_TENANT_ID', label: 'Tenant ID', type: 'text', placeholder: 'common', hint: 'Use "common" for multi-tenant' },
     ],
-    note: 'Register an app in Azure Entra ID (portal.azure.com). Add redirect URI: https://portal.empowerbuilding.ai/api/oauth/microsoft/callback',
+    note: 'Register an app in Azure Entra ID. Add redirect URI: https://portal.empowerbuilding.ai/api/oauth/microsoft/callback',
     docsUrl: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps',
   },
 ];
@@ -132,10 +93,8 @@ export const CATEGORIES = [
   { id: 'all', label: 'All' },
   { id: 'email', label: 'Email' },
   { id: 'sms', label: 'SMS & Voice' },
-  { id: 'ai', label: 'AI' },
-  { id: 'database', label: 'Database' },
+  { id: 'database', label: 'CRM' },
   { id: 'productivity', label: 'Productivity' },
-  { id: 'automation', label: 'Automation' },
 ] as const;
 
 export function getIntegration(id: string): Integration | undefined {
