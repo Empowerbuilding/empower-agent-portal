@@ -12,6 +12,8 @@ export interface WizardRep {
 }
 
 export interface WizardAnswers {
+  companyKnowledge?: string;
+  businessHours?: string;
   // Step 1 — Company
   orgName: string;
   orgSlug: string;
@@ -387,9 +389,84 @@ See SCRIPTS.md for complete usage of all automation scripts.
 `;
 }
 
+
+export function generateKNOWLEDGE(a: WizardAnswers): string {
+  const repSection = a.reps.map(r => {
+    const lines = [`### ${r.name}`];
+    if (r.email) lines.push(`- Email: ${r.email}`);
+    if ((r as any).bookingUrl) lines.push(`- Booking URL: ${(r as any).bookingUrl}`);
+    if ((r as any).signOff) lines.push(`- Email sign-off: "${(r as any).signOff}"`);
+    return lines.join('\n');
+  }).join('\n\n');
+
+  return `# KNOWLEDGE.md — ${a.orgName} Company Knowledge
+
+> ${a.agentName} reads this every session. All facts here are authoritative.
+
+## The Business
+**Company:** ${a.orgName}
+**Industry:** ${a.industry}
+**Website:** ${a.website || '(not set)'}
+**Business Hours:** ${a.businessHours || '(not set)'}
+
+## What We Sell
+${a.whatWeSell}
+
+${a.companyKnowledge ? `## Company Details, Pricing & Objection Handling
+${a.companyKnowledge}
+` : ''}
+## Reps
+${repSection}
+
+---
+*Update this file any time facts change. ${a.agentName} will use it in every session.*
+`;
+}
+
+export function generateRULES(a: WizardAnswers): string {
+  const repRules = a.reps.map(r => {
+    const slug = r.name.toLowerCase().replace(/\s+/g, '-');
+    const signOff = (r as any).signOff || `Thanks, ${r.name.split(' ')[0]}`;
+    const bookingUrl = (r as any).bookingUrl || '';
+    return `## ${r.name} (--user ${slug})
+- **Email sign-off:** "${signOff}"
+- **Booking URL:** ${bookingUrl || '(not set — update when available)'}
+- **Phone:** ${r.phone || '(not set)'}`;
+  }).join('\n\n');
+
+  return `# RULES.md — Permanent Rep Rules
+
+> These rules persist across every session. Update as reps give feedback.
+
+## Email Rules (all reps)
+- Always draft before sending — never send without explicit "send it"
+- Include booking URL in first outreach emails when available
+- Subject lines: specific, not generic — use the contact's name or project
+- Never use markdown in emails — plain text only
+- Always use --subject-file and --body-file flags — never --subject / --body shell args
+
+## Rep-Specific Rules
+
+${repRules}
+
+## Objection Handling
+- If a lead says "too expensive": acknowledge, ask about their budget, pivot to value
+- If a lead goes quiet: follow up once by email, once by SMS, then ask rep how to proceed
+- If a lead asks about timeline: always confirm with rep before committing to dates
+
+## DO NOT
+- Log email_sent manually — send_email.py does it automatically
+- Cross-post between rep channels
+- Send without rep approval
+- Quote pricing outside the ranges in KNOWLEDGE.md without rep approval
+`;
+}
+
 export function generateAllFiles(a: WizardAnswers): Record<string, string> {
   return {
     'SOUL.md': generateSOUL(a),
+    'KNOWLEDGE.md': generateKNOWLEDGE(a),
+    'RULES.md': generateRULES(a),
     'IDENTITY.md': generateIDENTITY(a),
     'USER.md': generateUSER(a),
     'MEMORY.md': generateMEMORY(a),
