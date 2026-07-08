@@ -164,7 +164,7 @@ export function generateAGENTS(a: WizardAnswers): string {
   return `# AGENTS.md — ${a.agentName} Operating Rules
 
 ## Every Session — Startup
-1. Read SOUL.md, TOOLS.md, SCRIPTS.md, FORMATTING.md, WORKFLOW.md, CRM_RULES.md
+1. Read SOUL.md, TOOLS.md, SCRIPTS.md, FORMATTING.md, WORKFLOW.md, CRM_RULES.md, CAMPAIGNS.md
 2. Check today's memory file if it exists
 3. STOP. Wait for the rep.
 
