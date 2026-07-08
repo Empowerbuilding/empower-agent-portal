@@ -10,6 +10,8 @@ interface Rep {
   email: string;
   phone: string;
   label: string;
+  bookingUrl: string;
+  signOff: string;
 }
 
 interface WizardState {
@@ -27,7 +29,11 @@ interface WizardState {
   agentTone: 'professional' | 'friendly' | 'direct';
   // Step 3
   reps: Rep[];
-  // Step 5
+  // Step 4 (Knowledge)
+  companyKnowledge: string;
+  docFileName: string;
+  businessHours: string;
+  // Step 6
   enabledCrons: string[];
   customCronText: string;
 }
@@ -79,14 +85,15 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const TOTAL = 6;
+  const TOTAL = 7;
 
   const [state, setState] = useState<WizardState>({
     orgName: '', orgSlug: '', industry: 'Custom Home Building',
     whatWeSell: '', website: '', phone: '',
     agentName: 'Vanessa', agentRole: 'inside sales agent',
     agentFocus: ['qualify', 'emails', 'sms'], agentTone: 'professional',
-    reps: [{ name: '', email: '', phone: '', label: 'Sales Rep' }],
+    reps: [{ name: '', email: '', phone: '', label: 'Sales Rep', bookingUrl: '', signOff: '' }],
+    companyKnowledge: '', docFileName: '', businessHours: '',
     enabledCrons: ['morning-briefing', 'inbox-scan', 'eod-report'],
     customCronText: '',
   });
@@ -143,6 +150,8 @@ export default function OnboardingPage() {
           whatWeSell: state.whatWeSell,
           website: state.website,
           reps: state.reps,
+          companyKnowledge: state.companyKnowledge,
+          businessHours: state.businessHours,
           enabledCrons: state.enabledCrons,
           wizard: {
             industry: state.industry,
@@ -152,6 +161,8 @@ export default function OnboardingPage() {
             agentRole: state.agentRole,
             agentFocus: state.agentFocus,
             agentTone: state.agentTone,
+            companyKnowledge: state.companyKnowledge,
+            businessHours: state.businessHours,
             reps: state.reps,
           },
         }),
@@ -273,7 +284,7 @@ export default function OnboardingPage() {
       update({ reps });
     }
     function addRep() {
-      if (state.reps.length < 5) update({ reps: [...state.reps, { name: '', email: '', phone: '', label: 'Sales Rep' }] });
+      if (state.reps.length < 5) update({ reps: [...state.reps, { name: '', email: '', phone: '', label: 'Sales Rep', bookingUrl: '', signOff: '' }] });
     }
     function removeRep(i: number) {
       if (state.reps.length > 1) update({ reps: state.reps.filter((_, idx) => idx !== i) });
@@ -309,6 +320,80 @@ export default function OnboardingPage() {
             + Add another rep
           </button>
         )}
+      </div>
+    );
+  }
+
+
+  function Step4Knowledge() {
+    const [uploading, setUploading] = useState(false);
+
+    async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setUploading(true);
+      try {
+        if (file.name.endsWith('.txt')) {
+          const text = await file.text();
+          update({ companyKnowledge: text.slice(0, 8000), docFileName: file.name });
+        } else {
+          update({ docFileName: file.name });
+        }
+      } finally {
+        setUploading(false);
+      }
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ fontSize: '13px', color: '#8b949e' }}>
+          Give {state.agentName} company knowledge from day one — she'll read this every session and know your business cold.
+        </div>
+
+        <Field label="Company Knowledge" hint="What you sell, pricing tiers, objection handling, ideal customer">
+          <textarea
+            style={{ ...inputStyle, resize: 'vertical', minHeight: '140px' }}
+            value={state.companyKnowledge}
+            placeholder={"Examples:\n• We build custom barndominiums 1,500–5,000 sq ft, starting at $180/sq ft\n• Ideal client: landowner in Texas with $350k+ budget\n• Common objection: \'too expensive\' — steel frame saves 20% on insurance\n• New construction only — no additions or remodels"}
+            onChange={e => update({ companyKnowledge: e.target.value })}
+          />
+        </Field>
+
+        <Field label="Upload a document (optional)" hint="TXT files auto-populate above. For PDF/DOCX, copy-paste key content into the box.">
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 14px', background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', color: '#8b949e', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+              📄 {uploading ? 'Reading…' : 'Choose file'}
+              <input type="file" accept=".txt,.pdf,.docx" style={{ display: 'none' }} onChange={handleFile} />
+            </label>
+            {state.docFileName && <span style={{ fontSize: '12px', color: '#22c55e' }}>✓ {state.docFileName}</span>}
+          </div>
+          {state.docFileName && !state.docFileName.endsWith('.txt') && (
+            <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '6px' }}>PDF/DOCX — copy key content into the box above.</div>
+          )}
+        </Field>
+
+        <Field label="Business hours" hint="Used for call routing and response timing">
+          <input style={inputStyle} value={state.businessHours} placeholder="Mon–Fri 8am–5pm CST" onChange={e => update({ businessHours: e.target.value })} />
+        </Field>
+
+        <div style={{ borderTop: '1px solid #21262d', paddingTop: '18px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '14px' }}>Rep Preferences</div>
+          {state.reps.filter(r => r.name.trim()).map((rep, i) => (
+            <div key={i} style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '10px', padding: '14px', marginBottom: '10px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)', marginBottom: '12px' }}>{rep.name}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <Field label="Booking URL" hint="Optional — calendly, acuity, etc.">
+                  <input style={inputStyle} value={rep.bookingUrl || ''} placeholder="calendly.com/repname"
+                    onChange={e => { const reps = [...state.reps]; reps[i] = { ...reps[i], bookingUrl: e.target.value }; update({ reps }); }} />
+                </Field>
+                <Field label="Email sign-off" hint="How they close emails">
+                  <input style={inputStyle} value={rep.signOff || ''} placeholder={`Thanks, ${rep.name.split(' ')[0]}`}
+                    onChange={e => { const reps = [...state.reps]; reps[i] = { ...reps[i], signOff: e.target.value }; update({ reps }); }} />
+                </Field>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -423,10 +508,10 @@ export default function OnboardingPage() {
 
   const stepTitles = [
     'Your Company', 'Your Agent', 'Your Team',
-    'Integrations', 'Automations', 'Review & Launch',
+    'Knowledge & Rules', 'Integrations', 'Automations', 'Review & Launch',
   ];
 
-  const stepComponents = [Step1, Step2, Step3, Step4, Step5, Step6];
+  const stepComponents = [Step1, Step2, Step3, Step4Knowledge, Step4, Step5, Step6];
 
   // Post-launch: show Gmail connect screen before entering the org
   if (launched) {
