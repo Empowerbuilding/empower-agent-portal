@@ -167,6 +167,16 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       .single();
     if (agentErr) throw new Error(`Create agent failed: ${agentErr.message}`);
 
+    // Write reps to agents.reps column so n8n can look them up for call routing
+    const repsForDb = input.reps.map(r => ({
+      name: r.name,
+      slug: r.name.toLowerCase().replace(/\s+/g, '-'),
+      email: r.email || '',
+      phone: r.phone || '',
+      label: r.label || 'Sales Rep',
+    }));
+    await supabase.from('agents').update({ reps: repsForDb }).eq('id', agent.id);
+
     // ── STEP 2b: Provision Telnyx phone number ───────────────────────────────
     let telnyxPhone: string | null = null;
     try {
