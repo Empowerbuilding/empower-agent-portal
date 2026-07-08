@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
   const {
     orgName, orgSlug, agentDisplayName, agentTone,
     industry, whatWeSell, website, reps, enabledCrons,
+    companyKnowledge, businessHours,
   } = body;
 
   // Validate required fields
@@ -55,6 +56,8 @@ export async function POST(req: NextRequest) {
     industry: industry || 'Home Building',
     whatWeSell: whatWeSell || '',
     website: website || '',
+    companyKnowledge: companyKnowledge || '',
+    businessHours: businessHours || '',
     reps,
     enabledCrons,
     wizard: body.wizard,
