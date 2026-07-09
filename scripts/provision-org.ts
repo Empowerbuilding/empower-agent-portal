@@ -68,6 +68,7 @@ export interface ProvisionResult {
 const ALL_SHARED_CHANNELS = [
   { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',  icon: '🔔', position: 7, requiredFocus: null },       // always
   { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',  icon: '📞', position: 8, requiredFocus: 'calls' },    // only if calls selected
+  { suffix: 'proposals',       display: 'Proposals',        type: 'feed',  icon: '📄', position: 9, requiredFocus: null },       // always
 ];
 
 // NOTE: crons use --no-deliver so the agent posts results itself via the message tool.
@@ -198,6 +199,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     let crmSupabaseUrl = '';
     let crmServiceRoleKey = '';
     let crmDbPassword = '';
+    let crmRepIds: Record<string, string> = {};
     try {
       if (process.env.SUPABASE_MANAGEMENT_API_KEY) {
         console.log('[provision] Provisioning CRM Supabase project...');
@@ -210,6 +212,28 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
           crm_supabase_key: crmServiceRoleKey,
         }).eq('id', agent.id);
         console.log('[provision] CRM project ready:', crmSupabaseUrl);
+
+        // ── Insert rep users into new CRM so crm_id is populated ──────────────
+        if (input.reps && input.reps.length > 0) {
+          try {
+            const repInserts = input.reps.map(r => ({
+              name:  r.name,
+              email: r.email || '',
+              role:  'sales',
+            }));
+            const crmClient = (await import('@supabase/supabase-js')).createClient(crmSupabaseUrl, crmServiceRoleKey);
+            const { data: repRows, error: repErr } = await crmClient.from('users').insert(repInserts).select('id, email');
+            if (repErr) {
+              console.warn('[provision] CRM rep insert failed (non-fatal):', repErr.message);
+            } else if (repRows) {
+              // Build lookup: email -> crm user id
+              crmRepIds = Object.fromEntries(repRows.map((r: { id: string; email: string }) => [r.email, r.id]));
+              console.log('[provision] CRM rep users created:', Object.keys(crmRepIds).length);
+            }
+          } catch (e) {
+            console.warn('[provision] CRM rep insert failed (non-fatal):', e);
+          }
+        }
       } else {
         console.warn('[provision] SUPABASE_MANAGEMENT_API_KEY not set — skipping CRM provisioning');
       }
@@ -479,7 +503,7 @@ print('cleared')
         slug:            r.name.toLowerCase().replace(/\s+/g, '-'),
         email:           r.email,
         phone:           r.phone || '',
-        crm_id:          '',   // populated after CRM is connected
+        crm_id:          crmRepIds[r.email] || '',   // auto-populated from CRM users table
         portal_channel:  `${input.orgSlug}-${agentSlug}-${r.name.toLowerCase().replace(/\s+/g, '-')}`,
         token_file:      `${r.name.toLowerCase().replace(/\s+/g, '_')}_token.json`,
       })),
