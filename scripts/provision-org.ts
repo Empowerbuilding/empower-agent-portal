@@ -57,6 +57,100 @@ export interface ProvisionInput {
   wizard?: Omit<WizardAnswers, 'orgName' | 'orgSlug'>; // Full wizard answers if provided
 }
 
+// ── Rollback state tracker ───────────────────────────────────────────────────
+interface RollbackState {
+  orgId:           string | null;
+  agentId:         string | null;
+  telnyxNumberId:  string | null; // Telnyx resource id (NOT the phone number string)
+  crmProjectRef:   string | null; // Supabase management API project ref
+  containerStarted: boolean;
+  workspaceCreated: boolean;
+  sshConnected:    boolean;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function runRollback(
+  rollback: RollbackState,
+  ssh: NodeSSH,
+  supabase: any,
+  ocPath: string,
+  containerName: string,
+): Promise<void> {
+  console.error('[rollback] Starting rollback...');
+
+  // 1. Stop + remove Docker container (reverse step 7)
+  if (rollback.containerStarted && rollback.sshConnected) {
+    try {
+      await ssh.execCommand(`docker stop ${containerName} && docker rm ${containerName}`);
+      console.error('[rollback] Docker container removed:', containerName);
+    } catch (e) {
+      console.error('[rollback] Failed to remove Docker container:', e);
+    }
+  }
+
+  // 2. Remove workspace directory (reverse step 5)
+  if (rollback.workspaceCreated && rollback.sshConnected) {
+    try {
+      await ssh.execCommand(`rm -rf ${ocPath}`);
+      console.error('[rollback] Workspace directory removed:', ocPath);
+    } catch (e) {
+      console.error('[rollback] Failed to remove workspace directory:', e);
+    }
+  }
+
+  // 3. Release Telnyx phone number (reverse step 2b)
+  if (rollback.telnyxNumberId) {
+    try {
+      const res = await fetch(`https://api.telnyx.com/v2/phone_numbers/${rollback.telnyxNumberId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${process.env.TELNYX_API_KEY}` },
+      });
+      if (res.ok || res.status === 404) {
+        console.error('[rollback] Telnyx number released:', rollback.telnyxNumberId);
+      } else {
+        const errBody = await res.text();
+        console.error('[rollback] Telnyx delete returned non-OK:', res.status, errBody);
+      }
+    } catch (e) {
+      console.error('[rollback] Failed to release Telnyx number:', e);
+    }
+  }
+
+  // 4. Delete CRM Supabase project (reverse step 2c)
+  if (rollback.crmProjectRef) {
+    try {
+      const res = await fetch(`https://api.supabase.com/v1/projects/${rollback.crmProjectRef}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${process.env.SUPABASE_MANAGEMENT_API_KEY}` },
+      });
+      if (res.ok || res.status === 404) {
+        console.error('[rollback] CRM Supabase project deleted:', rollback.crmProjectRef);
+      } else {
+        const errBody = await res.text();
+        console.error('[rollback] CRM project delete returned non-OK:', res.status, errBody);
+      }
+    } catch (e) {
+      console.error('[rollback] Failed to delete CRM Supabase project:', e);
+    }
+  }
+
+  // 5. Delete portal DB org row (cascade handles agents, channels, users)
+  if (rollback.orgId) {
+    try {
+      const { error } = await supabase.from('organizations').delete().eq('id', rollback.orgId);
+      if (error) {
+        console.error('[rollback] Portal DB org delete error:', error.message);
+      } else {
+        console.error('[rollback] Portal DB org deleted (cascade):', rollback.orgId);
+      }
+    } catch (e) {
+      console.error('[rollback] Failed to delete portal DB org:', e);
+    }
+  }
+
+  console.error('[rollback] Rollback complete.');
+}
+
 export interface ProvisionResult {
   success: boolean;
   orgId?: string;
@@ -133,6 +227,16 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
   const workspacePath = `/root/.portal-agent-${input.orgSlug}/workspace`;
   const ocPath = `/root/.portal-agent-${input.orgSlug}`;
 
+  const rollback: RollbackState = {
+    orgId:           null,
+    agentId:         null,
+    telnyxNumberId:  null,
+    crmProjectRef:   null,
+    containerStarted: false,
+    workspaceCreated: false,
+    sshConnected:    false,
+  };
+
   try {
     // ── STEP 1: Create organization ──────────────────────────────────────────
     const { data: org, error: orgErr } = await supabase
@@ -147,6 +251,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       .select()
       .single();
     if (orgErr) throw new Error(`Create org failed: ${orgErr.message}`);
+    rollback.orgId = org.id;
 
     // ── STEP 2: Create agent row ─────────────────────────────────────────────
     const { data: agent, error: agentErr } = await supabase
@@ -166,6 +271,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       .select()
       .single();
     if (agentErr) throw new Error(`Create agent failed: ${agentErr.message}`);
+    rollback.agentId = agent.id;
 
     // Write reps to agents.reps column so n8n can look them up for call routing
     const repsForDb = input.reps.map(r => ({
@@ -183,6 +289,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       if (process.env.TELNYX_API_KEY) {
         const telnyx = await provisionTelnyxNumber();
         telnyxPhone = telnyx.phoneNumber;
+        rollback.telnyxNumberId = telnyx.telnyxNumberId;
         await supabase.from('agents').update({ 
           telnyx_phone_number: telnyxPhone,
           telnyx_connection_id: '2996679323039040927'  // Empower Shared Voice
@@ -207,6 +314,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
         crmSupabaseUrl    = crm.supabaseUrl;
         crmServiceRoleKey = crm.serviceRoleKey;
         crmDbPassword     = crm.dbPassword;
+        rollback.crmProjectRef = crm.projectRef;
         await supabase.from('agents').update({
           crm_supabase_url: crmSupabaseUrl,
           crm_supabase_key: crmServiceRoleKey,
@@ -371,6 +479,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     const sshPrivateKey = getSSHPrivateKey();
     if (!sshPrivateKey) throw new Error('No SSH key available — set RESET_SSH_KEY env var');
     await ssh.connect({ host: DO_SERVER, username: 'root', privateKey: sshPrivateKey });
+    rollback.sshConnected = true;
 
     // Clone entire sales-agent .openclaw dir (brings plugins, extensions, config, pre-approved device pairing)
     await ssh.execCommand(`cp -r /root/.sales-agent ${ocPath}`);
@@ -379,6 +488,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     await ssh.execCommand(`rm -rf ${workspacePath}`);
     await ssh.execCommand(`cp -r ${TEMPLATE_PATH} ${workspacePath}`);
     await ssh.execCommand(`mkdir -p ${workspacePath}/memory ${workspacePath}/drafts ${workspacePath}/reports ${workspacePath}/proposals`);
+    rollback.workspaceCreated = true;
     // Patch hardcoded Barnhaus channel IDs in automation scripts to use this org's channels
     await ssh.execCommand(`find ${workspacePath}/automation -name '*.py' | xargs sed -i 's/barnhaus-vanessa/${input.orgSlug}-${agentSlug}/g' 2>/dev/null || true`);
 
@@ -524,6 +634,7 @@ print('cleared')
     if (dockerErr && !dockerErr.includes('already in use')) {
       console.warn('Docker run warning:', dockerErr);
     }
+    rollback.containerStarted = true;
 
     // ── STEP 8: Wait for container ready + gateway warmed (max 60s) ───────────
     let ready = false;
@@ -614,7 +725,8 @@ print('cleared')
     return { success: true, orgId: org.id, orgSlug: input.orgSlug, agentId: agent.id };
 
   } catch (err: any) {
-    console.error('Provision error:', err);
+    console.error('Provision error:', err.message);
+    await runRollback(rollback, ssh, supabase, ocPath, containerName);
     ssh.dispose();
     return { success: false, error: err.message };
   }
