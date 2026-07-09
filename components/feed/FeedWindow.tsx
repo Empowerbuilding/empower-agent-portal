@@ -30,10 +30,13 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
 
   useEffect(() => {
     setToolbar(
-      <button onClick={() => setDeleteMode(d => !d)} title="Delete" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}><IconTrash size={16} /></button>
+      <>
+        <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={17} /></button>
+        <button onClick={() => setDeleteMode(d => !d)} title="Delete" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}><IconTrash size={16} /></button>
+      </>
     );
     return () => setToolbar(null);
-  }, []);
+  }, [searchOpen]);
 
   const isInitialLoad = useRef(true);
   useEffect(() => {
