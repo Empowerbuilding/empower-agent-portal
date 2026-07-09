@@ -33,6 +33,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [stagedFile, setStagedFile] = useState<{ file: File; previewUrl: string } | null>(null);
+  const [memberCount, setMemberCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    fetch(`${SUPABASE_URL}/rest/v1/portal_channel_members?channel_id=eq.${channel.id}&select=user_id`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    }).then(r => r.json()).then((rows: unknown[]) => {
+      if (Array.isArray(rows)) setMemberCount(rows.length);
+    }).catch(() => {});
+  }, [channel.id]);
   const [agentTyping, setAgentTyping] = useState(false);
   const [listening, setListening] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -356,11 +366,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           </>
         ) : (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text)' }}># {channel.display_name}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+              <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}># {channel.display_name}</span>
+              {memberCount !== null && (
+                <span style={{ fontSize: '11px', color: 'var(--muted)', lineHeight: 1 }}>{memberCount} member{memberCount !== 1 ? 's' : ''}</span>
+              )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-              <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.7 }}><IconSearch size={16} /></button>
+              <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={17} /></button>
               <ChatOverflowMenu
                 contextPct={contextPct}
                 resetting={resetting}

@@ -93,7 +93,7 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
       <div className="msg-body">
         {showHeader && (
           <div className="msg-meta">
-            <span style={{ color: isUser ? '#79c0ff' : 'var(--accent)', fontWeight: 600 }}>
+            <span style={{ color: '#fff', fontWeight: 600 }}>
               {message.sender_name ?? (isUser ? 'User' : 'Agent')}
             </span>
             <span>{formatTime(message.created_at)}</span>

@@ -6,12 +6,12 @@
 
 :root {
   --safe-top: 0px; /* updated by JS in OrgShell for Android PWA edge-to-edge */
-  --bg: #26272b;
-  --sidebar-bg: #1e1f22;
-  --surface: #2d2f35;
-  --surface-hover: #35373e;
-  --card: #32343b;
-  --border: #2e3035;
+  --bg: #313338;
+  --sidebar-bg: #2b2d31;
+  --surface: #383a40;
+  --surface-hover: #404249;
+  --card: #3a3c43;
+  --border: #3f4147;
   --text: #dbdee1;
   --muted: #80848e;
   --accent: #3b82f6;
