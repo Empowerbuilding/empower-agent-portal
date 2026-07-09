@@ -8,6 +8,7 @@ import { PortalChannel, PortalMessage } from '@/lib/types';
 import MessageBubble from './MessageBubble';
 import SearchModal from './SearchModal';
 import ChatOverflowMenu from './ChatOverflowMenu';
+import PresenceButton from '@/components/presence/PresenceButton';
 import { playSend, playReceive, unlockAudio } from '@/lib/sounds';
 
 interface Props {
