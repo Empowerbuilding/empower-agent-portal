@@ -34,6 +34,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [stagedFile, setStagedFile] = useState<{ file: File; previewUrl: string } | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [memberCount, setMemberCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -261,6 +262,26 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     if (fileRef.current) fileRef.current.value = '';
   }
 
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOver(false);
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    const previewUrl = URL.createObjectURL(file);
+    setStagedFile({ file, previewUrl });
+  }
+
   function clearStagedFile() {
     if (stagedFile) URL.revokeObjectURL(stagedFile.previewUrl);
     setStagedFile(null);
@@ -340,7 +361,24 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+    <div
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {dragOver && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 50,
+          background: 'rgba(59,130,246,0.08)',
+          border: '2px dashed var(--accent, #3b82f6)',
+          borderRadius: '12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none',
+        }}>
+          <span style={{ color: 'var(--accent, #3b82f6)', fontSize: '16px', fontWeight: 600 }}>Drop file to attach</span>
+        </div>
+      )}
       {/* Confirm modal */}
       {confirming && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
