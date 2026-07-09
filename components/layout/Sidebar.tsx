@@ -342,7 +342,23 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
         />
       )}
 
-      <nav className={`sidebar${isOpen ? ' open' : ''}`}>
+      <nav
+        className={`sidebar${isOpen ? ' open' : ''}`}
+        onTouchStart={(e) => {
+          const touch = e.touches[0];
+          (e.currentTarget as any)._swipeStartX = touch.clientX;
+          (e.currentTarget as any)._swipeStartY = touch.clientY;
+        }}
+        onTouchEnd={(e) => {
+          const startX = (e.currentTarget as any)._swipeStartX;
+          const startY = (e.currentTarget as any)._swipeStartY;
+          if (startX == null) return;
+          const dx = e.changedTouches[0].clientX - startX;
+          const dy = Math.abs(e.changedTouches[0].clientY - startY);
+          // Swipe left at least 60px, not mostly vertical
+          if (dx < -60 && dy < Math.abs(dx) * 0.8) onClose();
+        }}
+      >
         <div className="sidebar-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
