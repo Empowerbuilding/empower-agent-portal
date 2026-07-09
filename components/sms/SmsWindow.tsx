@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import { useMobileToolbar } from '@/context/MobileToolbar';
-import { IconSend, IconMic, IconMicOff } from '@/components/ui/Icons';
+import { IconSend, IconMic, IconMicOff, IconSearch } from '@/components/ui/Icons';
+import SearchModal from '@/components/chat/SearchModal';
 
 interface Props {
   channel: PortalChannel;
@@ -80,6 +81,7 @@ function extractMediaUrls(content: string): string[] {
 export default function SmsWindow({ channel, initialMessages, currentUser, orgId }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [smsSearchOpen, setSmsSearchOpen] = useState(false);
   // mobile view: 'list' shows contact list, 'thread' shows conversation
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list');
   const [replyText, setReplyText] = useState('');
@@ -287,8 +289,9 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
       background: 'var(--sidebar-bg)',
     }}>
       {/* Desktop-only header inside list panel */}
-      <div className="desktop-only" style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
-        Conversations
+      <div className="desktop-only" style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Conversations</span>
+        <button onClick={() => setSmsSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={15} /></button>
       </div>
 
       {conversations.length === 0 && (
@@ -581,6 +584,14 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   // ── Layout ────────────────────────────────────────────────────────────────
   return (
     <>
+      {smsSearchOpen && (
+        <SearchModal
+          channelId={channel.id}
+          channelName={channel.display_name}
+          onClose={() => setSmsSearchOpen(false)}
+          onJumpTo={() => setSmsSearchOpen(false)}
+        />
+      )}
       {/* Desktop: side-by-side */}
       <div className="sms-desktop-layout">
         <div className="sms-contact-list">

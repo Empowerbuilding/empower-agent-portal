@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import Markdown from '@/components/ui/Markdown';
 import { useMobileToolbar } from '@/context/MobileToolbar';
-import { IconTrash } from '@/components/ui/Icons';
+import { IconTrash, IconSearch } from '@/components/ui/Icons';
+import SearchModal from '@/components/chat/SearchModal';
 
 interface Props {
   channel: PortalChannel;
@@ -68,6 +69,7 @@ function ApprovalCard({ message, currentUser, selected, onSelect, deleteMode }: 
 export default function ApprovalWindow({ channel, initialMessages, currentUser }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -140,6 +142,17 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      {searchOpen && (
+        <SearchModal
+          channelId={channel.id}
+          channelName={channel.display_name}
+          onClose={() => setSearchOpen(false)}
+          onJumpTo={(id) => {
+            setSearchOpen(false);
+            setTimeout(() => document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+          }}
+        />
+      )}
       {confirming && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', width: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -171,7 +184,10 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
                 <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Approval queue</div>
               </div>
             </div>
-            <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconTrash size={16} /></button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={17} /></button>
+              <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconTrash size={16} /></button>
+            </div>
           </>
         )}
       </div>
