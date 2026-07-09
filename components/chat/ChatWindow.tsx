@@ -217,13 +217,13 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     } else {
       setToolbar(
         <>
-          <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center' }}><IconSearch size={15} /></button>
+          <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.9 }}><IconSearch size={17} /></button>
           <ChatOverflowMenu
             contextPct={contextPct}
             resetting={resetting}
             onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
             onDeleteMode={() => setDeleteMode(true)}
-            size={15}
+            size={17}
           />
         </>
       );
