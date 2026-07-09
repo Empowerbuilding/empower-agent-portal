@@ -12,6 +12,13 @@ interface User {
   role: string;
 }
 
+interface Channel {
+  id: string;
+  display_name: string;
+  channel_type: string;
+  icon: string;
+}
+
 interface Invite {
   id: string;
   email: string;
@@ -50,6 +57,10 @@ export default function SettingsPage() {
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [userChannelMap, setUserChannelMap] = useState<Record<string, string[]>>({});
+  const [channelToggling, setChannelToggling] = useState<string | null>(null);
 
   useEffect(() => {
     const ios = isIOS();
@@ -150,6 +161,9 @@ export default function SettingsPage() {
         setOrgId(org.id);
         const { data: members } = await supabase.from('portal_users').select('id, name, email, role').eq('org_id', org.id).order('role');
         setUsers(members ?? []);
+        // Load channels for this org
+        const { data: chans } = await supabase.from('portal_channels').select('id, display_name, channel_type, icon').eq('org_id', org.id).order('position');
+        setChannels(chans ?? []);
         // Derive current user id from auth session matched against portal_users
         const { data: authData } = await supabase.auth.getUser();
         if (authData?.user?.email && members) {
@@ -229,6 +243,36 @@ export default function SettingsPage() {
     if (!confirm('Remove this user from the portal?')) return;
     await supabase.from('portal_users').delete().eq('id', userId);
     setUsers(prev => prev.filter(u => u.id !== userId));
+  }
+
+  async function toggleChannelExpand(userId: string) {
+    if (expandedUserId === userId) { setExpandedUserId(null); return; }
+    setExpandedUserId(userId);
+    if (!userChannelMap[userId]) {
+      const res = await fetch(`/api/members/channels?userId=${userId}&orgId=${orgId}`);
+      if (res.ok) {
+        const channelIds: string[] = await res.json();
+        setUserChannelMap(prev => ({ ...prev, [userId]: channelIds }));
+      }
+    }
+  }
+
+  async function toggleChannelMembership(userId: string, channelId: string, currentlyIn: boolean) {
+    const key = `${userId}:${channelId}`;
+    setChannelToggling(key);
+    await fetch('/api/members/channels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, channelId, orgId, add: !currentlyIn }),
+    });
+    setUserChannelMap(prev => {
+      const current = prev[userId] ?? [];
+      return {
+        ...prev,
+        [userId]: currentlyIn ? current.filter(id => id !== channelId) : [...current, channelId],
+      };
+    });
+    setChannelToggling(null);
   }
 
   return (
@@ -414,35 +458,66 @@ export default function SettingsPage() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {users.map(u => (
-            <div key={u.id} style={{
-              display: 'flex', alignItems: 'center', gap: '12px',
-              background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px',
-            }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '13px', fontWeight: 700, flexShrink: 0,
-              }}>
-                {u.name.charAt(0)}
+            <div key={u.id} style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+              {/* User row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px' }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
+                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '13px', fontWeight: 700, flexShrink: 0,
+                }}>
+                  {u.name.charAt(0)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{u.name}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{u.email}</div>
+                </div>
+                <span style={{
+                  fontSize: '11px', padding: '2px 8px', borderRadius: '12px',
+                  background: u.role === 'owner' ? 'rgba(76,139,240,0.15)' : 'var(--border)',
+                  color: u.role === 'owner' ? 'var(--accent)' : 'var(--muted)',
+                  fontWeight: 600, flexShrink: 0,
+                }}>
+                  {u.role}
+                </span>
+                {['owner', 'admin'].includes(currentUserRole) && u.role !== 'owner' && (
+                  <button
+                    onClick={() => toggleChannelExpand(u.id)}
+                    title="Manage channels"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: expandedUserId === u.id ? 'var(--accent)' : 'var(--muted)', fontSize: '12px', padding: '2px 6px', flexShrink: 0, fontWeight: 600 }}
+                  >#</button>
+                )}
+                {u.role !== 'owner' && (
+                  <button
+                    onClick={() => removeUser(u.id)}
+                    title="Remove user"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#da3633', fontSize: '16px', padding: '2px 4px', flexShrink: 0 }}
+                  >×</button>
+                )}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{u.name}</div>
-                <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{u.email}</div>
-              </div>
-              <span style={{
-                fontSize: '11px', padding: '2px 8px', borderRadius: '12px',
-                background: u.role === 'owner' ? 'rgba(76,139,240,0.15)' : 'var(--border)',
-                color: u.role === 'owner' ? 'var(--accent)' : 'var(--muted)',
-                fontWeight: 600, flexShrink: 0,
-              }}>
-                {u.role}
-              </span>
-              {u.role !== 'owner' && (
-                <button
-                  onClick={() => removeUser(u.id)}
-                  title="Remove user"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#da3633', fontSize: '16px', padding: '2px 4px', flexShrink: 0 }}
-                >×</button>
+              {/* Channel access panel */}
+              {expandedUserId === u.id && (
+                <div style={{ padding: '12px 14px 14px', borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Channel Access</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {channels.map(ch => {
+                      const inChannel = (userChannelMap[u.id] ?? []).includes(ch.id);
+                      const toggling = channelToggling === `${u.id}:${ch.id}`;
+                      return (
+                        <label key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: toggling ? 'wait' : 'pointer', fontSize: '13px', color: 'var(--text)' }}>
+                          <input
+                            type="checkbox"
+                            checked={inChannel}
+                            disabled={toggling}
+                            onChange={() => toggleChannelMembership(u.id, ch.id, inChannel)}
+                            style={{ accentColor: 'var(--accent)', width: 14, height: 14, cursor: 'pointer' }}
+                          />
+                          <span style={{ opacity: toggling ? 0.5 : 1 }}>{ch.icon} {ch.display_name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
           ))}
