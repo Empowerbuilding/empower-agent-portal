@@ -111,7 +111,7 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
           </div>
           {/* Channel-specific action buttons injected by child components (includes presence button) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, paddingRight: '2px' }}>
-            <PresenceButton orgId={org.id} openDirection="down" align="right" size={15} />
+            {activeChannelId && <PresenceButton orgId={org.id} openDirection="down" align="right" size={15} />}
             {toolbar}
           </div>
         </div>
