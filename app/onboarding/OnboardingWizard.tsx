@@ -172,12 +172,19 @@ export default function OnboardingPage() {
       clearInterval(interval);
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
         setError(data.error || 'Launch failed — please try again');
         setLaunching(false);
         return;
       }
 
+      // Async provisioning: redirect to progress page immediately
+      if (data.jobId) {
+        router.push(`/provision-progress?jobId=${data.jobId}&orgSlug=${data.orgSlug || state.orgSlug}`);
+        return;
+      }
+
+      // Legacy sync fallback (if server returns success directly)
       setLaunchStatus('Done ✓');
       setTimeout(() => setLaunched({
         agentId: data.agentId,

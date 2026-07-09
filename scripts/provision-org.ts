@@ -218,7 +218,13 @@ function buildBootstrapFiles(input: ProvisionInput): Record<string, string> {
 }
 
 
-export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResult> {
+export type ProgressCallback = (step: string, detail?: string) => void;
+
+export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressCallback): Promise<ProvisionResult> {
+  const progress = (step: string, detail?: string) => {
+    console.log(`[provision] ${step}${detail ? ': ' + detail : ''}`);
+    onProgress?.(step, detail);
+  };
   const supabase = createClient(PORTAL_SUPABASE_URL, PORTAL_SUPABASE_KEY);
   const ssh = new NodeSSH();
 
@@ -238,6 +244,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
   };
 
   try {
+    progress('creating_org', input.orgName);
     // ── STEP 1: Create organization ──────────────────────────────────────────
     const { data: org, error: orgErr } = await supabase
       .from('organizations')
@@ -253,6 +260,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     if (orgErr) throw new Error(`Create org failed: ${orgErr.message}`);
     rollback.orgId = org.id;
 
+    progress('creating_agent', input.agentDisplayName);
     // ── STEP 2: Create agent row ─────────────────────────────────────────────
     const { data: agent, error: agentErr } = await supabase
       .from('agents')
@@ -283,6 +291,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
     }));
     await supabase.from('agents').update({ reps: repsForDb }).eq('id', agent.id);
 
+    progress('provisioning_phone', 'Acquiring phone number');
     // ── STEP 2b: Provision Telnyx phone number ───────────────────────────────
     let telnyxPhone: string | null = null;
     try {
@@ -302,6 +311,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       console.error('[provision] Telnyx provisioning failed (non-fatal):', e);
     }
 
+    progress('provisioning_crm', 'Creating CRM database');
     // ── STEP 2c: Provision Supabase CRM project ────────────────────────────────
     let crmSupabaseUrl = '';
     let crmServiceRoleKey = '';
@@ -349,6 +359,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       console.error('[provision] CRM provisioning failed (non-fatal):', e);
     }
 
+    progress('creating_channels', 'Setting up portal channels');
         // ── STEP 3: Create channels based on agentFocus selections ──────────────
     const focus: string[] = input.wizard?.agentFocus ?? ['qualify', 'emails', 'sms'];
 
@@ -433,6 +444,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       await supabase.from('portal_channel_members').insert(memberRows);
     }
 
+    progress('creating_users', 'Creating rep accounts');
     // ── STEP 4b: Create rep logins and assign to their channels ────────────
     for (const rep of input.reps) {
       const repSlug = rep.name.toLowerCase().replace(/\s+/g, '-');
@@ -475,6 +487,7 @@ export async function provisionOrg(input: ProvisionInput): Promise<ProvisionResu
       }
     }
 
+    progress('cloning_workspace', 'Setting up agent workspace on server');
     // ── STEP 5: Clone full .openclaw dir from sales-agent ──────────────────
     const sshPrivateKey = getSSHPrivateKey();
     if (!sshPrivateKey) throw new Error('No SSH key available — set RESET_SSH_KEY env var');
@@ -516,6 +529,7 @@ print('cleared')
     await ssh.execCommand(`rm -f ${ocPath}/devices/pending.json`);
     await ssh.execCommand(`rm -rf ${ocPath}/agents/main/sessions`);
 
+    progress('writing_files', 'Writing agent configuration files');
     // ── STEP 6: Write bootstrap files ────────────────────────────────────────
     const files = buildBootstrapFiles(input);
     for (const [filename, content] of Object.entries(files)) {
@@ -624,6 +638,7 @@ print('cleared')
     fs.unlinkSync(orgConfigTmp);
     console.log('[provision] org_config.json written for', input.orgSlug);
 
+    progress('starting_container', 'Starting agent container');
     // ── STEP 7: Start Docker container ───────────────────────────────────────
     // Fix ownership to node user (uid 1000) before starting
     await ssh.execCommand(`chown -R 1000:1000 ${ocPath}`);
@@ -636,6 +651,7 @@ print('cleared')
     }
     rollback.containerStarted = true;
 
+    progress('waiting_ready', 'Waiting for agent to come online');
     // ── STEP 8: Wait for container ready + gateway warmed (max 60s) ───────────
     let ready = false;
     for (let i = 0; i < 30; i++) {
@@ -648,6 +664,7 @@ print('cleared')
     }
     if (!ready) throw new Error('Container gateway did not start within 60s');
 
+    progress('seeding_crons', 'Seeding default automations');
     // ── STEP 9: Seed default crons ───────────────────────────────────────────
     const enabledCrons = input.enabledCrons ?? ['morning-briefing', 'inbox-scan', 'eod-report'];
     const defaultCrons = buildDefaultCrons(input.orgSlug, agentSlug);
@@ -717,6 +734,7 @@ print('cleared')
       await supabase.from('agent_env_vars').upsert(envVarsToSeed, { onConflict: 'agent_id,key' });
     }
 
+    progress('complete', input.orgSlug);
     // ── STEP 11: Mark agent running ───────────────────────────────────────────
     await supabase.from('agents').update({ container_status: 'running', deployed_at: new Date().toISOString() }).eq('id', agent.id);
 
