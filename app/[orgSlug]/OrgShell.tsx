@@ -58,6 +58,17 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
   // Find active channel name for mobile header
   const activeChannelId = pathname.split('/')[2];
   const activeChannel = channels.find(ch => ch.id === activeChannelId);
+  const [mobileMemberCount, setMobileMemberCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!activeChannelId) { setMobileMemberCount(null); return; }
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    fetch(`https://xqvnpcxyyxxxydescfzw.supabase.co/rest/v1/portal_channel_members?channel_id=eq.${activeChannelId}&select=user_id`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    }).then(r => r.json()).then((rows: unknown[]) => {
+      if (Array.isArray(rows)) setMobileMemberCount(rows.length);
+    }).catch(() => {});
+  }, [activeChannelId]);
 
   return (
     <div className="app-shell">
@@ -92,6 +103,11 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
             <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {activeChannel ? `# ${activeChannel.display_name}` : org.name}
             </div>
+            {mobileMemberCount !== null && activeChannel && (
+              <div style={{ fontSize: '11px', color: 'var(--muted)', lineHeight: 1, marginTop: '1px' }}>
+                {mobileMemberCount} member{mobileMemberCount !== 1 ? 's' : ''}
+              </div>
+            )}
           </div>
           {/* Channel-specific action buttons injected by child components (includes presence button) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, paddingRight: '2px' }}>
