@@ -32,7 +32,7 @@ export default function ChatOverflowMenu({ contextPct, resetting, onResetContext
       <button
         onClick={() => setOpen(o => !o)}
         title="More options"
-        style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 6px', opacity: 0.7 }}
+        style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', opacity: 0.9 }}
       >
         <IconMore size={size} />
       </button>
