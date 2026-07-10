@@ -282,6 +282,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     setStagedFile({ file, previewUrl });
   }
 
+  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const file = Array.from(e.clipboardData.items)
+      .find(item => item.kind === 'file' && (item.type.startsWith('image/') || item.type === 'application/pdf'))
+      ?.getAsFile();
+    if (!file) return;
+    e.preventDefault();
+    const previewUrl = URL.createObjectURL(file);
+    setStagedFile({ file, previewUrl });
+  }
+
   function clearStagedFile() {
     if (stagedFile) URL.revokeObjectURL(stagedFile.previewUrl);
     setStagedFile(null);
@@ -512,6 +522,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               value={input}
               onChange={handleInputChange}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+              onPaste={handlePaste}
               placeholder={`Message ${channel.display_name}…`}
               rows={1}
             />
