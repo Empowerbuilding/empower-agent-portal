@@ -33,7 +33,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const allSelected = selected.size === messages.length && messages.length > 0;
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [stagedFile, setStagedFile] = useState<{ file: File; previewUrl: string } | null>(null);
+  const [stagedFiles, setStagedFiles] = useState<{ file: File; previewUrl: string }[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [memberCount, setMemberCount] = useState<number | null>(null);
 
@@ -255,10 +255,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const previewUrl = URL.createObjectURL(file);
-    setStagedFile({ file, previewUrl });
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setStagedFiles(prev => [...prev, ...files.map(file => ({ file, previewUrl: URL.createObjectURL(file) }))]);
     if (fileRef.current) fileRef.current.value = '';
   }
 
@@ -276,25 +275,26 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    const previewUrl = URL.createObjectURL(file);
-    setStagedFile({ file, previewUrl });
+    const files = Array.from(e.dataTransfer.files);
+    if (!files.length) return;
+    setStagedFiles(prev => [...prev, ...files.map(file => ({ file, previewUrl: URL.createObjectURL(file) }))]);
   }
 
   function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
-    const file = Array.from(e.clipboardData.items)
-      .find(item => item.kind === 'file' && (item.type.startsWith('image/') || item.type === 'application/pdf'))
-      ?.getAsFile();
-    if (!file) return;
+    const files = Array.from(e.clipboardData.items)
+      .filter(item => item.kind === 'file' && (item.type.startsWith('image/') || item.type === 'application/pdf'))
+      .map(item => item.getAsFile()).filter(Boolean) as File[];
+    if (!files.length) return;
     e.preventDefault();
-    const previewUrl = URL.createObjectURL(file);
-    setStagedFile({ file, previewUrl });
+    setStagedFiles(prev => [...prev, ...files.map(file => ({ file, previewUrl: URL.createObjectURL(file) }))]);
   }
 
-  function clearStagedFile() {
-    if (stagedFile) URL.revokeObjectURL(stagedFile.previewUrl);
-    setStagedFile(null);
+  function removeStagedFile(index: number) {
+    setStagedFiles(prev => { URL.revokeObjectURL(prev[index].previewUrl); return prev.filter((_, i) => i !== index); });
+  }
+
+  function clearStagedFiles() {
+    setStagedFiles(prev => { prev.forEach(f => URL.revokeObjectURL(f.previewUrl)); return []; });
   }
 
   function toggleVoice() {
@@ -334,21 +334,23 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
 
   async function sendMessage() {
     const content = input.trim();
-    if (!content && !stagedFile || sending) return;
+    if (!content && !stagedFiles.length || sending) return;
     setSending(true);
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     let attachments: { url: string; name: string; type: string }[] = [];
-    if (stagedFile) {
+    if (stagedFiles.length) {
       setUploading(true);
-      const path = `${orgId}/${channel.id}/${Date.now()}-${stagedFile.file.name}`;
-      const { error } = await supabase.storage.from('portal-attachments').upload(path, stagedFile.file, { upsert: true });
-      if (!error) {
-        const { data: { publicUrl } } = supabase.storage.from('portal-attachments').getPublicUrl(path);
-        attachments = [{ url: publicUrl, name: stagedFile.file.name, type: stagedFile.file.type }];
+      for (const staged of stagedFiles) {
+        const path = `${orgId}/${channel.id}/${Date.now()}-${staged.file.name}`;
+        const { error } = await supabase.storage.from('portal-attachments').upload(path, staged.file, { upsert: true });
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage.from('portal-attachments').getPublicUrl(path);
+          attachments.push({ url: publicUrl, name: staged.file.name, type: staged.file.type });
+        }
       }
-      clearStagedFile();
+      clearStagedFiles();
       setUploading(false);
     }
 
@@ -360,7 +362,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       sender_type: 'user',
       sender_id: currentUser.id,
       sender_name: currentUser.name,
-      content: content || (attachments[0]?.name ?? ''),
+      content: content || attachments.map(a => a.name).join(', ') || '',
       ...(attachments.length ? { attachments } : {}),
       processed: false,
     });
@@ -495,28 +497,28 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       {/* Input */}
       {!deleteMode && (
         <div className="input-area">
-          <input ref={fileRef} type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={handleFileChange} style={{ display: 'none' }} />
+          <input ref={fileRef} type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" multiple onChange={handleFileChange} style={{ display: 'none' }} />
           <div className="input-row">
             <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Attach file"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '20px', padding: '0 4px', flexShrink: 0, opacity: uploading ? 0.4 : 0.7 }}>
               <IconPaperclip size={18} />
             </button>
-            {stagedFile && (
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                {stagedFile.file.type.startsWith('image/') ? (
-                  <img src={stagedFile.previewUrl} alt={stagedFile.file.name}
+            {stagedFiles.map((sf, i) => (
+              <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
+                {sf.file.type.startsWith('image/') ? (
+                  <img src={sf.previewUrl} alt={sf.file.name}
                     style={{ height: '48px', width: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)' }} />
                 ) : (
                   <div style={{ height: '48px', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--border)', borderRadius: '6px', padding: '0 8px', fontSize: '12px', color: 'var(--muted)', maxWidth: '120px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                    📎 {stagedFile.file.name}
+                    📎 {sf.file.name}
                   </div>
                 )}
-                <button onClick={clearStagedFile}
+                <button onClick={() => removeStagedFile(i)}
                   style={{ position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', borderRadius: '50%', background: 'var(--border)', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
                   ✕
                 </button>
               </div>
-            )}
+            ))}
             <textarea
               ref={textareaRef}
               value={input}
@@ -530,7 +532,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', fontSize: '18px', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
               {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
             </button>
-            <button className="send-btn" onClick={sendMessage} disabled={(!input.trim() && !stagedFile) || sending}>
+            <button className="send-btn" onClick={sendMessage} disabled={(!input.trim() && !stagedFiles.length) || sending}>
               {sending ? '…' : <IconSend size={15} />}
             </button>
           </div>
