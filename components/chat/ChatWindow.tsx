@@ -22,7 +22,11 @@ const SUPABASE_URL = 'https://xqvnpcxyyxxxydescfzw.supabase.co';
 
 export default function ChatWindow({ channel, initialMessages, currentUser, orgId }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
-  const [input, setInput] = useState('');
+  const draftKey = `portal-draft-${channel.id}`;
+  const [input, setInput] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem(draftKey) ?? '';
+    return '';
+  });
   const [sending, setSending] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -110,6 +114,12 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   // Refresh on mount (catch messages missed while away)
   useEffect(() => {
     refresh();
+  }, [channel.id]);
+
+  // Restore draft when switching channels
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? (localStorage.getItem(`portal-draft-${channel.id}`) ?? '') : '';
+    setInput(saved);
   }, [channel.id]);
 
   // Refresh when app comes back to foreground (realtime socket drops in background on mobile)
@@ -361,7 +371,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     rec.onresult = (e: any) => {
       const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join('');
       const sep = baseText && !baseText.endsWith(' ') ? ' ' : '';
-      setInput(baseText + sep + transcript);
+      const newVal = baseText + sep + transcript;
+      localStorage.setItem(draftKey, newVal);
+      setInput(newVal);
     };
     rec.onend = () => setListening(false);
     rec.onerror = () => setListening(false);
@@ -370,6 +382,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    localStorage.setItem(draftKey, e.target.value);
     setInput(e.target.value);
     const el = e.target;
     el.style.height = 'auto';
@@ -380,6 +393,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     const content = input.trim();
     if (!content && !stagedFiles.length || sending) return;
     setSending(true);
+    localStorage.removeItem(draftKey);
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
