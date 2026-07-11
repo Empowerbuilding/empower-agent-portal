@@ -3,7 +3,8 @@
 /**
  * Markdown renderer for portal messages.
  * Supports: headers (# ## ###), **bold**, *italic*, `code`, ```blocks```,
- * bullet lists, numbered lists, --- dividers, | tables |, line breaks.
+ * bullet lists, numbered lists, --- dividers, | tables |, line breaks,
+ * ![alt](url) images, bare image URLs (jpg/png/gif/webp auto-embeds).
  */
 
 interface Props {
@@ -13,18 +14,35 @@ interface Props {
 
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  const regex = /(\[([^\]]+)\]\(([^)]+)\)|\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`)/g;
+  // Supports: ![alt](url) images, [text](url) links, **bold**, *italic*, `code`, bare image URLs
+  const regex = /(!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)|\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`|(https?:\/\/\S+\.(?:jpg|jpeg|png|gif|webp)(\?\S*)?))/gi;
   let last = 0;
   let match;
   let key = 0;
 
   while ((match = regex.exec(text)) !== null) {
     if (match.index > last) parts.push(text.slice(last, match.index));
-    if (match[2] && match[3]) {
-      parts.push(<a key={key++} href={match[3]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>{match[2]}</a>);
-    } else if (match[4]) parts.push(<strong key={key++}>{match[4]}</strong>);
-    else if (match[5]) parts.push(<em key={key++}>{match[5]}</em>);
-    else if (match[6]) parts.push(<code key={key++} style={{ background: 'var(--border)', borderRadius: '3px', padding: '1px 5px', fontSize: '0.9em', fontFamily: 'monospace' }}>{match[6]}</code>);
+    if (match[0].startsWith('![') && match[3]) {
+      // Markdown image: ![alt](url)
+      parts.push(
+        <img key={key++} src={match[3]} alt={match[2] || 'image'}
+          style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', display: 'block', margin: '6px 0', cursor: 'pointer', objectFit: 'contain' }}
+          onClick={() => window.open(match![3], '_blank')} />
+      );
+    } else if (match[4] && match[5]) {
+      // Markdown link: [text](url)
+      parts.push(<a key={key++} href={match[5]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>{match[4]}</a>);
+    } else if (match[6]) parts.push(<strong key={key++}>{match[6]}</strong>);
+    else if (match[7]) parts.push(<em key={key++}>{match[7]}</em>);
+    else if (match[8]) parts.push(<code key={key++} style={{ background: 'var(--border)', borderRadius: '3px', padding: '1px 5px', fontSize: '0.9em', fontFamily: 'monospace' }}>{match[8]}</code>);
+    else if (match[9]) {
+      // Bare image URL — auto-embed
+      parts.push(
+        <img key={key++} src={match[9]} alt="image"
+          style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', display: 'block', margin: '6px 0', cursor: 'pointer', objectFit: 'contain' }}
+          onClick={() => window.open(match![9], '_blank')} />
+      );
+    }
     last = match.index + match[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
