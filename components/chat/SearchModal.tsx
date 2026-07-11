@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PortalMessage } from '@/lib/types';
+import { IconSearch } from '@/components/ui/Icons';
 
 interface Props {
   channelId: string;
@@ -71,7 +72,7 @@ export default function SearchModal({ channelId, channelName, onClose, onJumpTo 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', width: '100%', maxWidth: '600px', margin: '0 16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 120px)' }}>
         {/* Search input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '18px', opacity: 0.5 }}>🔍</span>
+          <span style={{ opacity: 0.5, display: 'flex', alignItems: 'center' }}><IconSearch size={18} /></span>
           <input
             ref={inputRef}
             value={query}
@@ -82,7 +83,7 @@ export default function SearchModal({ channelId, channelName, onClose, onJumpTo 
           {query && (
             <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '2px 6px' }}>✕</button>
           )}
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', padding: '4px 8px' }}>Esc</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1, display: 'flex', alignItems: 'center' }}>✕</button>
         </div>
 
         {/* Results */}

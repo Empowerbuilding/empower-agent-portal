@@ -195,13 +195,57 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     setResetting(false);
   }
 
-  function handleJumpTo(messageId: string) {
-    const el = messageRefs.current[messageId];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.style.background = 'var(--accent)22';
-      setTimeout(() => { if (el) el.style.background = ''; }, 2000);
-    }
+  async function handleJumpTo(messageId: string) {
+    // Try the fast path — message already in DOM
+    const tryScroll = (id: string) => {
+      const el = messageRefs.current[id];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.background = 'var(--accent)22';
+        setTimeout(() => { if (el) el.style.background = ''; }, 2000);
+        return true;
+      }
+      return false;
+    };
+
+    if (tryScroll(messageId)) return;
+
+    // Message not in DOM — fetch messages around that timestamp and re-render
+    const { data: targetMsg } = await supabase
+      .from('portal_messages')
+      .select('created_at')
+      .eq('id', messageId)
+      .single();
+
+    if (!targetMsg) return;
+
+    // Fetch 50 messages before and 50 after the target
+    const [{ data: before }, { data: after }] = await Promise.all([
+      supabase
+        .from('portal_messages')
+        .select('*')
+        .eq('channel_id', channel.id)
+        .lte('created_at', targetMsg.created_at)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('portal_messages')
+        .select('*')
+        .eq('channel_id', channel.id)
+        .gt('created_at', targetMsg.created_at)
+        .order('created_at', { ascending: true })
+        .limit(50),
+    ]);
+
+    const merged = [
+      ...([...(before ?? [])].reverse()),
+      ...((after ?? [])),
+    ] as PortalMessage[];
+
+    setMessages(merged);
+
+    // Wait for React to render the new messages, then scroll
+    setTimeout(() => tryScroll(messageId), 150);
   }
 
   // Inject action buttons into OrgShell mobile header
