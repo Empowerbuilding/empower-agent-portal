@@ -1,4 +1,13 @@
 export type ChannelType = 'chat' | 'feed' | 'approval' | 'sms';
+
+export interface AgentGroup {
+  id: string;
+  org_id: string;
+  name: string;
+  slug: string;
+  emoji: string | null;
+  sort_order: number;
+}
 export type SenderType = 'user' | 'agent' | 'system';
 export type ContainerStatus = 'running' | 'stopped' | 'unhealthy' | 'error' | 'provisioning';
 
@@ -27,6 +36,8 @@ export interface Agent {
   memory_md: string | null;
   active: boolean;
   created_at: string;
+  group_id: string | null;
+  agent_groups?: AgentGroup | null;
 }
 
 export interface PortalChannel {

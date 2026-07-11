@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { PortalChannel, Agent, Organization } from '@/lib/types';
+import { PortalChannel, Agent, Organization, AgentGroup } from '@/lib/types';
 import OrgShell from './OrgShell';
 
 export default async function OrgLayout({
@@ -31,13 +31,20 @@ export default async function OrgLayout({
 
   const { data: channels } = await supabase
     .from('portal_channels')
-    .select('*, agents(id, name, display_name, container_status, active)')
+    .select('*, agents(id, name, display_name, container_status, active, group_id)')
     .in('id', channelIds).order('position');
+
+  const { data: groups } = await supabase
+    .from('agent_groups')
+    .select('*')
+    .eq('org_id', org.id)
+    .order('sort_order');
 
   return (
     <OrgShell
       org={org as Organization}
       channels={(channels ?? []) as (PortalChannel & { agents: Agent })[]}
+      groups={(groups ?? []) as AgentGroup[]}
       currentUser={portalUser}
       orgSlug={orgSlug}
     >

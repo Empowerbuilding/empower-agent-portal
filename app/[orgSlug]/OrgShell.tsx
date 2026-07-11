@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import NotificationPrompt from '@/components/NotificationPrompt';
-import { Organization, PortalChannel, Agent, PortalUser } from '@/lib/types';
+import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
 import { MobileToolbarProvider, useMobileToolbar } from '@/context/MobileToolbar';
 import PresenceButton from '@/components/presence/PresenceButton';
 import { registerServiceWorker } from '@/lib/push';
@@ -12,12 +12,13 @@ import { registerServiceWorker } from '@/lib/push';
 interface Props {
   org: Organization;
   channels: (PortalChannel & { agents: Agent })[];
+  groups: AgentGroup[];
   currentUser: PortalUser;
   orgSlug: string;
   children: React.ReactNode;
 }
 
-function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props) {
+function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { toolbar } = useMobileToolbar();
@@ -76,6 +77,7 @@ function OrgShellInner({ org, channels, currentUser, orgSlug, children }: Props)
       <Sidebar
         org={org}
         channels={channels}
+        groups={groups}
         currentUser={currentUser}
         orgSlug={orgSlug}
         isOpen={sidebarOpen}

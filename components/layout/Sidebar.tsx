@@ -4,13 +4,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Organization, PortalChannel, Agent, PortalUser } from '@/lib/types';
+import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
 import { IconGear, IconClock } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
   org: Organization;
   channels: (PortalChannel & { agents: Agent })[];
+  groups: AgentGroup[];
   currentUser: PortalUser;
   orgSlug: string;
   isOpen: boolean;
@@ -186,7 +187,7 @@ function ChannelGearMenu({ onRename, onDelete, onClose }: { onRename: () => void
   );
 }
 
-export default function Sidebar({ org, channels: initialChannels, currentUser, orgSlug, isOpen, onClose }: Props) {
+export default function Sidebar({ org, channels: initialChannels, groups, currentUser, orgSlug, isOpen, onClose }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -197,6 +198,19 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
   const [renamingChannel, setRenamingChannel] = useState<(PortalChannel & { agents: Agent }) | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const draggedIdRef = useRef<string | null>(null);
+
+  // Active group — default to first group, persist in localStorage
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('portal_active_group') ?? (groups[0]?.id ?? null);
+    }
+    return groups[0]?.id ?? null;
+  });
+
+  function selectGroup(id: string) {
+    setActiveGroupId(id);
+    if (typeof window !== 'undefined') localStorage.setItem('portal_active_group', id);
+  }
 
   // Unread tracking via DB (portal_channel_members.last_seen_at)
   const [lastSeen, setLastSeen] = useState<Record<string, string>>({});
@@ -297,7 +311,13 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
     return latest > seen;
   }
 
-  const grouped = channels.filter(ch => ch.agents?.active !== false).reduce<Record<string, { agent: Agent; channels: (PortalChannel & { agents: Agent })[] }>>(
+  // Filter channels to active group
+  const filteredChannels = channels.filter(ch => {
+    if (!activeGroupId) return true;
+    return ch.agents?.group_id === activeGroupId;
+  });
+
+  const grouped = filteredChannels.filter(ch => ch.agents?.active !== false).reduce<Record<string, { agent: Agent; channels: (PortalChannel & { agents: Agent })[] }>>(
     (acc, ch) => {
       const key = ch.agents?.display_name ?? 'Other';
       if (!acc[key]) acc[key] = { agent: ch.agents, channels: [] };
@@ -305,6 +325,8 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
       return acc;
     }, {}
   );
+
+  const activeGroup = groups.find(g => g.id === activeGroupId);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -343,6 +365,7 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
 
       <nav
         className={`sidebar${isOpen ? ' open' : ''}`}
+        style={{ flexDirection: 'row' }}
         onTouchStart={(e) => {
           const touch = e.touches[0];
           (e.currentTarget as any)._swipeStartX = touch.clientX;
@@ -358,12 +381,74 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
           if (dx < -60 && dy < Math.abs(dx) * 0.8) onClose();
         }}
       >
+        {/* Group Rail — left icon strip */}
+        {groups.length > 0 && (
+          <div style={{
+            width: 52,
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            paddingTop: 12,
+            paddingBottom: 8,
+            gap: 4,
+            background: 'rgba(0,0,0,0.15)',
+            borderRight: '1px solid var(--border)',
+            overflowY: 'auto',
+          }}>
+            {groups.map(g => {
+              const isActive = g.id === activeGroupId;
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => selectGroup(g.id)}
+                  title={g.name}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: isActive ? '12px' : '50%',
+                    background: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.07)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 18,
+                    transition: 'border-radius 0.2s, background 0.15s',
+                    flexShrink: 0,
+                    position: 'relative',
+                  }}
+                >
+                  {g.emoji ?? g.name.charAt(0)}
+                  {/* Active indicator pill */}
+                  {isActive && (
+                    <span style={{
+                      position: 'absolute',
+                      left: -8,
+                      width: 4,
+                      height: 20,
+                      background: 'var(--text)',
+                      borderRadius: '0 4px 4px 0',
+                    }} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Right panel — header + nav + footer */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
         <div className="sidebar-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Image src="/logo.png" alt="Empower Building" width={28} height={28} style={{ objectFit: 'contain', borderRadius: '4px' }} />
               <div>
-                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', lineHeight: 1.2 }}>{org.name}</div>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', lineHeight: 1.2 }}>
+                  {activeGroup ? activeGroup.emoji + ' ' + activeGroup.name : org.name}
+                </div>
                 <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Agent Portal</div>
               </div>
             </div>
@@ -498,7 +583,8 @@ export default function Sidebar({ org, channels: initialChannels, currentUser, o
           <button onClick={handleSignOut} title="Sign out" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
           </button>
-        </div>
+        </div>{/* end sidebar-footer */}
+        </div>{/* end right panel */}
       </nav>
     </>
   );
