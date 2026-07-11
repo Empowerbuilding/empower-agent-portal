@@ -187,6 +187,33 @@ function ChannelGearMenu({ onRename, onDelete, onClose }: { onRename: () => void
   );
 }
 
+// Minimal SVG icons for each group slug
+const GROUP_ICONS: Record<string, React.ReactNode> = {
+  sales: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  ),
+  finance: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  ),
+  marketing: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11l19-9-9 19-2-8-8-2z" />
+    </svg>
+  ),
+  design: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="22" y2="4" />
+      <path d="M6.59 8.23L2 22l5-1 3-8" />
+      <path d="M2.5 13.5h14.5" />
+    </svg>
+  ),
+};
+
 export default function Sidebar({ org, channels: initialChannels, groups, currentUser, orgSlug, isOpen, onClose }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -420,7 +447,9 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                     position: 'relative',
                   }}
                 >
-                  {g.emoji ?? g.name.charAt(0)}
+                  {GROUP_ICONS[g.slug] ?? (
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>{g.name.charAt(0)}</span>
+                  )}
                   {/* Active indicator pill */}
                   {isActive && (
                     <span style={{
@@ -447,7 +476,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
               <Image src="/logo.png" alt="Empower Building" width={28} height={28} style={{ objectFit: 'contain', borderRadius: '4px' }} />
               <div>
                 <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', lineHeight: 1.2 }}>
-                  {activeGroup ? activeGroup.emoji + ' ' + activeGroup.name : org.name}
+                  {activeGroup ? activeGroup.name : org.name}
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Agent Portal</div>
               </div>
