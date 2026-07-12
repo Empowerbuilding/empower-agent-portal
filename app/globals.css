@@ -313,9 +313,9 @@ html, body {
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-shrink: 0;
-  min-height: 77px;
+  min-height: 57px;
 }
 
 .agent-group { margin-bottom: 16px; }
