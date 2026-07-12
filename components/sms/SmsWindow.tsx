@@ -99,7 +99,6 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const voiceBaseRef = useRef('');
   const voiceSessionFinalsRef = useRef('');
   const voiceLastSetRef = useRef('');
-  const voiceIgnoreUntilRef = useRef(0);
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
 
@@ -205,16 +204,14 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     voiceBaseRef.current = replyText;
     voiceLastSetRef.current = replyText;
     voiceSessionFinalsRef.current = '';
-    voiceIgnoreUntilRef.current = 0;
     voiceActiveRef.current = true;
     setListening(true);
 
     function startRec() {
       const r = new SR();
-      r.lang = 'en-US'; r.interimResults = true; r.continuous = true;
+      r.lang = 'en-US'; r.interimResults = true; r.continuous = false;
       recognitionRef.current = r;
       r.onresult = (e: any) => {
-        if (Date.now() < voiceIgnoreUntilRef.current) return; // post-restart dead zone
         let finals = ''; let interim = '';
         for (let i = 0; i < e.results.length; i++) {
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
@@ -232,7 +229,6 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
         if (voiceActiveRef.current) {
           voiceBaseRef.current = voiceLastSetRef.current;
           voiceSessionFinalsRef.current = '';
-          voiceIgnoreUntilRef.current = Date.now() + 300;
           setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
         } else { setListening(false); }
       };

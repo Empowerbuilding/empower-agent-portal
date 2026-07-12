@@ -60,7 +60,6 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const voiceBaseRef = useRef('');
   const voiceSessionFinalsRef = useRef('');
   const voiceLastSetRef = useRef('');    // mirrors displayed input for use as base after restart
-  const voiceIgnoreUntilRef = useRef(0); // timestamp: ignore onresult events until this time (post-restart dead zone)
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
@@ -373,7 +372,6 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     voiceBaseRef.current = input;
     voiceLastSetRef.current = input;
     voiceSessionFinalsRef.current = '';
-    voiceIgnoreUntilRef.current = 0;
     voiceActiveRef.current = true;
     setListening(true);
 
@@ -381,15 +379,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const r = new SR();
       r.lang = 'en-US';
       r.interimResults = true;
-      r.continuous = true;
+      // continuous=false: each phrase is a clean atomic session.
+      // Avoids the Android Chrome bug where continuous=true causes the previous phrase
+      // to be re-delivered to every restarted session.
+      // We restart manually in onend to keep the mic alive until user taps off.
+      r.continuous = false;
       recognitionRef.current = r;
 
       r.onresult = (e: any) => {
-        // Dead zone: ignore results for 300ms after a restart.
-        // Chrome Android re-delivers the previous phrase immediately on new session start;
-        // real new speech always has natural latency, so this window safely filters it.
-        if (Date.now() < voiceIgnoreUntilRef.current) return;
-
         let finals = '';
         let interim = '';
         for (let i = 0; i < e.results.length; i++) {
@@ -408,10 +405,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
 
       r.onend = () => {
         if (voiceActiveRef.current) {
-          // Use the last displayed value as the new base (avoids async React state issues)
+          // Commit this phrase into base, then restart for next phrase
           voiceBaseRef.current = voiceLastSetRef.current;
           voiceSessionFinalsRef.current = '';
-          voiceIgnoreUntilRef.current = Date.now() + 300; // 300ms dead zone for next session
           setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
         } else {
           setListening(false);
