@@ -75,7 +75,7 @@ export default async function ChannelPage({
   }
 
   if (ch.channel_type === 'feed') {
-    return <FeedWindow channel={ch} initialMessages={messages ?? []} />;
+    return <FeedWindow channel={ch} initialMessages={messages ?? []} orgId={org.id} />;
   }
 
   if (ch.channel_type === 'approval') {

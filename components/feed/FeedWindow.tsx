@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useMobileToolbar } from '@/context/MobileToolbar';
 import { IconTrash, IconSearch } from '@/components/ui/Icons';
+import PresenceButton from '@/components/presence/PresenceButton';
 import SearchModal from '@/components/chat/SearchModal';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
@@ -11,13 +12,14 @@ import Markdown from '@/components/ui/Markdown';
 interface Props {
   channel: PortalChannel;
   initialMessages: PortalMessage[];
+  orgId: string;
 }
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-export default function FeedWindow({ channel, initialMessages }: Props) {
+export default function FeedWindow({ channel, initialMessages, orgId }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -145,6 +147,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <PresenceButton orgId={orgId} openDirection="down" align="right" size={15} />
               <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={17} /></button>
               <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconTrash size={16} /></button>
             </div>
