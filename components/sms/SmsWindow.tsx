@@ -212,19 +212,18 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
       recognitionRef.current = r;
       r.onresult = (e: any) => {
         let finals = ''; let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
+        for (let i = 0; i < e.results.length; i++) {
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
           else interim = e.results[i][0].transcript;
         }
-        // Filter mobile Chrome re-delivery of previous session's speech
-        if (e.resultIndex === 0 && voiceSessionFinalsRef.current === '' && finals) {
+        // Mobile Chrome re-delivery guard
+        if (voiceSessionFinalsRef.current === '' && finals) {
           const lastCommitted = voiceLastCommittedRef.current.trim();
           if (lastCommitted && lastCommitted.endsWith(finals.trim())) return;
         }
-        const accFinals = voiceSessionFinalsRef.current + finals;
-        voiceSessionFinalsRef.current = accFinals;
+        voiceSessionFinalsRef.current = finals; // SET, not accumulate
         const base = voiceBaseRef.current;
-        const spoken = accFinals + (interim ? (accFinals && !accFinals.endsWith(' ') ? ' ' : '') + interim : '');
+        const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
         const sep = base && !base.endsWith(' ') && spoken ? ' ' : '';
         setReplyText(spoken ? base + sep + spoken : base);
       };

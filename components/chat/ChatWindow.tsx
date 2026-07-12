@@ -382,24 +382,24 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       recognitionRef.current = r;
 
       r.onresult = (e: any) => {
+        // Rebuild finals from full cumulative results array (correct for continuous=true)
         let finals = '';
         let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
+        for (let i = 0; i < e.results.length; i++) {
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
           else interim = e.results[i][0].transcript;
         }
-        // On mobile Chrome, a newly-started session can re-deliver the last committed phrase
-        // as its first result — skip it if it matches what we already committed.
-        if (e.resultIndex === 0 && voiceSessionFinalsRef.current === '' && finals) {
+        // Mobile Chrome re-delivery guard: when a new session starts, the browser sometimes
+        // re-fires the last committed phrase as the first result. Skip it.
+        if (voiceSessionFinalsRef.current === '' && finals) {
           const lastCommitted = voiceLastCommittedRef.current.trim();
           if (lastCommitted && lastCommitted.endsWith(finals.trim())) {
-            return; // duplicate re-delivery, ignore
+            return;
           }
         }
-        const accFinals = voiceSessionFinalsRef.current + finals;
-        voiceSessionFinalsRef.current = accFinals;
+        voiceSessionFinalsRef.current = finals; // SET (not accumulate) — cumulative array already contains all finals
         const base = voiceBaseRef.current;
-        const spoken = accFinals + (interim ? (accFinals && !accFinals.endsWith(' ') ? ' ' : '') + interim : '');
+        const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
         const sep = base && !base.endsWith(' ') && spoken ? ' ' : '';
         const newVal = spoken ? base + sep + spoken : base;
         localStorage.setItem(draftKey, newVal);
