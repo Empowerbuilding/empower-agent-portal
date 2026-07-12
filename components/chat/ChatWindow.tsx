@@ -59,7 +59,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const voiceActiveRef = useRef(false);
   const voiceBaseRef = useRef('');
   const voiceSessionFinalsRef = useRef('');
-  const voiceLastCommittedRef = useRef(''); // tracks last committed base to filter mobile re-deliveries
+  const voiceLastSetRef = useRef('');    // mirrors displayed input for use as base after restart
+  const voiceIgnoreUntilRef = useRef(0); // timestamp: ignore onresult events until this time (post-restart dead zone)
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
@@ -370,7 +371,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     }
 
     voiceBaseRef.current = input;
+    voiceLastSetRef.current = input;
     voiceSessionFinalsRef.current = '';
+    voiceIgnoreUntilRef.current = 0;
     voiceActiveRef.current = true;
     setListening(true);
 
@@ -382,41 +385,33 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       recognitionRef.current = r;
 
       r.onresult = (e: any) => {
-        // Rebuild finals from full cumulative results array (correct for continuous=true)
+        // Dead zone: ignore results for 300ms after a restart.
+        // Chrome Android re-delivers the previous phrase immediately on new session start;
+        // real new speech always has natural latency, so this window safely filters it.
+        if (Date.now() < voiceIgnoreUntilRef.current) return;
+
         let finals = '';
         let interim = '';
         for (let i = 0; i < e.results.length; i++) {
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
           else interim = e.results[i][0].transcript;
         }
-        // Mobile Chrome re-delivery guard: when a new session starts, the browser sometimes
-        // re-fires the last committed phrase as the first result. Skip it.
-        if (voiceSessionFinalsRef.current === '' && finals) {
-          const lastCommitted = voiceLastCommittedRef.current.trim();
-          if (lastCommitted && lastCommitted.endsWith(finals.trim())) {
-            return;
-          }
-        }
-        voiceSessionFinalsRef.current = finals; // SET (not accumulate) — cumulative array already contains all finals
+        voiceSessionFinalsRef.current = finals;
         const base = voiceBaseRef.current;
         const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
         const sep = base && !base.endsWith(' ') && spoken ? ' ' : '';
         const newVal = spoken ? base + sep + spoken : base;
+        voiceLastSetRef.current = newVal;
         localStorage.setItem(draftKey, newVal);
         setInput(newVal);
       };
 
       r.onend = () => {
         if (voiceActiveRef.current) {
-          // Commit finalized text into base before restarting
-          const finals = voiceSessionFinalsRef.current;
-          if (finals) {
-            const base = voiceBaseRef.current;
-            const sep = base && !base.endsWith(' ') ? ' ' : '';
-            voiceBaseRef.current = (base + sep + finals).trim();
-          }
-          voiceLastCommittedRef.current = voiceBaseRef.current; // snapshot for dupe filter
+          // Use the last displayed value as the new base (avoids async React state issues)
+          voiceBaseRef.current = voiceLastSetRef.current;
           voiceSessionFinalsRef.current = '';
+          voiceIgnoreUntilRef.current = Date.now() + 300; // 300ms dead zone for next session
           setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
         } else {
           setListening(false);

@@ -98,7 +98,8 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const voiceActiveRef = useRef(false);
   const voiceBaseRef = useRef('');
   const voiceSessionFinalsRef = useRef('');
-  const voiceLastCommittedRef = useRef('');
+  const voiceLastSetRef = useRef('');
+  const voiceIgnoreUntilRef = useRef(0);
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
 
@@ -202,7 +203,9 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     if (listening) { voiceActiveRef.current = false; recognitionRef.current?.stop(); setListening(false); return; }
 
     voiceBaseRef.current = replyText;
+    voiceLastSetRef.current = replyText;
     voiceSessionFinalsRef.current = '';
+    voiceIgnoreUntilRef.current = 0;
     voiceActiveRef.current = true;
     setListening(true);
 
@@ -211,32 +214,25 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
       r.lang = 'en-US'; r.interimResults = true; r.continuous = true;
       recognitionRef.current = r;
       r.onresult = (e: any) => {
+        if (Date.now() < voiceIgnoreUntilRef.current) return; // post-restart dead zone
         let finals = ''; let interim = '';
         for (let i = 0; i < e.results.length; i++) {
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
           else interim = e.results[i][0].transcript;
         }
-        // Mobile Chrome re-delivery guard
-        if (voiceSessionFinalsRef.current === '' && finals) {
-          const lastCommitted = voiceLastCommittedRef.current.trim();
-          if (lastCommitted && lastCommitted.endsWith(finals.trim())) return;
-        }
-        voiceSessionFinalsRef.current = finals; // SET, not accumulate
+        voiceSessionFinalsRef.current = finals;
         const base = voiceBaseRef.current;
         const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
         const sep = base && !base.endsWith(' ') && spoken ? ' ' : '';
-        setReplyText(spoken ? base + sep + spoken : base);
+        const newVal = spoken ? base + sep + spoken : base;
+        voiceLastSetRef.current = newVal;
+        setReplyText(newVal);
       };
       r.onend = () => {
         if (voiceActiveRef.current) {
-          const finals = voiceSessionFinalsRef.current;
-          if (finals) {
-            const base = voiceBaseRef.current;
-            const sep = base && !base.endsWith(' ') ? ' ' : '';
-            voiceBaseRef.current = (base + sep + finals).trim();
-          }
-          voiceLastCommittedRef.current = voiceBaseRef.current;
+          voiceBaseRef.current = voiceLastSetRef.current;
           voiceSessionFinalsRef.current = '';
+          voiceIgnoreUntilRef.current = Date.now() + 300;
           setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
         } else { setListening(false); }
       };
