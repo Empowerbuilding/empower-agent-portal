@@ -128,13 +128,7 @@ export default function FeedWindow({ channel, initialMessages }: Props) {
           </>
         ) : (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '18px' }}>{channel.icon}</span>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '14px' }}>{channel.display_name}</div>
-                <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Feed</div>
-              </div>
-            </div>
+            <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}># {channel.display_name}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
               <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={17} /></button>
               <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconTrash size={16} /></button>
