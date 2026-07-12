@@ -59,6 +59,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const voiceActiveRef = useRef(false);
   const voiceBaseRef = useRef('');
   const voiceSessionFinalsRef = useRef('');
+  const voiceLastCommittedRef = useRef(''); // tracks last committed base to filter mobile re-deliveries
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
@@ -377,7 +378,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const r = new SR();
       r.lang = 'en-US';
       r.interimResults = true;
-      r.continuous = false; // continuous=true causes word duplication on mobile (browser re-delivers old speech to restarted sessions)
+      r.continuous = true;
       recognitionRef.current = r;
 
       r.onresult = (e: any) => {
@@ -387,7 +388,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
           else interim = e.results[i][0].transcript;
         }
-        // Accumulate finals across result events within the same session
+        // On mobile Chrome, a newly-started session can re-deliver the last committed phrase
+        // as its first result — skip it if it matches what we already committed.
+        if (e.resultIndex === 0 && voiceSessionFinalsRef.current === '' && finals) {
+          const lastCommitted = voiceLastCommittedRef.current.trim();
+          if (lastCommitted && lastCommitted.endsWith(finals.trim())) {
+            return; // duplicate re-delivery, ignore
+          }
+        }
         const accFinals = voiceSessionFinalsRef.current + finals;
         voiceSessionFinalsRef.current = accFinals;
         const base = voiceBaseRef.current;
@@ -399,12 +407,20 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       };
 
       r.onend = () => {
-        // No auto-restart — avoids mobile duplication bug where browser re-delivers
-        // previous session's speech to the new recognition instance.
-        // User taps mic again to continue speaking.
-        voiceActiveRef.current = false;
-        voiceSessionFinalsRef.current = '';
-        setListening(false);
+        if (voiceActiveRef.current) {
+          // Commit finalized text into base before restarting
+          const finals = voiceSessionFinalsRef.current;
+          if (finals) {
+            const base = voiceBaseRef.current;
+            const sep = base && !base.endsWith(' ') ? ' ' : '';
+            voiceBaseRef.current = (base + sep + finals).trim();
+          }
+          voiceLastCommittedRef.current = voiceBaseRef.current; // snapshot for dupe filter
+          voiceSessionFinalsRef.current = '';
+          setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
+        } else {
+          setListening(false);
+        }
       };
 
       r.onerror = (e: any) => {
