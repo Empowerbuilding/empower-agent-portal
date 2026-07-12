@@ -76,6 +76,16 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
   const listRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
+  const [memberCount, setMemberCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/portal_channel_members?channel_id=eq.${channel.id}&select=user_id`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    }).then(r => r.json()).then((rows: unknown[]) => {
+      if (Array.isArray(rows)) setMemberCount(rows.length);
+    }).catch(() => {});
+  }, [channel.id]);
 
   const isInitialLoad = useRef(true);
   useEffect(() => {
@@ -180,7 +190,12 @@ export default function ApprovalWindow({ channel, initialMessages, currentUser }
           </>
         ) : (
           <>
-            <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}># {channel.display_name}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+              <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}># {channel.display_name}</span>
+              {memberCount !== null && (
+                <span style={{ fontSize: '11px', color: 'var(--muted)', lineHeight: 1 }}>{memberCount} member{memberCount !== 1 ? 's' : ''}</span>
+              )}
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
               <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={17} /></button>
               <button onClick={() => setDeleteMode(true)} title="Delete messages" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', opacity: 0.6 }}><IconTrash size={16} /></button>
