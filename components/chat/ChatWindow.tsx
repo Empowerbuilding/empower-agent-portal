@@ -100,7 +100,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     if (data) {
       setMessages(data as PortalMessage[]);
       const lastMsg = data[data.length - 1];
-      if (lastMsg && lastMsg.sender_type === 'user') {
+      const isRecentUserMsg = lastMsg && lastMsg.sender_type === 'user' &&
+        (Date.now() - new Date(lastMsg.created_at).getTime()) < 5 * 60 * 1000;
+      if (isRecentUserMsg) {
         setAgentTyping(true);
         if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
         typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
@@ -135,7 +137,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages', filter: `channel_id=eq.${channel.id}` },
         (payload) => {
           const msg = payload.new as PortalMessage;
-          if (msg.sender_type === 'user') {
+          const msgIsRecent = (Date.now() - new Date(msg.created_at).getTime()) < 5 * 60 * 1000;
+          if (msg.sender_type === 'user' && msgIsRecent) {
             setAgentTyping(true);
             if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
             typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
