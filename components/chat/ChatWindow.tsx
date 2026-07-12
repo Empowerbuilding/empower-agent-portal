@@ -57,6 +57,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const fileRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const voiceActiveRef = useRef(false);
+  const voiceBaseRef = useRef('');
+  const voiceSessionFinalsRef = useRef('');
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
@@ -366,10 +368,12 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       return;
     }
 
+    voiceBaseRef.current = input;
+    voiceSessionFinalsRef.current = '';
     voiceActiveRef.current = true;
     setListening(true);
 
-    function startRec(base: string) {
+    function startRec() {
       const r = new SR();
       r.lang = 'en-US';
       r.interimResults = true;
@@ -383,17 +387,26 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
           else interim = e.results[i][0].transcript;
         }
-        const spoken = finals + interim;
+        voiceSessionFinalsRef.current = finals;
+        const base = voiceBaseRef.current;
+        const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
         const sep = base && !base.endsWith(' ') ? ' ' : '';
-        const newVal = base + sep + spoken;
+        const newVal = spoken ? base + sep + spoken : base;
         localStorage.setItem(draftKey, newVal);
         setInput(newVal);
-        if (finals) base = (base + (base && !base.endsWith(' ') ? ' ' : '') + finals).trim();
       };
 
       r.onend = () => {
         if (voiceActiveRef.current) {
-          setTimeout(() => { if (voiceActiveRef.current) startRec(base); }, 100);
+          // Commit finalized text into base before restarting
+          const finals = voiceSessionFinalsRef.current;
+          if (finals) {
+            const base = voiceBaseRef.current;
+            const sep = base && !base.endsWith(' ') ? ' ' : '';
+            voiceBaseRef.current = (base + sep + finals).trim();
+          }
+          voiceSessionFinalsRef.current = '';
+          setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
         } else {
           setListening(false);
         }
@@ -408,7 +421,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       r.start();
     }
 
-    startRec(input);
+    startRec();
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {

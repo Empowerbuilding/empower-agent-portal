@@ -96,6 +96,8 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
   const voiceActiveRef = useRef(false);
+  const voiceBaseRef = useRef('');
+  const voiceSessionFinalsRef = useRef('');
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
 
@@ -198,10 +200,12 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     if (!SR) { alert('Voice input not supported in this browser.'); return; }
     if (listening) { voiceActiveRef.current = false; recognitionRef.current?.stop(); setListening(false); return; }
 
+    voiceBaseRef.current = replyText;
+    voiceSessionFinalsRef.current = '';
     voiceActiveRef.current = true;
     setListening(true);
 
-    function startRec(base: string) {
+    function startRec() {
       const r = new SR();
       r.lang = 'en-US'; r.interimResults = true; r.continuous = true;
       recognitionRef.current = r;
@@ -211,20 +215,29 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
           else interim = e.results[i][0].transcript;
         }
-        const spoken = finals + interim;
+        voiceSessionFinalsRef.current = finals;
+        const base = voiceBaseRef.current;
+        const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
         const sep = base && !base.endsWith(' ') ? ' ' : '';
-        setReplyText(base + sep + spoken);
-        if (finals) base = (base + (base && !base.endsWith(' ') ? ' ' : '') + finals).trim();
+        setReplyText(spoken ? base + sep + spoken : base);
       };
       r.onend = () => {
-        if (voiceActiveRef.current) setTimeout(() => { if (voiceActiveRef.current) startRec(base); }, 100);
-        else setListening(false);
+        if (voiceActiveRef.current) {
+          const finals = voiceSessionFinalsRef.current;
+          if (finals) {
+            const base = voiceBaseRef.current;
+            const sep = base && !base.endsWith(' ') ? ' ' : '';
+            voiceBaseRef.current = (base + sep + finals).trim();
+          }
+          voiceSessionFinalsRef.current = '';
+          setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
+        } else { setListening(false); }
       };
       r.onerror = (e: any) => { if (e.error === 'no-speech' || e.error === 'aborted') return; voiceActiveRef.current = false; setListening(false); };
       r.start();
     }
 
-    startRec(replyText);
+    startRec();
   }
 
   async function askVanessa(msg: PortalMessage) {
