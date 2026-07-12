@@ -367,7 +367,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     const rec = new SR();
     rec.lang = 'en-US';
     rec.interimResults = true;
-    rec.continuous = false;
+    rec.continuous = true;
     recognitionRef.current = rec;
 
     let baseText = input;

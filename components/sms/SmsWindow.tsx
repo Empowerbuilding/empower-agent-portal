@@ -197,7 +197,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     if (!SR) { alert('Voice input not supported in this browser.'); return; }
     if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
     const rec = new SR();
-    rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = false;
+    rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = true;
     recognitionRef.current = rec;
     let base = replyText;
     rec.onresult = (e: any) => {
