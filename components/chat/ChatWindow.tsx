@@ -372,9 +372,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
 
     let baseText = input;
     rec.onresult = (e: any) => {
-      const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join('');
+      // Collect finalized segments + one interim segment at the end
+      let finals = '';
+      let interim = '';
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finals += e.results[i][0].transcript;
+        else interim = e.results[i][0].transcript;
+      }
+      const spoken = finals + interim;
       const sep = baseText && !baseText.endsWith(' ') ? ' ' : '';
-      const newVal = baseText + sep + transcript;
+      const newVal = baseText + sep + spoken;
       localStorage.setItem(draftKey, newVal);
       setInput(newVal);
     };

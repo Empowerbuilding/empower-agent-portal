@@ -201,9 +201,15 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     recognitionRef.current = rec;
     let base = replyText;
     rec.onresult = (e: any) => {
-      const t = Array.from(e.results).map((r: any) => r[0].transcript).join('');
+      let finals = '';
+      let interim = '';
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finals += e.results[i][0].transcript;
+        else interim = e.results[i][0].transcript;
+      }
+      const spoken = finals + interim;
       const sep = base && !base.endsWith(' ') ? ' ' : '';
-      setReplyText(base + sep + t);
+      setReplyText(base + sep + spoken);
     };
     rec.onend = () => setListening(false);
     rec.onerror = () => setListening(false);
