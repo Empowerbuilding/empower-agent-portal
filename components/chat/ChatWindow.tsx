@@ -377,39 +377,34 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const r = new SR();
       r.lang = 'en-US';
       r.interimResults = true;
-      r.continuous = true;
+      r.continuous = false; // continuous=true causes word duplication on mobile (browser re-delivers old speech to restarted sessions)
       recognitionRef.current = r;
 
       r.onresult = (e: any) => {
         let finals = '';
         let interim = '';
-        for (let i = 0; i < e.results.length; i++) {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
           else interim = e.results[i][0].transcript;
         }
-        voiceSessionFinalsRef.current = finals;
+        // Accumulate finals across result events within the same session
+        const accFinals = voiceSessionFinalsRef.current + finals;
+        voiceSessionFinalsRef.current = accFinals;
         const base = voiceBaseRef.current;
-        const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
-        const sep = base && !base.endsWith(' ') ? ' ' : '';
+        const spoken = accFinals + (interim ? (accFinals && !accFinals.endsWith(' ') ? ' ' : '') + interim : '');
+        const sep = base && !base.endsWith(' ') && spoken ? ' ' : '';
         const newVal = spoken ? base + sep + spoken : base;
         localStorage.setItem(draftKey, newVal);
         setInput(newVal);
       };
 
       r.onend = () => {
-        if (voiceActiveRef.current) {
-          // Commit finalized text into base before restarting
-          const finals = voiceSessionFinalsRef.current;
-          if (finals) {
-            const base = voiceBaseRef.current;
-            const sep = base && !base.endsWith(' ') ? ' ' : '';
-            voiceBaseRef.current = (base + sep + finals).trim();
-          }
-          voiceSessionFinalsRef.current = '';
-          setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
-        } else {
-          setListening(false);
-        }
+        // No auto-restart — avoids mobile duplication bug where browser re-delivers
+        // previous session's speech to the new recognition instance.
+        // User taps mic again to continue speaking.
+        voiceActiveRef.current = false;
+        voiceSessionFinalsRef.current = '';
+        setListening(false);
       };
 
       r.onerror = (e: any) => {

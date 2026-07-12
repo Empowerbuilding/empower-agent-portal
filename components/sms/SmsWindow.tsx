@@ -207,31 +207,26 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
 
     function startRec() {
       const r = new SR();
-      r.lang = 'en-US'; r.interimResults = true; r.continuous = true;
+      r.lang = 'en-US'; r.interimResults = true; r.continuous = false; // continuous=true causes word duplication on mobile
       recognitionRef.current = r;
       r.onresult = (e: any) => {
         let finals = ''; let interim = '';
-        for (let i = 0; i < e.results.length; i++) {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
           if (e.results[i].isFinal) finals += e.results[i][0].transcript;
           else interim = e.results[i][0].transcript;
         }
-        voiceSessionFinalsRef.current = finals;
+        const accFinals = voiceSessionFinalsRef.current + finals;
+        voiceSessionFinalsRef.current = accFinals;
         const base = voiceBaseRef.current;
-        const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
-        const sep = base && !base.endsWith(' ') ? ' ' : '';
+        const spoken = accFinals + (interim ? (accFinals && !accFinals.endsWith(' ') ? ' ' : '') + interim : '');
+        const sep = base && !base.endsWith(' ') && spoken ? ' ' : '';
         setReplyText(spoken ? base + sep + spoken : base);
       };
       r.onend = () => {
-        if (voiceActiveRef.current) {
-          const finals = voiceSessionFinalsRef.current;
-          if (finals) {
-            const base = voiceBaseRef.current;
-            const sep = base && !base.endsWith(' ') ? ' ' : '';
-            voiceBaseRef.current = (base + sep + finals).trim();
-          }
-          voiceSessionFinalsRef.current = '';
-          setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
-        } else { setListening(false); }
+        // No auto-restart — avoids mobile duplication bug
+        voiceActiveRef.current = false;
+        voiceSessionFinalsRef.current = '';
+        setListening(false);
       };
       r.onerror = (e: any) => { if (e.error === 'no-speech' || e.error === 'aborted') return; voiceActiveRef.current = false; setListening(false); };
       r.start();
