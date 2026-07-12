@@ -56,6 +56,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+  const voiceActiveRef = useRef(false);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
@@ -359,36 +360,55 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     if (!SR) { alert('Voice input is not supported in this browser.'); return; }
 
     if (listening) {
+      voiceActiveRef.current = false;
       recognitionRef.current?.stop();
       setListening(false);
       return;
     }
 
-    const rec = new SR();
-    rec.lang = 'en-US';
-    rec.interimResults = true;
-    rec.continuous = true;
-    recognitionRef.current = rec;
-
-    let baseText = input;
-    rec.onresult = (e: any) => {
-      // Collect finalized segments + one interim segment at the end
-      let finals = '';
-      let interim = '';
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finals += e.results[i][0].transcript;
-        else interim = e.results[i][0].transcript;
-      }
-      const spoken = finals + interim;
-      const sep = baseText && !baseText.endsWith(' ') ? ' ' : '';
-      const newVal = baseText + sep + spoken;
-      localStorage.setItem(draftKey, newVal);
-      setInput(newVal);
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    rec.start();
+    voiceActiveRef.current = true;
     setListening(true);
+
+    function startRec(base: string) {
+      const r = new SR();
+      r.lang = 'en-US';
+      r.interimResults = true;
+      r.continuous = true;
+      recognitionRef.current = r;
+
+      r.onresult = (e: any) => {
+        let finals = '';
+        let interim = '';
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) finals += e.results[i][0].transcript;
+          else interim = e.results[i][0].transcript;
+        }
+        const spoken = finals + interim;
+        const sep = base && !base.endsWith(' ') ? ' ' : '';
+        const newVal = base + sep + spoken;
+        localStorage.setItem(draftKey, newVal);
+        setInput(newVal);
+        if (finals) base = (base + (base && !base.endsWith(' ') ? ' ' : '') + finals).trim();
+      };
+
+      r.onend = () => {
+        if (voiceActiveRef.current) {
+          setTimeout(() => { if (voiceActiveRef.current) startRec(base); }, 100);
+        } else {
+          setListening(false);
+        }
+      };
+
+      r.onerror = (e: any) => {
+        if (e.error === 'no-speech' || e.error === 'aborted') return;
+        voiceActiveRef.current = false;
+        setListening(false);
+      };
+
+      r.start();
+    }
+
+    startRec(input);
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {

@@ -95,6 +95,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const smsListRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
+  const voiceActiveRef = useRef(false);
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
 
@@ -195,25 +196,35 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   function toggleVoice() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) { alert('Voice input not supported in this browser.'); return; }
-    if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
-    const rec = new SR();
-    rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = true;
-    recognitionRef.current = rec;
-    let base = replyText;
-    rec.onresult = (e: any) => {
-      let finals = '';
-      let interim = '';
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finals += e.results[i][0].transcript;
-        else interim = e.results[i][0].transcript;
-      }
-      const spoken = finals + interim;
-      const sep = base && !base.endsWith(' ') ? ' ' : '';
-      setReplyText(base + sep + spoken);
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    rec.start(); setListening(true);
+    if (listening) { voiceActiveRef.current = false; recognitionRef.current?.stop(); setListening(false); return; }
+
+    voiceActiveRef.current = true;
+    setListening(true);
+
+    function startRec(base: string) {
+      const r = new SR();
+      r.lang = 'en-US'; r.interimResults = true; r.continuous = true;
+      recognitionRef.current = r;
+      r.onresult = (e: any) => {
+        let finals = ''; let interim = '';
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) finals += e.results[i][0].transcript;
+          else interim = e.results[i][0].transcript;
+        }
+        const spoken = finals + interim;
+        const sep = base && !base.endsWith(' ') ? ' ' : '';
+        setReplyText(base + sep + spoken);
+        if (finals) base = (base + (base && !base.endsWith(' ') ? ' ' : '') + finals).trim();
+      };
+      r.onend = () => {
+        if (voiceActiveRef.current) setTimeout(() => { if (voiceActiveRef.current) startRec(base); }, 100);
+        else setListening(false);
+      };
+      r.onerror = (e: any) => { if (e.error === 'no-speech' || e.error === 'aborted') return; voiceActiveRef.current = false; setListening(false); };
+      r.start();
+    }
+
+    startRec(replyText);
   }
 
   async function askVanessa(msg: PortalMessage) {
