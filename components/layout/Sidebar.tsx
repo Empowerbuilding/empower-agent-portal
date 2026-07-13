@@ -320,7 +320,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
     return ch.agents?.group_id === activeGroupId;
   });
 
-  const grouped = filteredChannels.filter(ch => ch.agents?.active !== false).reduce<Record<string, { agent: Agent; channels: (PortalChannel & { agents: Agent })[] }>>(
+  const grouped = filteredChannels.filter(ch => ch.agents?.active !== false && ch.active !== false).reduce<Record<string, { agent: Agent; channels: (PortalChannel & { agents: Agent })[] }>>(
     (acc, ch) => {
       const key = ch.agents?.display_name ?? 'Other';
       if (!acc[key]) acc[key] = { agent: ch.agents, channels: [] };
