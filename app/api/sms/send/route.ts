@@ -32,12 +32,13 @@ export async function POST(req: NextRequest) {
     }
     const { org_id: orgId, agent_id: agentId } = channel;
 
-    // ── Look up agent → Telnyx phone number ──────────────────────────────────
+    // ── Look up agent → carrier + phone credentials ────────────────────────────
     const { data: agent } = await portal
       .from('agents')
-      .select('telnyx_phone_number')
+      .select('telnyx_phone_number, sms_gateway, textbee_api_key, textbee_phone_number, textbee_device_id')
       .eq('id', agentId)
       .single();
+    const smsGateway = agent?.sms_gateway || 'telnyx';
     const telnyxFrom = agent?.telnyx_phone_number || process.env.TELNYX_FROM_NUMBER || '+18304076296';
 
     // ── Look up org → CRM credentials ────────────────────────────────────────
@@ -66,21 +67,43 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Send via Telnyx ───────────────────────────────────────────────────────
-    const telRes = await fetch('https://api.telnyx.com/v2/messages', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${TELNYX_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: telnyxFrom, to, text: body }),
-    });
+    // ── Send via carrier (TextBee or Telnyx) ────────────────────────────────
+    let msgId = 'unknown';
 
-    if (!telRes.ok) {
-      const err = await telRes.text();
-      console.error('[sms/send] Telnyx error:', telRes.status, err);
-      return NextResponse.json({ ok: false, error: `Telnyx ${telRes.status}: ${err.slice(0, 200)}` }, { status: 502 });
+    if (smsGateway === 'textbee') {
+      const deviceId = agent?.textbee_device_id;
+      const apiKey   = agent?.textbee_api_key;
+      if (!deviceId || !apiKey) {
+        console.error('[sms/send] TextBee credentials missing for agent', agentId);
+        return NextResponse.json({ ok: false, error: 'TextBee credentials not configured for this agent' }, { status: 500 });
+      }
+      const tbRes = await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`, {
+        method: 'POST',
+        headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipients: [to], message: body }),
+      });
+      if (!tbRes.ok) {
+        const err = await tbRes.text();
+        console.error('[sms/send] TextBee error:', tbRes.status, err);
+        return NextResponse.json({ ok: false, error: `TextBee ${tbRes.status}: ${err.slice(0, 200)}` }, { status: 502 });
+      }
+      const tbData = await tbRes.json();
+      msgId = tbData?.data?.messages?.[0]?._id || 'unknown';
+    } else {
+      // Default: Telnyx
+      const telRes = await fetch('https://api.telnyx.com/v2/messages', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${TELNYX_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: telnyxFrom, to, text: body }),
+      });
+      if (!telRes.ok) {
+        const err = await telRes.text();
+        console.error('[sms/send] Telnyx error:', telRes.status, err);
+        return NextResponse.json({ ok: false, error: `Telnyx ${telRes.status}: ${err.slice(0, 200)}` }, { status: 502 });
+      }
+      const telData = await telRes.json();
+      msgId = telData?.data?.id || 'unknown';
     }
-
-    const telData = await telRes.json();
-    const msgId = telData?.data?.id || 'unknown';
 
     // ── Write to portal_messages ──────────────────────────────────────────────
     const sentMeta = {
