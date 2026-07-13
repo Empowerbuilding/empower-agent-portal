@@ -88,6 +88,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
   const [askingVanessa, setAskingVanessa] = useState<string | null>(null);
+  const [stagedDraftId, setStagedDraftId] = useState<string | null>(null);
   // phone number Vanessa is currently drafting for (shows indicator in thread)
   const [vanessaDrafting, setVanessaDrafting] = useState<string | null>(null);
   const vanessaDraftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -295,6 +296,8 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     setReplyText('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     try {
+      const draftId = stagedDraftId;
+      setStagedDraftId(null);
       await fetch('/api/sms/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -304,6 +307,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
           channelId: channel.id,
           contactName: activeConv.contact_name,
           userFlag,
+          ...(draftId ? { draftMessageId: draftId } : {}),
         }),
       });
     } finally {
@@ -499,6 +503,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                           setReplyText(body);
                           // Mark draft as staged (not deleted) so thread stays visible
                           // Rep can still edit in the reply box, then send
+                          setStagedDraftId(msg.id);
                           setMessages(prev => prev.map(m => m.id === msg.id
                             ? { ...m, metadata: { ...(m.metadata ?? {}), approval_state: 'staged' } }
                             : m

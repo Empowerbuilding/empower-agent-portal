@@ -55,6 +55,11 @@ export interface ProvisionInput {
   businessHours?: string;
   enabledCrons?: string[]; // defaults: ['morning-briefing', 'inbox-scan', 'eod-report']
   wizard?: Omit<WizardAnswers, 'orgName' | 'orgSlug'>; // Full wizard answers if provided
+  textbeeApiKey?: string;
+  textbeeDeviceId?: string;
+  textbeePhoneNumber?: string;  // E.164 Android SIM number
+  textbeeSimSlot?: number;      // default 0
+  telnyxDid?: string;           // Voice-only DID (provisioned manually before running wizard)
 }
 
 // ── Rollback state tracker ───────────────────────────────────────────────────
@@ -160,9 +165,10 @@ export interface ProvisionResult {
 }
 
 const ALL_SHARED_CHANNELS = [
-  { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',  icon: '🔔', position: 7, requiredFocus: null },       // always
-  { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',  icon: '📞', position: 8, requiredFocus: 'calls' },    // only if calls selected
-  { suffix: 'proposals',       display: 'Proposals',        type: 'feed',  icon: '📄', position: 9, requiredFocus: null },       // always
+  { suffix: 'lead-alerts',     display: 'Lead Alerts',      type: 'feed',  icon: '🔔', position: 7,  active: true,  requiredFocus: null },       // always
+  { suffix: 'call-recordings', display: 'Call Recordings',  type: 'feed',  icon: '📞', position: 8,  active: true,  requiredFocus: 'calls' },    // only if calls selected
+  { suffix: 'proposals',       display: 'Proposals',        type: 'feed',  icon: '📄', position: 9,  active: true,  requiredFocus: null },       // always
+  { suffix: 'sms-actions',     display: 'SMS Actions',      type: 'chat',  icon: '📱', position: 99, active: false, requiredFocus: 'sms' },     // hidden from sidebar, used by container
 ];
 
 // NOTE: crons use --no-deliver so the agent posts results itself via the message tool.
@@ -291,11 +297,38 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
     }));
     await supabase.from('agents').update({ reps: repsForDb }).eq('id', agent.id);
 
+    // ── Create agent_group for this agent ──────────────────────────────────────
+    const groupSlug = `${input.orgSlug}-${agentSlug}`;
+    const { data: agentGroup } = await supabase
+      .from('agent_groups')
+      .insert({
+        name: input.agentDisplayName,
+        slug: groupSlug,
+        org_id: org.id,
+        sort_order: 0,
+      })
+      .select().single();
+    if (agentGroup?.id) {
+      await supabase.from('agents').update({ group_id: agentGroup.id }).eq('id', agent.id);
+    }
+
     progress('provisioning_phone', 'Acquiring phone number');
-    // ── STEP 2b: Provision Telnyx phone number ───────────────────────────────
+    // ── STEP 2b: Provision phone number (TextBee or Telnyx) ──────────────────
     let telnyxPhone: string | null = null;
     try {
-      if (process.env.TELNYX_API_KEY) {
+      if (input.textbeeApiKey) {
+        // TextBee path — store credentials, use manual Telnyx voice DID if provided
+        await supabase.from('agents').update({
+          textbee_api_key: input.textbeeApiKey,
+          textbee_device_id: input.textbeeDeviceId || null,
+          textbee_phone_number: input.textbeePhoneNumber || null,
+          textbee_sim_slot: input.textbeeSimSlot ?? 0,
+          telnyx_phone_number: input.telnyxDid || null,
+          telnyx_connection_id: input.telnyxDid ? '2996679323039040927' : null,
+        }).eq('id', agent.id);
+        telnyxPhone = input.textbeePhoneNumber || null;
+        console.log('[provision] TextBee provisioned:', input.textbeePhoneNumber, '| Telnyx voice DID:', input.telnyxDid || 'none');
+      } else if (process.env.TELNYX_API_KEY) {
         const telnyx = await provisionTelnyxNumber();
         telnyxPhone = telnyx.phoneNumber;
         rollback.telnyxNumberId = telnyx.telnyxNumberId;
@@ -305,10 +338,10 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
         }).eq('id', agent.id);
         console.log('[provision] Telnyx number assigned:', telnyxPhone);
       } else {
-        console.warn('[provision] TELNYX_API_KEY not set — skipping phone provisioning');
+        console.warn('[provision] No phone credentials provided — skipping phone provisioning');
       }
     } catch (e) {
-      console.error('[provision] Telnyx provisioning failed (non-fatal):', e);
+      console.error('[provision] Phone provisioning failed (non-fatal):', e);
     }
 
     progress('provisioning_crm', 'Creating CRM database');
@@ -375,7 +408,7 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
         channel_type: ch.type,
         icon: ch.icon,
         position: ch.position,
-        active: true,
+        active: ch.active !== false,
       }));
 
     // Per-rep channels: chat always; SMS only if sms selected
@@ -470,18 +503,12 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
       }, { onConflict: 'org_id,email', ignoreDuplicates: false }).select('id').maybeSingle();
 
       if (repPortalUser?.id) {
-        // Add rep to: their chat channel, their SMS channel, and all shared channels
-        const repChannels = channelRows.filter(ch =>
-          ch.name === (input.orgSlug + "-" + agentSlug + "-" + repSlug) ||
-          ch.name === (input.orgSlug + "-" + agentSlug + "-" + repSlug + "-sms") ||
-          ch.channel_type === 'lead_alerts' ||
-          ch.channel_type === 'call_recordings'
-        );
-        if (repChannels.length > 0) {
-          const repMemberRows = repChannels.map(ch => ({
-            channel_id: ch.id,
-            user_id: repPortalUser.id,
-          }));
+        // Add rep to ALL channels (same access as owner)
+        const repMemberRows = channelRows.map(ch => ({
+          channel_id: ch.id,
+          user_id: repPortalUser.id,
+        }));
+        if (repMemberRows.length > 0) {
           await supabase.from('portal_channel_members').insert(repMemberRows).then(() => {});
         }
       }
@@ -551,6 +578,7 @@ print('cleared')
       }),
       `${input.orgSlug}-${agentSlug}-lead-alerts`,
       `${input.orgSlug}-${agentSlug}-call-recordings`,
+      `${input.orgSlug}-${agentSlug}-sms-actions`,
     ];
 
     const ocConfig = {
@@ -586,7 +614,7 @@ print('cleared')
       },
       models: {
         providers: {
-          google: { maxTokens: 4096 },
+          google: { maxTokens: 4096, apiKey: process.env.GOOGLE_AI_STUDIO_KEY || '' },
         },
       },
       plugins: {
@@ -618,10 +646,19 @@ print('cleared')
       portal_supabase_key: PORTAL_SUPABASE_KEY,
       crm_supabase_url:   crmSupabaseUrl,
       crm_supabase_key:   crmServiceRoleKey,
-      // Telnyx: populated from provisioned number; key from shared env
+      // SMS gateway config
+      sms_gateway:         input.textbeeApiKey ? 'textbee' : 'telnyx',
+      // TextBee (client SMS via Android SIM)
+      textbee_api_key:     input.textbeeApiKey || '',
+      textbee_device_id:   input.textbeeDeviceId || '',
+      textbee_phone_number: input.textbeePhoneNumber || '',
+      textbee_sim_slot:    input.textbeeSimSlot ?? 0,
+      // Telnyx: voice DID or auto-provisioned number
       telnyx_api_key:     process.env.TELNYX_API_KEY || '',
-      telnyx_from_number: telnyxPhone || '',
+      telnyx_from_number: input.textbeeApiKey ? (input.telnyxDid || '') : (telnyxPhone || ''),
+      telnyx_did:         input.telnyxDid || '',
       telnyx_app_id:      '2996679323039040927', // Empower Shared Voice app
+      from_number:        input.textbeeApiKey ? (input.textbeePhoneNumber || '') : (telnyxPhone || ''),
       reps: input.reps.map(r => ({
         name:            r.name,
         slug:            r.name.toLowerCase().replace(/\s+/g, '-'),
