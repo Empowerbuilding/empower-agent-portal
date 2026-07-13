@@ -497,7 +497,13 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                       <button
                         onClick={() => {
                           setReplyText(body);
-                          denyDraft(msg.id);
+                          // Mark draft as staged (not deleted) so thread stays visible
+                          // Rep can still edit in the reply box, then send
+                          setMessages(prev => prev.map(m => m.id === msg.id
+                            ? { ...m, metadata: { ...(m.metadata ?? {}), approval_state: 'staged' } }
+                            : m
+                          ));
+                          supabase.from('portal_messages').update({ metadata: { ...(msg.metadata ?? {}), approval_state: 'staged' } }).eq('id', msg.id);
                           setTimeout(() => textareaRef.current?.focus(), 50);
                         }}
                         style={{
