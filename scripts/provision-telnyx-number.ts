@@ -113,9 +113,10 @@ async function assignSmsProfile(telnyxNumberId: string): Promise<void> {
 }
 
 /**
- * Main: provision a number and return the details
+ * Main: provision a number and return the details.
+ * @param voiceOnly - if true, skip SMS profile + 10DLC campaign assignment (voice-only number)
  */
-export async function provisionTelnyxNumber(): Promise<ProvisionResult> {
+export async function provisionTelnyxNumber(voiceOnly = false): Promise<ProvisionResult> {
   console.log('[telnyx] Finding available number...')
   const phoneNumber = await findAvailableNumber()
   console.log('[telnyx] Ordering:', phoneNumber)
@@ -126,11 +127,15 @@ export async function provisionTelnyxNumber(): Promise<ProvisionResult> {
   // Brief wait for number to become active
   await new Promise(r => setTimeout(r, 2000))
 
-  console.log('[telnyx] Assigning SMS profile...')
-  await assignSmsProfile(telnyxNumberId)
+  if (voiceOnly) {
+    console.log('[telnyx] voiceOnly=true — skipping SMS profile and 10DLC campaign assignment')
+  } else {
+    console.log('[telnyx] Assigning SMS profile...')
+    await assignSmsProfile(telnyxNumberId)
 
-  console.log('[telnyx] Assigning 10DLC campaign...')
-  await assignCampaign(phoneNumber)
+    console.log('[telnyx] Assigning 10DLC campaign...')
+    await assignCampaign(phoneNumber)
+  }
 
   console.log('[telnyx] Done:', phoneNumber)
   return { phoneNumber, telnyxNumberId }

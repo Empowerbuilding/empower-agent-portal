@@ -36,6 +36,11 @@ interface WizardState {
   // Step 6
   enabledCrons: string[];
   customCronText: string;
+  // TextBee / Phone
+  textbeeApiKey: string;
+  textbeeDeviceId: string;
+  textbeePhoneNumber: string;
+  telnyxDid: string;
 }
 
 const INDUSTRIES = [
@@ -96,6 +101,7 @@ export default function OnboardingPage() {
     companyKnowledge: '', docFileName: '', businessHours: '',
     enabledCrons: ['morning-briefing', 'inbox-scan', 'eod-report'],
     customCronText: '',
+    textbeeApiKey: '', textbeeDeviceId: '', textbeePhoneNumber: '', telnyxDid: '',
   });
 
   const [launching, setLaunching] = useState(false);
@@ -154,6 +160,10 @@ export default function OnboardingPage() {
           companyKnowledge: state.companyKnowledge,
           businessHours: state.businessHours,
           enabledCrons: state.enabledCrons,
+          textbeeApiKey: state.textbeeApiKey || undefined,
+          textbeeDeviceId: state.textbeeDeviceId || undefined,
+          textbeePhoneNumber: state.textbeePhoneNumber || undefined,
+          telnyxDid: state.telnyxDid || undefined,
           wizard: {
             industry: state.industry,
             whatWeSell: state.whatWeSell,
@@ -411,7 +421,6 @@ export default function OnboardingPage() {
         <div style={{ fontSize: '13px', color: '#8b949e' }}>Connect your tools so {state.agentName} can send emails, make calls, and access your CRM. You can skip any of these and connect later in Settings.</div>
         {[
           { id: 'gmail', icon: '📧', name: 'Gmail', desc: 'Send follow-up emails and scan your inbox — connect right after launch', status: 'Connect at launch' },
-          { id: 'telnyx', icon: '📞', name: 'Phone (Telnyx)', desc: 'SMS and voice calls — a number is auto-provisioned for you', status: 'Auto-provisioned' },
           { id: 'crm', icon: '🗄️', name: 'CRM', desc: 'Built-in CRM included — contacts, deals, activity log', status: 'Built-in included' },
         ].map(item => (
           <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: '#0d1117', border: '1px solid #30363d', borderRadius: '10px' }}>
@@ -425,6 +434,27 @@ export default function OnboardingPage() {
             </div>
           </div>
         ))}
+
+        {/* TextBee / SMS Setup */}
+        <div style={{ borderTop: '1px solid #21262d', paddingTop: '16px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '14px' }}>SMS / Phone Setup (TextBee)</div>
+          <div style={{ fontSize: '12px', color: '#6e7681', marginBottom: '12px' }}>SMS is sent via your client&apos;s Android phone using TextBee. Enter the credentials below — you can also add these later in Settings.</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Field label="TextBee API Key" hint="From app.textbee.dev → API Keys">
+              <input style={inputStyle} value={state.textbeeApiKey} placeholder="tb_live_..." onChange={e => update({ textbeeApiKey: e.target.value })} />
+            </Field>
+            <Field label="TextBee Device ID" hint="The device ID of the Android phone running TextBee">
+              <input style={inputStyle} value={state.textbeeDeviceId} placeholder="64a3f..." onChange={e => update({ textbeeDeviceId: e.target.value })} />
+            </Field>
+            <Field label="Android Phone Number" hint="E.164 format — the SIM card number in the Android phone">
+              <input style={inputStyle} value={state.textbeePhoneNumber} placeholder="+18305551234" onChange={e => update({ textbeePhoneNumber: e.target.value })} />
+            </Field>
+            <Field label="Telnyx Voice DID (optional)" hint="Voice-only number already ordered in Telnyx — enter here to skip auto-provisioning">
+              <input style={inputStyle} value={state.telnyxDid} placeholder="+18305559876" onChange={e => update({ telnyxDid: e.target.value })} />
+            </Field>
+          </div>
+        </div>
+
         <div style={{ padding: '12px 14px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '8px', fontSize: '12px', color: '#8b949e' }}>
           💡 All integrations can be connected in <strong style={{ color: 'var(--text)' }}>Settings → Integrations</strong> after launch.
         </div>
