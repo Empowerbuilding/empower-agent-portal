@@ -245,14 +245,26 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     try {
       const body = extractSmsBody(msg.content);
       const mediaUrls = extractMediaUrls(msg.content);
-      // Route to background channel — Vanessa monitors it, Larry/Shannon never see it
+      // Route to background channel — Vanessa monitors it, reps never see it
       const phone = activeConv.contact_phone;
-      const senderUser = channel.id.includes('larry') ? 'larry' : 'shannon';
+      // Derive user flag and action channel from channel ID
+      let senderUser = 'larry';
+      let smsActionsChannel = 'barnhaus-vanessa-sms-actions';
+      if (channel.id.includes('its-training')) {
+        smsActionsChannel = 'its-training-vanessa-sms-actions';
+        if (channel.id.includes('ryan')) senderUser = 'ryan';
+        else if (channel.id.includes('rep1')) senderUser = 'rep1';
+        else if (channel.id.includes('rep2')) senderUser = 'rep2';
+        else if (channel.id.includes('rep3')) senderUser = 'rep3';
+        else senderUser = 'ryan';
+      } else {
+        senderUser = channel.id.includes('larry') ? 'larry' : 'shannon';
+      }
       const mediaNote = mediaUrls.length > 0 ? ` They also sent ${mediaUrls.length} image(s): ${mediaUrls.join(', ')}.` : '';
       const bodyNote = body ? `"${body}"` : '(no text — image/media only)';
       const prompt = `SMS action from ${currentUser.name}: Draft a reply to this inbound text from ${activeConv.contact_name} (${phone}): ${bodyNote}.${mediaNote} Run send_sms.py --draft --to "${phone}" --user ${senderUser} and post it to the SMS inbox. No reply needed here.`;
       await supabase.from('portal_messages').insert({
-        channel_id: 'barnhaus-vanessa-sms-actions',
+        channel_id: smsActionsChannel,
         org_id: orgId,
         sender_type: 'user',
         sender_id: currentUser.id,
