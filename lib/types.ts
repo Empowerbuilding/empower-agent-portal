@@ -20,6 +20,8 @@ export interface Organization {
   plan: string;
   active: boolean;
   created_at: string;
+  crm_supabase_url?: string | null;
+  crm_supabase_key?: string | null;
 }
 
 export interface Agent {
