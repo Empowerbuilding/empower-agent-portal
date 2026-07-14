@@ -135,7 +135,7 @@ export default function CompaniesClient({ companies: initial, orgSlug, crmUrl, c
     padding: '8px 16px', fontSize: 13, fontWeight: active ? 700 : 500,
     borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
     color: active ? 'var(--accent)' : 'var(--muted)',
-    background: 'transparent', border: 'none', borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+    background: 'transparent', border: 'none',
     cursor: 'pointer', whiteSpace: 'nowrap' as const,
   });
 
