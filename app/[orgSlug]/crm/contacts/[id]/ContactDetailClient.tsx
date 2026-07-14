@@ -68,7 +68,7 @@ export default function ContactDetailClient({ contact, activities: initActivitie
   const [addingTask, setAddingTask] = useState(false);
   const [savingTask, setSavingTask] = useState(false);
   const [movingStage, setMovingStage] = useState(false);
-  const [enrichOpen, setEnrichOpen] = useState(false);
+  const [enrichOpen, setEnrichOpen] = useState(true);
 
   const fullName = `${contact.first_name} ${contact.last_name}`;
   const leadScore = contact.lead_score?.toLowerCase();

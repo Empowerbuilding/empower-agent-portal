@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 
 interface Contact {
   id: string;
@@ -43,26 +44,24 @@ const LIFECYCLE_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 function LeadScoreBadge({ score }: { score: string | null }) {
-  if (!score) return (
-    <span style={{ padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: '#f3f4f6', color: '#9ca3af' }}>—</span>
-  );
+  if (!score) return null;
   const s = LEAD_SCORE_STYLES[score.toLowerCase()] ?? { bg: '#f3f4f6', color: '#6b7280', label: score };
   return (
     <span style={{ padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: s.bg, color: s.color }}>{s.label}</span>
   );
 }
 
-function WhaleBadge({ tier }: { tier: string | null }) {
+function WhaleBadge({ tier, score }: { tier: string | null; score: number | null }) {
   if (!tier || (tier !== 'WHALE' && tier !== 'SOLID' && tier !== 'WARM')) return null;
-  const styles: Record<string, { color: string; weight: string }> = {
-    WHALE: { color: '#2563eb', weight: '700' },
-    SOLID: { color: '#60a5fa', weight: '600' },
-    WARM:  { color: '#9ca3af', weight: '500' },
+  const styles: Record<string, { bg: string; color: string }> = {
+    WHALE: { bg: '#dbeafe', color: '#1d4ed8' },
+    SOLID: { bg: '#e0e7ff', color: '#4338ca' },
+    WARM:  { bg: '#f3f4f6', color: '#6b7280' },
   };
   const s = styles[tier];
   return (
-    <span style={{ padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: s.weight, background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}33` }}>
-      {tier}
+    <span style={{ padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: s.bg, color: s.color, border: `1px solid ${s.color}33` }}>
+      🐋 {tier}{score != null ? ` ${score}` : ''}
     </span>
   );
 }
@@ -78,21 +77,59 @@ function LifecyclePill({ stage }: { stage: string | null }) {
   );
 }
 
-export default function ContactsClient({ contacts: initial, orgSlug }: Props) {
+const PAGE_SIZE = 50;
+
+export default function ContactsClient({ contacts: initialContacts, orgSlug, crmUrl, crmKey }: Props) {
   const router = useRouter();
+  const crm = createClient(crmUrl, crmKey);
+
   const [search, setSearch] = useState('');
   const [lifecycleFilter, setLifecycleFilter] = useState('');
   const [scoreFilter, setScoreFilter] = useState('');
   const [page, setPage] = useState(0);
-  const PAGE_SIZE = 50;
 
-  const filtered = initial.filter(c => {
-    const name = `${c.first_name} ${c.last_name}`.toLowerCase();
-    const matchSearch = !search || name.includes(search.toLowerCase()) ||
-      (c.phone ?? '').includes(search) || (c.email ?? '').toLowerCase().includes(search.toLowerCase());
-    const matchLifecycle = !lifecycleFilter || c.lifecycle_stage === lifecycleFilter;
-    const matchScore = !scoreFilter || (c.lead_score ?? '').toLowerCase() === scoreFilter;
-    return matchSearch && matchLifecycle && matchScore;
+  // Search results state — null = use initialContacts
+  const [searchResults, setSearchResults] = useState<Contact[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Real-time Supabase search — fires when search term changes
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!search.trim()) {
+      setSearchResults(null);
+      setPage(0);
+      return;
+    }
+
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      const q = search.trim();
+      const { data } = await crm
+        .from('contacts')
+        .select('id, first_name, last_name, email, phone, lead_score, lead_score_reason, whale_score, whale_tier, lifecycle_stage, client_type, owner_id, created_at, companies(name)')
+        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      const normalized = (data ?? []).map((c: any) => ({
+        ...c,
+        companies: Array.isArray(c.companies) ? (c.companies[0] ?? null) : c.companies,
+      }));
+      setSearchResults(normalized as Contact[]);
+      setSearching(false);
+      setPage(0);
+    }, 300);
+  }, [search]);
+
+  const base = searchResults ?? initialContacts;
+
+  // Client-side filter on top of search results
+  const filtered = base.filter(c => {
+    if (lifecycleFilter && c.lifecycle_stage !== lifecycleFilter) return false;
+    if (scoreFilter && c.lead_score?.toLowerCase() !== scoreFilter) return false;
+    return true;
   });
 
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -109,16 +146,22 @@ export default function ContactsClient({ contacts: initial, orgSlug }: Props) {
   return (
     <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <div style={{ position: 'relative' }}>
         <input
           placeholder="Search name, phone, email…"
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(0); }}
           style={{
-            flex: 1, background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
+            width: '100%', boxSizing: 'border-box',
+            background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
             borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13,
           }}
         />
+        {searching && (
+          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--muted)' }}>
+            searching…
+          </span>
+        )}
       </div>
 
       {/* Filter pills — Lifecycle */}
@@ -143,10 +186,15 @@ export default function ContactsClient({ contacts: initial, orgSlug }: Props) {
         ))}
       </div>
 
+      {/* Count */}
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        {search ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${search}"` : `${filtered.length} contacts`}
+      </div>
+
       {/* List */}
       {paginated.length === 0 ? (
         <div style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8 }}>
-          No contacts found.
+          {searching ? 'Searching…' : 'No contacts found.'}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -159,7 +207,6 @@ export default function ContactsClient({ contacts: initial, orgSlug }: Props) {
                 padding: '12px 14px', background: 'var(--surface)',
                 border: '1px solid var(--border)', borderRadius: 8,
                 cursor: 'pointer', gap: 12,
-                transition: 'background 0.1s',
               }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}
@@ -177,9 +224,9 @@ export default function ContactsClient({ contacts: initial, orgSlug }: Props) {
               </div>
               {/* Right */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <LeadScoreBadge score={c.lead_score} />
-                  <WhaleBadge tier={c.whale_tier} />
+                  <WhaleBadge tier={c.whale_tier} score={c.whale_score} />
                 </div>
                 <LifecyclePill stage={c.lifecycle_stage} />
               </div>
@@ -189,9 +236,9 @@ export default function ContactsClient({ contacts: initial, orgSlug }: Props) {
       )}
 
       {/* Pagination */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{filtered.length} contacts</span>
-        {totalPages > 1 && (
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{page + 1} / {totalPages}</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
@@ -200,7 +247,6 @@ export default function ContactsClient({ contacts: initial, orgSlug }: Props) {
             >
               ← Prev
             </button>
-            <span style={{ fontSize: 12, color: 'var(--muted)', alignSelf: 'center' }}>{page + 1} / {totalPages}</span>
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
@@ -209,8 +255,8 @@ export default function ContactsClient({ contacts: initial, orgSlug }: Props) {
               Next →
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
