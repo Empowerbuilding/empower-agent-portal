@@ -27,9 +27,15 @@ export default async function ContactsPage({ params }: { params: Promise<{ orgSl
     console.error('ContactsPage error:', error);
   }
 
+  // Normalize Supabase relational join: companies comes as array, we want single object
+  const normalized = (contacts ?? []).map(c => ({
+    ...c,
+    companies: Array.isArray(c.companies) ? (c.companies[0] ?? null) : c.companies,
+  }));
+
   return (
     <ContactsClient
-      contacts={contacts ?? []}
+      contacts={normalized}
       orgSlug={orgSlug}
       crmUrl={org.crm_supabase_url}
       crmKey={org.crm_supabase_key}

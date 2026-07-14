@@ -26,6 +26,12 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
   if (contactError || !contact) return notFound();
 
+  // Normalize Supabase relational join: companies comes as array, we want single object
+  const normalizedContact = {
+    ...contact,
+    companies: Array.isArray(contact.companies) ? (contact.companies[0] ?? null) : contact.companies,
+  };
+
   // Fetch activities (last 15)
   const { data: activities } = await crm
     .from('activities')
@@ -55,7 +61,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
   return (
     <ContactDetailClient
-      contact={contact}
+      contact={normalizedContact}
       activities={activities ?? []}
       tasks={tasks ?? []}
       deal={deal}
