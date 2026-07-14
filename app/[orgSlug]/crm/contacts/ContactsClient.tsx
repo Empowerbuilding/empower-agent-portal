@@ -15,6 +15,7 @@ interface Contact {
   whale_score: number | null;
   whale_tier: string | null;
   lifecycle_stage: string | null;
+  lead_source: string | null;
   client_type: string | null;
   owner_id: string | null;
   created_at: string;
@@ -88,46 +89,53 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
   const [scoreFilter, setScoreFilter] = useState('');
   const [page, setPage] = useState(0);
 
-  // Search results state — null = use initialContacts
-  const [searchResults, setSearchResults] = useState<Contact[] | null>(null);
+  // Server results state — null = use initialContacts
+  const [serverResults, setServerResults] = useState<Contact[] | null>(null);
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Real-time Supabase search — fires when search term changes
+  // Server-side query — fires when search OR lifecycleFilter changes
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!search.trim()) {
-      setSearchResults(null);
+    if (!search.trim() && !lifecycleFilter) {
+      setServerResults(null);
       setPage(0);
       return;
     }
 
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
-      const q = search.trim();
-      const { data } = await crm
+      let query = crm
         .from('contacts')
-        .select('id, first_name, last_name, email, phone, lead_score, lead_score_reason, whale_score, whale_tier, lifecycle_stage, client_type, owner_id, created_at, companies(name)')
-        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`)
+        .select('id, first_name, last_name, email, phone, lead_score, lead_score_reason, whale_score, whale_tier, lifecycle_stage, lead_source, client_type, owner_id, created_at, companies(name)')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(200);
 
+      if (search.trim()) {
+        const q = search.trim();
+        query = query.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
+      }
+
+      if (lifecycleFilter) {
+        query = query.eq('lifecycle_stage', lifecycleFilter);
+      }
+
+      const { data } = await query;
       const normalized = (data ?? []).map((c: any) => ({
         ...c,
         companies: Array.isArray(c.companies) ? (c.companies[0] ?? null) : c.companies,
       }));
-      setSearchResults(normalized as Contact[]);
+      setServerResults(normalized as Contact[]);
       setSearching(false);
       setPage(0);
     }, 300);
-  }, [search]);
+  }, [search, lifecycleFilter]);
 
-  const base = searchResults ?? initialContacts;
+  const base = serverResults ?? initialContacts;
 
-  // Client-side filter on top of search results
+  // Client-side score filter only (fast, no server round-trip needed)
   const filtered = base.filter(c => {
-    if (lifecycleFilter && c.lifecycle_stage !== lifecycleFilter) return false;
     if (scoreFilter && c.lead_score?.toLowerCase() !== scoreFilter) return false;
     return true;
   });
@@ -169,7 +177,7 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
         <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stage:</span>
         <button style={pillBtn(!lifecycleFilter)} onClick={() => { setLifecycleFilter(''); setPage(0); }}>All</button>
         {['subscriber','lead','mql','sql','customer','former_client'].map(s => (
-          <button key={s} style={pillBtn(lifecycleFilter === s)} onClick={() => { setLifecycleFilter(s); setPage(0); }}>
+          <button key={s} style={pillBtn(lifecycleFilter === s)} onClick={() => { setLifecycleFilter(lifecycleFilter === s ? '' : s); setPage(0); }}>
             {s.replace('_',' ').replace(/\b\w/g, c => c.toUpperCase())}
           </button>
         ))}
@@ -220,6 +228,11 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
                   {c.phone && <span>{c.phone}</span>}
                   {c.email && <span>{c.email}</span>}
                   {c.companies?.name && <span style={{ color: 'var(--accent)', opacity: 0.8 }}>{c.companies.name}</span>}
+                  {c.lead_source && (
+                    <span style={{ color: 'var(--muted)', fontSize: 11, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '0 4px' }}>
+                      {c.lead_source.replace(/_/g, ' ')}
+                    </span>
+                  )}
                 </div>
               </div>
               {/* Right */}

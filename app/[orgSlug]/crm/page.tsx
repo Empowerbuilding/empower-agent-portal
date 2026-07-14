@@ -58,6 +58,8 @@ export default async function CrmPage({ params }: { params: Promise<{ orgSlug: s
     ...c,
     open_deals: dealCounts[c.id] ?? 0,
     contact_count: contactCounts[c.id] ?? 0,
+    primary_contact: null,
+    total_revenue: 0,
   }));
 
   return (

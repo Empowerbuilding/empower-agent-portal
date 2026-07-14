@@ -19,7 +19,7 @@ export default async function ContactsPage({ params }: { params: Promise<{ orgSl
 
   const { data: contacts, error } = await crm
     .from('contacts')
-    .select('id, first_name, last_name, email, phone, lead_score, lead_score_reason, whale_score, whale_tier, lifecycle_stage, client_type, owner_id, created_at, companies(name)')
+    .select('id, first_name, last_name, email, phone, lead_score, lead_score_reason, whale_score, whale_tier, lifecycle_stage, lead_source, client_type, owner_id, created_at, companies(name)')
     .order('created_at', { ascending: false })
     .limit(50);
 
