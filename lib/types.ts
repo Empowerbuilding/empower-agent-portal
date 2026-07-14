@@ -22,6 +22,7 @@ export interface Organization {
   created_at: string;
   crm_supabase_url?: string | null;
   crm_supabase_key?: string | null;
+  crm_mode?: string | null;
 }
 
 export interface Agent {

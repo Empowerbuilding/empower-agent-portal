@@ -14,19 +14,25 @@ export default async function DealsPage({ params }: { params: Promise<{ orgSlug:
   if (!org?.crm_supabase_url || !org?.crm_supabase_key) redirect(`/${orgSlug}/crm`);
 
   const crm = createSupabaseClient(org.crm_supabase_url, org.crm_supabase_key);
+  const crmMode = org.crm_mode ?? 'b2b';
 
-  const [{ data: deals }, { data: companies }] = await Promise.all([
+  const [{ data: deals }, { data: companies }, { data: contacts }] = await Promise.all([
     crm.from('deals').select('*').order('created_at', { ascending: false }),
     crm.from('companies').select('id, name').order('name'),
+    crmMode === 'b2c'
+      ? crm.from('contacts').select('id, first_name, last_name').order('last_name')
+      : Promise.resolve({ data: [] }),
   ]);
 
   return (
     <DealsClient
       deals={deals ?? []}
       companies={companies ?? []}
+      contacts={contacts ?? []}
       orgSlug={orgSlug}
       crmUrl={org.crm_supabase_url}
       crmKey={org.crm_supabase_key}
+      crmMode={crmMode}
     />
   );
 }

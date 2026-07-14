@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import CompaniesClient from './CompaniesClient';
+import CompaniesClient from '../CompaniesClient';
 
-export default async function CrmPage({ params }: { params: Promise<{ orgSlug: string }> }) {
+export default async function CompaniesPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
   const supabase = await createClient();
 
@@ -11,12 +11,6 @@ export default async function CrmPage({ params }: { params: Promise<{ orgSlug: s
   if (!user) redirect('/login');
 
   const { data: org } = await supabase.from('organizations').select('*').eq('slug', orgSlug).single();
-
-  // B2C orgs (Barnhaus): redirect to contacts list
-  if (org?.crm_mode === 'b2c') {
-    redirect(`/${orgSlug}/crm/contacts`);
-  }
-
   if (!org?.crm_supabase_url || !org?.crm_supabase_key) {
     return (
       <div style={{ padding: 32, color: 'var(--muted)', fontSize: 14 }}>
@@ -36,7 +30,7 @@ export default async function CrmPage({ params }: { params: Promise<{ orgSlug: s
     .from('deals')
     .select('company_id, stage')
     .not('company_id', 'is', null)
-    .not('stage', 'in', '("closed_won","closed_lost")');
+    .not('stage', 'in', '("closed_won","closed_lost","complete","lost")');
 
   const dealCounts: Record<string, number> = {};
   for (const d of deals ?? []) {
