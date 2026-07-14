@@ -20,24 +20,25 @@ export default async function CompaniesPage({ params }: { params: Promise<{ orgS
   }
 
   const crm = createSupabaseClient(org.crm_supabase_url, org.crm_supabase_key);
-  const { data: companies } = await crm
+
+  const { data: companies, error } = await crm
     .from('companies')
-    .select('id, name, industry, city, state, phone, owner_id, created_at')
+    .select('id, name, type, website, city, state, phone, notes, created_at')
     .order('name');
 
-  // Get open deal counts per company
+  // Open deal counts per company
   const { data: deals } = await crm
     .from('deals')
     .select('company_id, stage')
     .not('company_id', 'is', null)
-    .not('stage', 'in', '("closed_won","closed_lost","complete","lost")');
+    .not('stage', 'in', '("complete","lost","closed_won","closed_lost")');
 
   const dealCounts: Record<string, number> = {};
   for (const d of deals ?? []) {
     if (d.company_id) dealCounts[d.company_id] = (dealCounts[d.company_id] ?? 0) + 1;
   }
 
-  // Get contact counts per company
+  // Contact counts per company
   const { data: contacts } = await crm
     .from('contacts')
     .select('id, company_id')
