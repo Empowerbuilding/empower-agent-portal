@@ -28,7 +28,7 @@ export default async function CrmPage({ params }: { params: Promise<{ orgSlug: s
   const crm = createSupabaseClient(org.crm_supabase_url, org.crm_supabase_key);
   const { data: companies } = await crm
     .from('companies')
-    .select('id, name, industry, city, state, phone, owner_id, created_at')
+    .select('id, name, type, website, city, state, phone, notes, created_at')
     .order('name');
 
   // Get open deal counts per company
