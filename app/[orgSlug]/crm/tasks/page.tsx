@@ -15,18 +15,26 @@ export default async function TasksPage({ params }: { params: Promise<{ orgSlug:
 
   const crm = createSupabaseClient(org.crm_supabase_url, org.crm_supabase_key);
 
-  const [{ data: tasks }, { data: contacts }] = await Promise.all([
-    crm.from('tasks').select('*').order('due_date', { ascending: true, nullsFirst: false }),
+  const [{ data: tasks }, { data: contacts }, { data: users }] = await Promise.all([
+    crm.from('tasks')
+      .select('*, contacts(first_name, last_name, email, phone), deals(title), companies(name)')
+      .order('due_date', { ascending: true, nullsFirst: false }),
     crm.from('contacts').select('id, first_name, last_name').order('first_name'),
+    crm.from('users').select('id, name, email').order('name'),
   ]);
+
+  // Find the CRM user ID that matches the logged-in portal user
+  const currentCrmUser = (users ?? []).find((u: any) => u.email === user.email);
 
   return (
     <TasksClient
       tasks={tasks ?? []}
       contacts={contacts ?? []}
+      users={users ?? []}
       orgSlug={orgSlug}
       crmUrl={org.crm_supabase_url}
       crmKey={org.crm_supabase_key}
+      currentCrmUserId={currentCrmUser?.id ?? null}
     />
   );
 }
