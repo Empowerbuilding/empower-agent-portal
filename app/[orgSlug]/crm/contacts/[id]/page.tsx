@@ -40,7 +40,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     meetingsRes,
     allActivitiesRes,
   ] = await Promise.all([
-    crm.from('activities').select('*').eq('contact_id', id).order('created_at', { ascending: false }).limit(30),
+    crm.from('activities').select('*').eq('contact_id', id).order('created_at', { ascending: false }).limit(50),
     crm.from('tasks').select('*').eq('contact_id', id).eq('completed', false).order('due_date', { ascending: true }),
     crm.from('deals').select('*').eq('contact_id', id).not('stage', 'in', '("complete","lost")').order('created_at', { ascending: false }).limit(1),
     crm.from('users').select('id, name, role'),

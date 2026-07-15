@@ -166,11 +166,11 @@ function NewDealModal({ companies, contacts, onClose, onCreated, crmUrl, crmKey,
   );
 }
 
-export default function DealsClient({ deals: initial, companies, contacts, orgSlug, crmUrl, crmKey, crmMode }: {
-
+export default function DealsClient({ deals: initial, companies, contacts, users = [], orgSlug, crmUrl, crmKey, crmMode }: {
   deals: any[];
   companies: { id: string; name: string }[];
   contacts: { id: string; first_name: string; last_name: string }[];
+  users?: { id: string; name: string }[];
   orgSlug: string;
   crmUrl: string;
   crmKey: string;
@@ -180,6 +180,9 @@ export default function DealsClient({ deals: initial, companies, contacts, orgSl
   const [stageFilter, setStageFilter] = useState('all');
   const [salesTab, setSalesTab] = useState<'consumer' | 'builder'>('consumer'); // B2C only
   const [showNew, setShowNew] = useState(false);
+  const [ownerFilter, setOwnerFilter] = useState('');
+  const [sortField, setSortField] = useState<'value' | 'created_at' | ''>('');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const stages = crmMode === 'b2c' ? B2C_STAGES : B2B_STAGES;
   const companyMap = Object.fromEntries(companies.map(c => [c.id, c.name]));
@@ -195,11 +198,24 @@ export default function DealsClient({ deals: initial, companies, contacts, orgSl
       })
     : deals;
 
-  const filtered = stageFilter === 'all'
-    ? tabFiltered
-    : tabFiltered.filter(d => d.stage === stageFilter);
+  const stageFiltered = stageFilter === 'all' ? tabFiltered : tabFiltered.filter(d => d.stage === stageFilter);
+  const ownerFiltered = ownerFilter ? stageFiltered.filter(d => d.owner_id === ownerFilter) : stageFiltered;
+  const filtered = sortField
+    ? [...ownerFiltered].sort((a, b) => {
+        let cmp = 0;
+        if (sortField === 'value') cmp = (a.value ?? 0) - (b.value ?? 0);
+        if (sortField === 'created_at') cmp = a.created_at < b.created_at ? -1 : 1;
+        return sortDir === 'asc' ? cmp : -cmp;
+      })
+    : ownerFiltered;
 
   const totalValue = filtered.reduce((sum, d) => sum + (d.value ?? 0), 0);
+
+  function toggleDealSort(field: 'value' | 'created_at') {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('desc'); }
+  }
+  const dealSortIcon = (f: string) => sortField === f ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
 
   const tabBtn = (active: boolean): React.CSSProperties => ({
     padding: '7px 16px', fontSize: 13, fontWeight: active ? 600 : 400,
@@ -238,17 +254,18 @@ export default function DealsClient({ deals: initial, companies, contacts, orgSl
       )}
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <select
-          value={stageFilter}
-          onChange={e => setStageFilter(e.target.value)}
-          style={{
-            background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
-            borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13, cursor: 'pointer',
-          }}
-        >
+        <select value={stageFilter} onChange={e => setStageFilter(e.target.value)}
+          style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13, cursor: 'pointer' }}>
           <option value="all">All Stages</option>
           {stages.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
+        {users.length > 0 && (
+          <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}
+            style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: ownerFilter ? 'var(--text)' : 'var(--muted)', padding: '8px 12px', fontSize: 13, cursor: 'pointer' }}>
+            <option value="">All reps</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.name.split(' ')[0]}</option>)}
+          </select>
+        )}
         <div style={{ flex: 1, fontSize: 12, color: 'var(--muted)' }}>
           {filtered.length} deals{totalValue > 0 ? ` · $${totalValue.toLocaleString()}` : ''}
         </div>
@@ -275,7 +292,7 @@ export default function DealsClient({ deals: initial, companies, contacts, orgSl
             <span>Contact</span>
             <span>Stage</span>
             <span>Type</span>
-            <span>Value</span>
+            <span onClick={() => toggleDealSort('value')} style={{ cursor: 'pointer', userSelect: 'none' }}>Value{dealSortIcon('value')}</span>
           </div>
         ) : (
           <div style={{
@@ -287,7 +304,7 @@ export default function DealsClient({ deals: initial, companies, contacts, orgSl
             <span>Deal</span>
             <span>Company</span>
             <span>Stage</span>
-            <span>Value</span>
+            <span onClick={() => toggleDealSort('value')} style={{ cursor: 'pointer', userSelect: 'none' }}>Value{dealSortIcon('value')}</span>
             <span>Seats</span>
             <span>Training</span>
           </div>

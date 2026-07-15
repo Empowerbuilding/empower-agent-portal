@@ -105,6 +105,19 @@ export default function ContactDetailClient({
   // Deal stage
   const [movingStage, setMovingStage] = useState(false);
 
+  // Add to Pipeline modal
+  const [showAddDeal, setShowAddDeal] = useState(false);
+  const [newDeal, setNewDeal] = useState({ title: '', stage: 'qualified', value: '', deal_type: 'custom_design' });
+  const [savingDeal, setSavingDeal] = useState(false);
+
+  // Quick task from contact
+  const [showQuickTask, setShowQuickTask] = useState(false);
+
+  // Lead source editing
+  const LEAD_SOURCES = ['facebook_lead_ad','referral','cost_calc','shopify_cost_calc','guide_download','empower_website','barnhaus_contact','barnhaus_store_contact','shopify_order','calendar_booking','shopify_calendar_booking','direct_phone_call','floor_plan_archive','design_concierge','trade_show','other'];
+  const [editLeadSource, setEditLeadSource] = useState(false);
+  const [leadSource, setLeadSource] = useState(contactData.lead_source ?? '');
+
   // Sections toggle
   const [enrichOpen, setEnrichOpen] = useState(false);
   const [trestleOpen, setTrestleOpen] = useState(false);
@@ -133,6 +146,30 @@ export default function ContactDetailClient({
     const { data } = await crm.from('deals').update({ stage: newStage }).eq('id', deal.id).select().single();
     if (data) setDeal(data);
     setMovingStage(false);
+  }
+
+  async function saveLeadSource(src: string) {
+    setLeadSource(src);
+    setEditLeadSource(false);
+    await crm.from('contacts').update({ lead_source: src || null }).eq('id', contactData.id);
+    setContactData((prev: any) => ({ ...prev, lead_source: src || null }));
+  }
+
+  async function addToPipeline() {
+    if (!newDeal.title.trim() || savingDeal) return;
+    setSavingDeal(true);
+    const val = parseFloat(newDeal.value) || null;
+    const { data } = await crm.from('deals').insert({
+      contact_id: contactData.id,
+      title: newDeal.title.trim(),
+      stage: newDeal.stage,
+      value: val,
+      deal_type: newDeal.deal_type || null,
+      sales_type: 'b2c',
+      created_at: new Date().toISOString(),
+    }).select().single();
+    setSavingDeal(false);
+    if (data) { setDeal(data); setShowAddDeal(false); }
   }
 
   async function saveContactEdits() {
@@ -255,6 +292,14 @@ export default function ContactDetailClient({
                 </>
               ) : (
                 <>
+                  <button onClick={() => setShowAddDeal(true)}
+                    style={{ padding: '6px 12px', background: '#166534', border: '1px solid #22c55e55', borderRadius: 6, color: '#4ade80', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                    + Pipeline
+                  </button>
+                  <button onClick={() => setShowQuickTask(true)}
+                    style={{ padding: '6px 12px', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>
+                    + Task
+                  </button>
                   <button onClick={() => { setEditMode(true); setEditFields({ first_name: contactData.first_name ?? '', last_name: contactData.last_name ?? '', phone: contactData.phone ?? '', email: contactData.email ?? '' }); }}
                     style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>
                     ✏️ Edit
@@ -295,9 +340,17 @@ export default function ContactDetailClient({
                 🐋 {contactData.whale_tier}{contactData.whale_score != null ? ` ${contactData.whale_score}` : ''}
               </span>
             )}
-            {contactData.lead_source && (
-              <span style={{ fontSize: 11, color: '#60a5fa', fontWeight: 600, background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 4, padding: '2px 7px' }}>
-                {contactData.lead_source.replace(/_/g, ' ')}
+            {editLeadSource ? (
+              <select value={leadSource} onChange={e => saveLeadSource(e.target.value)} autoFocus onBlur={() => setEditLeadSource(false)}
+                style={{ fontSize: 12, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text)', padding: '2px 6px', cursor: 'pointer' }}>
+                <option value="">— None —</option>
+                {LEAD_SOURCES.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
+              </select>
+            ) : (
+              <span onClick={() => setEditLeadSource(true)}
+                style={{ fontSize: 11, color: '#60a5fa', fontWeight: 600, background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 4, padding: '2px 7px', cursor: 'pointer' }}
+                title="Click to edit lead source">
+                {leadSource ? leadSource.replace(/_/g, ' ') : '+ lead source'}
               </span>
             )}
           </div>
@@ -465,8 +518,9 @@ export default function ContactDetailClient({
           <div key={a.id} style={{ padding: '12px 14px', borderBottom: i < notes.length - 1 ? '1px solid var(--border)' : 'none' }}>
             <div style={{ fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{a.title}</div>
             {a.description && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, whiteSpace: 'pre-wrap' }}>{a.description}</div>}
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-              {new Date(a.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, display: 'flex', gap: 8 }}>
+              <span>{new Date(a.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+              {a.user_id && ownerMap[a.user_id] && <span style={{ color: 'var(--accent)', opacity: 0.7 }}>— {ownerMap[a.user_id].split(' ')[0]}</span>}
             </div>
           </div>
         ))}
@@ -600,6 +654,59 @@ export default function ContactDetailClient({
         )}
       </div>
 
+    </div>
+
+      {/* ── Add to Pipeline Modal ── */}
+      {showAddDeal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setShowAddDeal(false)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 380, display: 'flex', flexDirection: 'column', gap: 12 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>Add to Pipeline</div>
+            <input placeholder="Deal title *" value={newDeal.title} onChange={e => setNewDeal(d => ({...d, title: e.target.value}))}
+              style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }} autoFocus />
+            <select value={newDeal.stage} onChange={e => setNewDeal(d => ({...d, stage: e.target.value}))}
+              style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }}>
+              {[['qualified','Qualified'],['concept','Concept'],['design','Design'],['engineering','Engineering']].map(([k,l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+            <select value={newDeal.deal_type} onChange={e => setNewDeal(d => ({...d, deal_type: e.target.value}))}
+              style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }}>
+              {[['custom_design','Custom Design'],['catalog_plan','Catalog Plan'],['modification','Modification'],['referral','Referral']].map(([k,l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+            <input placeholder="Value ($)" value={newDeal.value} onChange={e => setNewDeal(d => ({...d, value: e.target.value}))} type="number"
+              style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }} />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowAddDeal(false)} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+              <button onClick={addToPipeline} disabled={!newDeal.title.trim() || savingDeal}
+                style={{ padding: '8px 16px', background: '#166534', border: '1px solid #22c55e55', borderRadius: 6, color: '#4ade80', fontWeight: 700, cursor: 'pointer', fontSize: 13, opacity: !newDeal.title.trim() || savingDeal ? 0.5 : 1 }}>
+                {savingDeal ? 'Creating…' : 'Add to Pipeline'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick Task from this contact (reuse addTask) ── */}
+      {showQuickTask && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setShowQuickTask(false)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 360, display: 'flex', flexDirection: 'column', gap: 12 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>New Task</div>
+            <input placeholder="Task title *" value={newTask.title} onChange={e => setNewTask(f => ({...f, title: e.target.value}))}
+              style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }} autoFocus />
+            <input type="date" value={newTask.due_date} onChange={e => setNewTask(f => ({...f, due_date: e.target.value}))}
+              style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }} />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowQuickTask(false)} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+              <button onClick={async () => { await addTask(); setShowQuickTask(false); }} disabled={!newTask.title.trim() || savingTask}
+                style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13, opacity: !newTask.title.trim() || savingTask ? 0.5 : 1 }}>
+                {savingTask ? 'Saving…' : 'Create Task'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -48,6 +48,7 @@ export default async function ContactsPage({ params }: { params: Promise<{ orgSl
       crmUrl={org.crm_supabase_url}
       crmKey={org.crm_supabase_key}
       ownerMap={ownerMap}
+      users={users ?? []}
     />
   );
 }

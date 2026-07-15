@@ -29,6 +29,7 @@ interface Props {
   crmUrl: string;
   crmKey: string;
   ownerMap?: Record<string, string>;
+  users?: { id: string; name: string }[];
 }
 
 const LEAD_SCORE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
@@ -94,14 +95,20 @@ function OwnerBadge({ ownerId, ownerMap }: { ownerId: string | null; ownerMap: R
   );
 }
 
-export default function ContactsClient({ contacts: initialContacts, totalCount, orgSlug, crmUrl, crmKey, ownerMap = {} }: Props) {
+export default function ContactsClient({ contacts: initialContacts, totalCount, orgSlug, crmUrl, crmKey, ownerMap = {}, users = [] }: Props) {
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
 
   const [search, setSearch] = useState('');
   const [lifecycleFilter, setLifecycleFilter] = useState('');
   const [scoreFilter, setScoreFilter] = useState('');
+  const [ownerFilter, setOwnerFilter] = useState('');
   const [page, setPage] = useState(0);
+  const [sortField, setSortField] = useState<'first_name' | 'created_at' | 'lead_score' | 'whale_score' | ''>('');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newContact, setNewContact] = useState({ first_name: '', last_name: '', phone: '', email: '' });
 
   // Server results state — null = use initialContacts
   const [serverResults, setServerResults] = useState<Contact[] | null>(null);
@@ -171,16 +178,55 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
     setLoadingMore(false);
   };
 
+  const crm2 = createClient(crmUrl, crmKey);
+
+  async function createContact() {
+    if (!newContact.first_name.trim() || creating) return;
+    setCreating(true);
+    const { data } = await crm2.from('contacts').insert({
+      first_name: newContact.first_name.trim(),
+      last_name: newContact.last_name.trim() || null,
+      phone: newContact.phone.trim() || null,
+      email: newContact.email.trim() || null,
+      created_at: new Date().toISOString(),
+    }).select().single();
+    setCreating(false);
+    if (data) {
+      setAllContacts(prev => [data, ...prev]);
+      setShowCreate(false);
+      setNewContact({ first_name: '', last_name: '', phone: '', email: '' });
+    }
+  }
+
+  const SCORE_ORDER: Record<string, number> = { hot: 0, medium: 1, cold: 2 };
+  function toggleSort(field: typeof sortField) {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  }
+  const sIcon = (f: string) => sortField === f ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
+
   const base = serverResults ?? allContacts;
 
-  // Client-side score filter only (fast, no server round-trip needed)
+  // Client-side filters
   const filtered = base.filter(c => {
     if (scoreFilter && c.lead_score?.toLowerCase() !== scoreFilter) return false;
+    if (ownerFilter && c.owner_id !== ownerFilter) return false;
     return true;
   });
 
-  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const sorted = sortField
+    ? [...filtered].sort((a, b) => {
+        let cmp = 0;
+        if (sortField === 'first_name') cmp = (`${a.first_name} ${a.last_name}`).localeCompare(`${b.first_name} ${b.last_name}`);
+        if (sortField === 'created_at') cmp = (a.created_at ?? '').localeCompare(b.created_at ?? '');
+        if (sortField === 'lead_score') cmp = (SCORE_ORDER[a.lead_score?.toLowerCase() ?? ''] ?? 9) - (SCORE_ORDER[b.lead_score?.toLowerCase() ?? ''] ?? 9);
+        if (sortField === 'whale_score') cmp = (b.whale_score ?? -1) - (a.whale_score ?? -1);
+        return sortDir === 'asc' ? cmp : -cmp;
+      })
+    : filtered;
+
+  const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
 
   const pillBtn = (active: boolean): React.CSSProperties => ({
     padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400,
@@ -235,13 +281,59 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
         ))}
       </div>
 
+      {/* Owner filter + Sort + Create */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        {users.length > 0 && (
+          <select value={ownerFilter} onChange={e => { setOwnerFilter(e.target.value); setPage(0); }}
+            style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: ownerFilter ? 'var(--text)' : 'var(--muted)', padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}>
+            <option value="">All reps</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.name.split(' ')[0]}</option>)}
+          </select>
+        )}
+        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>SORT:</span>
+        {([['first_name','Name'],['created_at','Date'],['lead_score','Score'],['whale_score','Whale']] as [typeof sortField, string][]).map(([f,l]) => (
+          <button key={f} onClick={() => { toggleSort(f); setPage(0); }}
+            style={{ padding: '4px 10px', fontSize: 11, fontWeight: sortField === f ? 600 : 400, background: sortField === f ? 'var(--accent)' : 'var(--sidebar-bg)', color: sortField === f ? '#fff' : 'var(--muted)', border: `1px solid ${sortField === f ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 5, cursor: 'pointer' }}>
+            {l}{sIcon(String(f))}
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        <button onClick={() => setShowCreate(true)}
+          style={{ padding: '6px 12px', background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          + New Contact
+        </button>
+      </div>
+
       {/* Count */}
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
         {search
-          ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${search}"`
+          ? `${sorted.length} result${sorted.length !== 1 ? 's' : ''} for "${search}"`
           : `Showing ${allContacts.length.toLocaleString()} of ${totalCount.toLocaleString()} contacts`}
       </div>
       </div>{/* end sticky header */}
+
+      {/* Create Contact Modal */}
+      {showCreate && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setShowCreate(false)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 360, display: 'flex', flexDirection: 'column', gap: 12 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>New Contact</div>
+            {(['first_name','last_name','phone','email'] as const).map(f => (
+              <input key={f} placeholder={f.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}
+                value={newContact[f]} onChange={e => setNewContact(p => ({...p,[f]:e.target.value}))}
+                style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13, width: '100%', boxSizing: 'border-box' as const }} />
+            ))}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowCreate(false)} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+              <button onClick={createContact} disabled={!newContact.first_name.trim() || creating}
+                style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 13, opacity: !newContact.first_name.trim() || creating ? 0.5 : 1 }}>
+                {creating ? 'Creating…' : 'Create Contact'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* List */}
       {paginated.length === 0 ? (

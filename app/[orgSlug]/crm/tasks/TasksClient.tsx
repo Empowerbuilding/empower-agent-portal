@@ -90,9 +90,11 @@ export default function TasksClient({ tasks: initial, contacts, users, orgSlug, 
 }) {
   const crm = createClient(crmUrl, crmKey);
   const [tasks, setTasks] = useState(initial);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(currentCrmUserId ? 'my' : 'all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [repFilter, setRepFilter] = useState<string>(''); // '' = all reps
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [sortField, setSortField] = useState<'due_date' | 'priority' | 'title' | ''>('due_date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const userMap = Object.fromEntries(users.map(u => [u.id, u.name]));
 
@@ -133,6 +135,28 @@ export default function TasksClient({ tasks: initial, contacts, users, orgSlug, 
     return true;
   });
 
+  // Sort
+  const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3, '': 4 };
+  const sorted = [...filtered].sort((a, b) => {
+    if (!sortField) return 0;
+    let cmp = 0;
+    if (sortField === 'due_date') {
+      const da = a.due_date ?? 'zzz'; const db = b.due_date ?? 'zzz';
+      cmp = da < db ? -1 : da > db ? 1 : 0;
+    } else if (sortField === 'priority') {
+      cmp = (PRIORITY_ORDER[a.priority ?? ''] ?? 4) - (PRIORITY_ORDER[b.priority ?? ''] ?? 4);
+    } else if (sortField === 'title') {
+      cmp = (a.title ?? '').localeCompare(b.title ?? '');
+    }
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  function toggleSort(field: 'due_date' | 'priority' | 'title') {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  }
+  const sortIcon = (field: string) => sortField === field ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
+
   const pillBtn = (active: boolean): React.CSSProperties => ({
     padding: '6px 12px', fontSize: 12, fontWeight: active ? 600 : 400,
     background: active ? 'var(--accent)' : 'var(--sidebar-bg)',
@@ -156,8 +180,8 @@ export default function TasksClient({ tasks: initial, contacts, users, orgSlug, 
 
       {/* Secondary filters */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* Rep filter — only when not in "my tasks" mode */}
-        {statusFilter !== 'my' && users.length > 0 && (
+        {/* Rep filter */}
+        {users.length > 0 && (
           <select
             value={repFilter}
             onChange={e => setRepFilter(e.target.value)}
@@ -178,7 +202,7 @@ export default function TasksClient({ tasks: initial, contacts, users, orgSlug, 
           {['urgent','high','medium','low'].map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase()+p.slice(1)}</option>)}
         </select>
 
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 4 }}>{filtered.length} task{filtered.length !== 1 ? 's' : ''}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 4 }}>{sorted.length} task{sorted.length !== 1 ? 's' : ''}</div>
       </div>
 
       </div>{/* end sticky */}
@@ -195,20 +219,20 @@ export default function TasksClient({ tasks: initial, contacts, users, orgSlug, 
           fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em',
         }}>
           <span></span>
-          <span>Task</span>
+          <span onClick={() => toggleSort('title')} style={{ cursor: 'pointer', userSelect: 'none' }}>Task{sortIcon('title')}</span>
           <span>Associated</span>
-          <span>Due Date</span>
-          <span>Priority</span>
+          <span onClick={() => toggleSort('due_date')} style={{ cursor: 'pointer', userSelect: 'none' }}>Due Date{sortIcon('due_date')}</span>
+          <span onClick={() => toggleSort('priority')} style={{ cursor: 'pointer', userSelect: 'none' }}>Priority{sortIcon('priority')}</span>
           <span>Type</span>
           <span>Assigned To</span>
         </div>
 
         {filtered.length === 0 ? (
           <div style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            {statusFilter === 'my' ? 'No open tasks assigned to you.' : 'No tasks match this filter.'}
+            {'No tasks match this filter.'}
           </div>
         ) : (
-          filtered.map((task, i) => {
+          sorted.map((task, i) => {
             const done = task.status === 'completed' || task.completed;
             const due = dueDateDisplay(task);
             const contactName = normContact(task);
@@ -221,7 +245,7 @@ export default function TasksClient({ tasks: initial, contacts, users, orgSlug, 
                   display: 'grid',
                   gridTemplateColumns: '32px 1fr 160px 100px 80px 90px 110px',
                   padding: '10px 14px',
-                  borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none',
+                  borderBottom: i < sorted.length - 1 ? '1px solid var(--border)' : 'none',
                   opacity: done ? 0.5 : 1,
                   alignItems: 'center',
                 }}
