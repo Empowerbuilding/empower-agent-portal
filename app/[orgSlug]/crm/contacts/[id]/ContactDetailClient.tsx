@@ -259,6 +259,7 @@ export default function ContactDetailClient({
   const otherActivities = activities.filter(a => a.activity_type !== 'note');
 
   return (
+    <>
     <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 760, margin: '0 auto' }}>
 
       {/* ── Header card ── */}
@@ -655,7 +656,7 @@ export default function ContactDetailClient({
       </div>
 
     </div>
-
+    <>
       {/* ── Add to Pipeline Modal ── */}
       {showAddDeal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -707,6 +708,7 @@ export default function ContactDetailClient({
           </div>
         </div>
       )}
-    </div>
+    </>
+    </>
   );
 }
