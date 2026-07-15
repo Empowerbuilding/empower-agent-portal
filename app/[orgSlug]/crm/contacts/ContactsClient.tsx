@@ -27,6 +27,7 @@ interface Props {
   orgSlug: string;
   crmUrl: string;
   crmKey: string;
+  ownerMap?: Record<string, string>;
 }
 
 const LEAD_SCORE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
@@ -80,7 +81,19 @@ function LifecyclePill({ stage }: { stage: string | null }) {
 
 const PAGE_SIZE = 50;
 
-export default function ContactsClient({ contacts: initialContacts, orgSlug, crmUrl, crmKey }: Props) {
+function OwnerBadge({ ownerId, ownerMap }: { ownerId: string | null; ownerMap: Record<string, string> }) {
+  if (!ownerId) return null;
+  const name = ownerMap[ownerId];
+  if (!name) return null;
+  const first = name.split(' ')[0];
+  return (
+    <span style={{ padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 500, background: 'var(--sidebar-bg)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+      👤 {first}
+    </span>
+  );
+}
+
+export default function ContactsClient({ contacts: initialContacts, orgSlug, crmUrl, crmKey, ownerMap = {} }: Props) {
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
 
@@ -240,6 +253,7 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <LeadScoreBadge score={c.lead_score} />
                   <WhaleBadge tier={c.whale_tier} score={c.whale_score} />
+                  <OwnerBadge ownerId={c.owner_id} ownerMap={ownerMap} />
                 </div>
                 <LifecyclePill stage={c.lifecycle_stage} />
               </div>

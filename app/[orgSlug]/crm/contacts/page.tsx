@@ -27,6 +27,13 @@ export default async function ContactsPage({ params }: { params: Promise<{ orgSl
     console.error('ContactsPage error:', error);
   }
 
+  // Fetch users for owner name lookup
+  const { data: users } = await crm.from('users').select('id, name');
+  const ownerMap: Record<string, string> = {};
+  for (const u of users ?? []) {
+    ownerMap[u.id] = u.name;
+  }
+
   // Normalize Supabase relational join: companies comes as array, we want single object
   const normalized = (contacts ?? []).map(c => ({
     ...c,
@@ -39,6 +46,7 @@ export default async function ContactsPage({ params }: { params: Promise<{ orgSl
       orgSlug={orgSlug}
       crmUrl={org.crm_supabase_url}
       crmKey={org.crm_supabase_key}
+      ownerMap={ownerMap}
     />
   );
 }
