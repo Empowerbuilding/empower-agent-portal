@@ -15,7 +15,8 @@ export default async function CrmLayout({ children, params }: Props) {
 
   const b2cTabs = [
     { label: 'Contacts', href: `/${orgSlug}/crm/contacts` },
-    { label: 'Pipeline', href: `/${orgSlug}/crm/deals` },
+    { label: 'Pipeline', href: `/${orgSlug}/crm/pipeline` },
+    { label: 'Deals', href: `/${orgSlug}/crm/deals` },
     { label: 'Tasks', href: `/${orgSlug}/crm/tasks` },
     { label: 'Companies', href: `/${orgSlug}/crm/companies` },
     { label: 'Cross-sell', href: `/${orgSlug}/crm/cross-sell` },

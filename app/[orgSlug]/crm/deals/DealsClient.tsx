@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 // ITS Training (B2B) stages
@@ -166,6 +167,7 @@ function NewDealModal({ companies, contacts, onClose, onCreated, crmUrl, crmKey,
 }
 
 export default function DealsClient({ deals: initial, companies, contacts, orgSlug, crmUrl, crmKey, crmMode }: {
+
   deals: any[];
   companies: { id: string; name: string }[];
   contacts: { id: string; first_name: string; last_name: string }[];
@@ -299,9 +301,10 @@ export default function DealsClient({ deals: initial, companies, contacts, orgSl
           filtered.map((d, i) => crmMode === 'b2c' ? (
             <div
               key={d.id}
+              onClick={() => window.location.href = `/${orgSlug}/crm/deals/${d.id}`}
               style={{
                 display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 80px',
-                padding: '10px 14px', cursor: 'default',
+                padding: '10px 14px', cursor: 'pointer',
                 borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none',
               }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
