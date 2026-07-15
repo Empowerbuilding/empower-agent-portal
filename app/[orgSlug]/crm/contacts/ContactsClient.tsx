@@ -24,6 +24,7 @@ interface Contact {
 
 interface Props {
   contacts: Contact[];
+  totalCount: number;
   orgSlug: string;
   crmUrl: string;
   crmKey: string;
@@ -93,7 +94,7 @@ function OwnerBadge({ ownerId, ownerMap }: { ownerId: string | null; ownerMap: R
   );
 }
 
-export default function ContactsClient({ contacts: initialContacts, orgSlug, crmUrl, crmKey, ownerMap = {} }: Props) {
+export default function ContactsClient({ contacts: initialContacts, totalCount, orgSlug, crmUrl, crmKey, ownerMap = {} }: Props) {
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
 
@@ -107,6 +108,11 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Load more — fetches next batch from server when paginating past initial load
+  const [allContacts, setAllContacts] = useState<Contact[]>(initialContacts);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [allLoaded, setAllLoaded] = useState(initialContacts.length >= totalCount);
+
   // Server-side query — fires when search OR lifecycleFilter changes
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -117,13 +123,14 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
       return;
     }
 
+
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
       let query = crm
         .from('contacts')
         .select('id, first_name, last_name, email, phone, lead_score, lead_score_reason, whale_score, whale_tier, lifecycle_stage, lead_source, client_type, owner_id, created_at, companies(name)')
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(1000);
 
       if (search.trim()) {
         const q = search.trim();
@@ -145,7 +152,26 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
     }, 300);
   }, [search, lifecycleFilter]);
 
-  const base = serverResults ?? initialContacts;
+  // Load more handler
+  const loadMore = async () => {
+    if (loadingMore || allLoaded) return;
+    setLoadingMore(true);
+    const { data } = await crm
+      .from('contacts')
+      .select('id, first_name, last_name, email, phone, lead_score, lead_score_reason, whale_score, whale_tier, lifecycle_stage, lead_source, client_type, owner_id, created_at, companies(name)')
+      .order('created_at', { ascending: false })
+      .range(allContacts.length, allContacts.length + 499);
+    const normalized = (data ?? []).map((c: any) => ({
+      ...c,
+      companies: Array.isArray(c.companies) ? (c.companies[0] ?? null) : c.companies,
+    }));
+    const next = [...allContacts, ...normalized];
+    setAllContacts(next as Contact[]);
+    if (next.length >= totalCount) setAllLoaded(true);
+    setLoadingMore(false);
+  };
+
+  const base = serverResults ?? allContacts;
 
   // Client-side score filter only (fast, no server round-trip needed)
   const filtered = base.filter(c => {
@@ -209,7 +235,9 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
 
       {/* Count */}
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-        {search ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${search}"` : `${filtered.length} contacts`}
+        {search
+          ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${search}"`
+          : `Showing ${allContacts.length.toLocaleString()} of ${totalCount.toLocaleString()} contacts`}
       </div>
 
       {/* List */}
@@ -264,9 +292,9 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>{page + 1} / {totalPages}</span>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
@@ -275,11 +303,17 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
               ← Prev
             </button>
             <button
-              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-              style={{ padding: '6px 14px', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: page >= totalPages - 1 ? 'var(--muted)' : 'var(--text)', cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontSize: 13 }}
+              onClick={() => {
+                if (page >= totalPages - 1 && !allLoaded) {
+                  loadMore().then(() => setPage(p => p + 1));
+                } else {
+                  setPage(p => Math.min(totalPages - 1, p + 1));
+                }
+              }}
+              disabled={page >= totalPages - 1 && allLoaded}
+              style={{ padding: '6px 14px', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: (page >= totalPages - 1 && allLoaded) ? 'var(--muted)' : 'var(--text)', cursor: (page >= totalPages - 1 && allLoaded) ? 'default' : 'pointer', fontSize: 13 }}
             >
-              Next →
+              {loadingMore ? 'Loading…' : 'Next →'}
             </button>
           </div>
         </div>

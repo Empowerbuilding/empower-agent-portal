@@ -17,11 +17,11 @@ export default async function ContactsPage({ params }: { params: Promise<{ orgSl
 
   const crm = createSupabaseClient(org.crm_supabase_url, org.crm_supabase_key);
 
-  const { data: contacts, error } = await crm
+  const { data: contacts, error, count } = await crm
     .from('contacts')
-    .select('id, first_name, last_name, email, phone, lead_score, lead_score_reason, whale_score, whale_tier, lifecycle_stage, lead_source, client_type, owner_id, created_at, companies(name)')
+    .select('id, first_name, last_name, email, phone, lead_score, lead_score_reason, whale_score, whale_tier, lifecycle_stage, lead_source, client_type, owner_id, created_at, companies(name)', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .limit(50);
+    .range(0, 499);
 
   if (error) {
     console.error('ContactsPage error:', error);
@@ -43,6 +43,7 @@ export default async function ContactsPage({ params }: { params: Promise<{ orgSl
   return (
     <ContactsClient
       contacts={normalized}
+      totalCount={count ?? normalized.length}
       orgSlug={orgSlug}
       crmUrl={org.crm_supabase_url}
       crmKey={org.crm_supabase_key}
