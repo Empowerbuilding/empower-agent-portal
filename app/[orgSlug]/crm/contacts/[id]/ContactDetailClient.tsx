@@ -413,6 +413,74 @@ export default function ContactDetailClient({
         </div>
       </div>
 
+      {/* ── Enrichment ── */}
+      <div style={sectionStyle}>
+        <button onClick={() => setEnrichOpen(v => !v)}
+          style={{ padding: '10px 14px', borderBottom: enrichOpen ? '1px solid var(--border)' : 'none', fontWeight: 600, fontSize: 13, color: 'var(--text)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', border: 'none', cursor: 'pointer', textAlign: 'left' } as React.CSSProperties}>
+          <span>Enrichment Data</span>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{enrichOpen ? '▲ Hide' : '▼ Show'}</span>
+        </button>
+        {enrichOpen && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+
+            {/* Trestle */}
+            <div style={{ borderBottom: '1px solid var(--border)' }}>
+              <button onClick={() => setTrestleOpen(v => !v)}
+                style={{ padding: '8px 14px', fontWeight: 600, fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between' } as React.CSSProperties}>
+                <span>📞 Trestle Phone Intelligence</span>
+                <span>{trestleOpen ? '▲' : '▼'}</span>
+              </button>
+              {trestleOpen && (
+                <div style={{ padding: '8px 14px 12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                  {[
+                    ['Owner', contactData.trestle_owner_name],
+                    ['Age Range', contactData.trestle_owner_age_range],
+                    ['Line Type', contactData.trestle_line_type],
+                    ['Carrier', contactData.trestle_carrier],
+                    ['Prepaid', contactData.trestle_is_prepaid != null ? (contactData.trestle_is_prepaid ? '⚠️ Yes' : 'No') : null],
+                    ['Address', [contactData.trestle_address, contactData.trestle_city, contactData.trestle_state, contactData.trestle_zip].filter(Boolean).join(', ') || null],
+                    ['Emails', Array.isArray(contactData.trestle_emails) ? contactData.trestle_emails.join(', ') : contactData.trestle_emails],
+                  ].map(([label, val]) => val ? (
+                    <div key={String(label)}>
+                      <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 1 }}>{String(val)}</div>
+                    </div>
+                  ) : null)}
+                </div>
+              )}
+            </div>
+
+            {/* ATTOM */}
+            <div>
+              <button onClick={() => setAttomOpen(v => !v)}
+                style={{ padding: '8px 14px', fontWeight: 600, fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between' } as React.CSSProperties}>
+                <span>🏡 ATTOM Property Data</span>
+                <span>{attomOpen ? '▲' : '▼'}</span>
+              </button>
+              {attomOpen && (
+                <div style={{ padding: '8px 14px 12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                  {[
+                    ['AVM Value', contactData.attom_avm_value ? `$${Number(contactData.attom_avm_value).toLocaleString()}` : null],
+                    ['AVM Range', (contactData.attom_avm_low && contactData.attom_avm_high) ? `$${Number(contactData.attom_avm_low).toLocaleString()} – $${Number(contactData.attom_avm_high).toLocaleString()}` : null],
+                    ['AVM Score', contactData.attom_avm_score ? `${contactData.attom_avm_score}/100` : null],
+                    ['Size', contactData.attom_sqft ? `${Number(contactData.attom_sqft).toLocaleString()} sqft` : null],
+                    ['Beds / Baths', (contactData.attom_beds || contactData.attom_baths) ? `${contactData.attom_beds ?? '?'}bd / ${contactData.attom_baths ?? '?'}ba` : null],
+                    ['Lot Acres', contactData.attom_lot_acres != null ? `${Number(contactData.attom_lot_acres).toFixed(2)} ac` : null],
+                    ['Year Built', contactData.attom_year_built],
+                    ['Last Sale', contactData.attom_last_sale_price ? `$${Number(contactData.attom_last_sale_price).toLocaleString()}` : null],
+                  ].map(([label, val]) => val ? (
+                    <div key={String(label)}>
+                      <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 1 }}>{String(val)}</div>
+                    </div>
+                  ) : null)}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ── Attribution ── */}
       {(firstActivity || lastActivity) && (
         <div style={sectionStyle}>
@@ -604,73 +672,6 @@ export default function ContactDetailClient({
         ))}
       </div>
 
-      {/* ── Enrichment ── */}
-      <div style={sectionStyle}>
-        <button onClick={() => setEnrichOpen(v => !v)}
-          style={{ padding: '10px 14px', borderBottom: enrichOpen ? '1px solid var(--border)' : 'none', fontWeight: 600, fontSize: 13, color: 'var(--text)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', border: 'none', cursor: 'pointer', textAlign: 'left' } as React.CSSProperties}>
-          <span>Enrichment Data</span>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{enrichOpen ? '▲ Hide' : '▼ Show'}</span>
-        </button>
-        {enrichOpen && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-
-            {/* Trestle */}
-            <div style={{ borderBottom: '1px solid var(--border)' }}>
-              <button onClick={() => setTrestleOpen(v => !v)}
-                style={{ padding: '8px 14px', fontWeight: 600, fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between' } as React.CSSProperties}>
-                <span>📞 Trestle Phone Intelligence</span>
-                <span>{trestleOpen ? '▲' : '▼'}</span>
-              </button>
-              {trestleOpen && (
-                <div style={{ padding: '8px 14px 12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
-                  {[
-                    ['Owner', contactData.trestle_owner_name],
-                    ['Age Range', contactData.trestle_owner_age_range],
-                    ['Line Type', contactData.trestle_line_type],
-                    ['Carrier', contactData.trestle_carrier],
-                    ['Prepaid', contactData.trestle_is_prepaid != null ? (contactData.trestle_is_prepaid ? '⚠️ Yes' : 'No') : null],
-                    ['Address', [contactData.trestle_address, contactData.trestle_city, contactData.trestle_state, contactData.trestle_zip].filter(Boolean).join(', ') || null],
-                    ['Emails', Array.isArray(contactData.trestle_emails) ? contactData.trestle_emails.join(', ') : contactData.trestle_emails],
-                  ].map(([label, val]) => val ? (
-                    <div key={String(label)}>
-                      <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-                      <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 1 }}>{String(val)}</div>
-                    </div>
-                  ) : null)}
-                </div>
-              )}
-            </div>
-
-            {/* ATTOM */}
-            <div>
-              <button onClick={() => setAttomOpen(v => !v)}
-                style={{ padding: '8px 14px', fontWeight: 600, fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between' } as React.CSSProperties}>
-                <span>🏡 ATTOM Property Data</span>
-                <span>{attomOpen ? '▲' : '▼'}</span>
-              </button>
-              {attomOpen && (
-                <div style={{ padding: '8px 14px 12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-                  {[
-                    ['AVM Value', contactData.attom_avm_value ? `$${Number(contactData.attom_avm_value).toLocaleString()}` : null],
-                    ['AVM Range', (contactData.attom_avm_low && contactData.attom_avm_high) ? `$${Number(contactData.attom_avm_low).toLocaleString()} – $${Number(contactData.attom_avm_high).toLocaleString()}` : null],
-                    ['AVM Score', contactData.attom_avm_score ? `${contactData.attom_avm_score}/100` : null],
-                    ['Size', contactData.attom_sqft ? `${Number(contactData.attom_sqft).toLocaleString()} sqft` : null],
-                    ['Beds / Baths', (contactData.attom_beds || contactData.attom_baths) ? `${contactData.attom_beds ?? '?'}bd / ${contactData.attom_baths ?? '?'}ba` : null],
-                    ['Lot Acres', contactData.attom_lot_acres != null ? `${Number(contactData.attom_lot_acres).toFixed(2)} ac` : null],
-                    ['Year Built', contactData.attom_year_built],
-                    ['Last Sale', contactData.attom_last_sale_price ? `$${Number(contactData.attom_last_sale_price).toLocaleString()}` : null],
-                  ].map(([label, val]) => val ? (
-                    <div key={String(label)}>
-                      <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-                      <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 1 }}>{String(val)}</div>
-                    </div>
-                  ) : null)}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
 
     </div>
     <>
