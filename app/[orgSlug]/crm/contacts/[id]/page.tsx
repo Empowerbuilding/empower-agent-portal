@@ -26,45 +26,45 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
   if (contactError || !contact) return notFound();
 
-  // Normalize Supabase relational join: companies comes as array, we want single object
   const normalizedContact = {
     ...contact,
     companies: Array.isArray(contact.companies) ? (contact.companies[0] ?? null) : contact.companies,
   };
 
-  // Fetch activities (last 15)
-  const { data: activities } = await crm
-    .from('activities')
-    .select('*')
-    .eq('contact_id', id)
-    .order('created_at', { ascending: false })
-    .limit(15);
+  // Parallel fetches
+  const [
+    activitiesRes,
+    tasksRes,
+    dealsRaw,
+    usersRes,
+    meetingsRes,
+    allActivitiesRes,
+  ] = await Promise.all([
+    crm.from('activities').select('*').eq('contact_id', id).order('created_at', { ascending: false }).limit(30),
+    crm.from('tasks').select('*').eq('contact_id', id).eq('completed', false).order('due_date', { ascending: true }),
+    crm.from('deals').select('*').eq('contact_id', id).not('stage', 'in', '("complete","lost")').order('created_at', { ascending: false }).limit(1),
+    crm.from('users').select('id, name, role'),
+    crm.from('scheduled_meetings').select('*').eq('contact_id', id).order('scheduled_at', { ascending: false }).limit(10).catch(() => ({ data: [] })),
+    // For attribution — get all activities sorted ascending (first touch)
+    crm.from('activities').select('activity_type, title, created_at').eq('contact_id', id).order('created_at', { ascending: true }).limit(100),
+  ]);
 
-  // Fetch open tasks
-  const { data: tasks } = await crm
-    .from('tasks')
-    .select('*')
-    .eq('contact_id', id)
-    .eq('completed', false)
-    .order('due_date', { ascending: true });
+  const deal = (dealsRaw.data ?? [])[0] ?? null;
 
-  // Fetch active deal
-  const { data: dealsRaw } = await crm
-    .from('deals')
-    .select('*')
-    .eq('contact_id', id)
-    .not('stage', 'in', '("complete","lost")')
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  const deal = dealsRaw?.[0] ?? null;
+  // Build owner map
+  const ownerMap: Record<string, string> = {};
+  for (const u of usersRes.data ?? []) ownerMap[u.id] = u.name;
 
   return (
     <ContactDetailClient
       contact={normalizedContact}
-      activities={activities ?? []}
-      tasks={tasks ?? []}
+      activities={activitiesRes.data ?? []}
+      allActivities={allActivitiesRes.data ?? []}
+      tasks={tasksRes.data ?? []}
       deal={deal}
+      meetings={(meetingsRes as any).data ?? []}
+      users={usersRes.data ?? []}
+      ownerMap={ownerMap}
       orgSlug={orgSlug}
       crmUrl={org.crm_supabase_url}
       crmKey={org.crm_supabase_key}
