@@ -60,11 +60,12 @@ interface Props {
   orgSlug: string;
   crmUrl: string;
   crmKey: string;
+  crmNotes?: any[];
 }
 
 export default function ContactDetailClient({
   contact, activities: initActivities, allActivities, tasks: initTasks, deal: initDeal,
-  meetings, users, ownerMap, orgSlug, crmUrl, crmKey,
+  meetings, users, ownerMap, orgSlug, crmUrl, crmKey, crmNotes = [],
 }: Props) {
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
@@ -255,7 +256,23 @@ export default function ContactDetailClient({
   };
 
   // Separate notes from other activities
-  const notes = activities.filter(a => a.activity_type === 'note');
+  // Merge activity-based notes + notes table — sort by created_at desc, dedupe by id
+  const activityNotes = activities.filter(a => a.activity_type === 'note');
+  const normalizedCrmNotes = crmNotes.map((n: any) => ({
+    id: n.id,
+    activity_type: 'note',
+    title: n.content,
+    description: null,
+    user_id: n.created_by,
+    created_at: n.created_at,
+    _source: 'notes_table',
+  }));
+  const allNoteIds = new Set(activityNotes.map((n: any) => n.id));
+  const mergedNotes = [
+    ...activityNotes,
+    ...normalizedCrmNotes.filter((n: any) => !allNoteIds.has(n.id)),
+  ].sort((a: any, b: any) => b.created_at.localeCompare(a.created_at));
+  const notes = mergedNotes;
   const otherActivities = activities.filter(a => a.activity_type !== 'note');
 
   return (

@@ -39,6 +39,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     usersRes,
     meetingsRes,
     allActivitiesRes,
+    notesRes,
   ] = await Promise.all([
     crm.from('activities').select('*').eq('contact_id', id).order('created_at', { ascending: false }).limit(50),
     crm.from('tasks').select('*').eq('contact_id', id).eq('completed', false).order('due_date', { ascending: true }),
@@ -47,6 +48,8 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     crm.from('scheduled_meetings').select('*').eq('contact_id', id).order('scheduled_at', { ascending: false }).limit(10),
     // For attribution — get all activities sorted ascending (first touch)
     crm.from('activities').select('activity_type, title, created_at').eq('contact_id', id).order('created_at', { ascending: true }).limit(100),
+    // Notes from the separate notes table (original CRM)
+    crm.from('notes').select('id, content, created_by, created_at').eq('contact_id', id).order('created_at', { ascending: false }).limit(30),
   ]);
 
   const deal = (dealsRaw.data ?? [])[0] ?? null;
@@ -59,6 +62,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     <ContactDetailClient
       contact={normalizedContact}
       activities={activitiesRes.data ?? []}
+      crmNotes={(notesRes as any).data ?? []}
       allActivities={allActivitiesRes.data ?? []}
       tasks={tasksRes.data ?? []}
       deal={deal}
