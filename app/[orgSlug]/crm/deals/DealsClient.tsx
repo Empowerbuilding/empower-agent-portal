@@ -221,6 +221,8 @@ export default function DealsClient({ deals: initial, companies, contacts, orgSl
         />
       )}
 
+      {/* Sticky header */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)', paddingBottom: 8, marginBottom: -4, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* B2C: Consumer / Builder toggle */}
       {crmMode === 'b2c' && (
         <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 7, overflow: 'hidden', alignSelf: 'flex-start' }}>
@@ -255,6 +257,8 @@ export default function DealsClient({ deals: initial, companies, contacts, orgSl
           + New Deal
         </button>
       </div>
+
+      </div>{/* end sticky */}
 
       <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
         {/* Headers */}

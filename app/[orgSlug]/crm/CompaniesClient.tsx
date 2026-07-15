@@ -145,7 +145,7 @@ export default function CompaniesClient({ companies: initial, orgSlug, crmUrl, c
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)' }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}

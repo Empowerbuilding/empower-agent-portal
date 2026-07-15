@@ -237,7 +237,7 @@ export default function CrossSellClient({ rows: initial, builders, orgSlug, crmU
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Summary bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)' }}>
         {[
           { label: 'Engineering Signed',       value: engSigned, color: '#c084fc' },
           { label: 'Builder Referrals Signed', value: bldSigned, color: '#60a5fa' },

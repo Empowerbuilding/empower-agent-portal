@@ -143,6 +143,8 @@ export default function TasksClient({ tasks: initial, contacts, users, orgSlug, 
 
   return (
     <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Sticky header */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)', paddingBottom: 8, marginBottom: -4, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Status filter bar */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {STATUS_FILTERS.filter(f => f.value !== 'my' || currentCrmUserId).map(f => (
@@ -178,6 +180,8 @@ export default function TasksClient({ tasks: initial, contacts, users, orgSlug, 
 
         <div style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 4 }}>{filtered.length} task{filtered.length !== 1 ? 's' : ''}</div>
       </div>
+
+      </div>{/* end sticky */}
 
       {/* Table */}
       <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
