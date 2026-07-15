@@ -81,7 +81,9 @@ function BuilderMultiSelect({ selectedIds, builders, onChange }: {
   onChange: (ids: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState<{ top: number; left: number; openUp: boolean } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     function handleOut(e: MouseEvent) {
@@ -96,6 +98,16 @@ function BuilderMultiSelect({ selectedIds, builders, onChange }: {
     onChange(next);
   };
 
+  const handleOpen = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUp = spaceBelow < 240;
+      setDropPos({ top: openUp ? rect.top : rect.bottom + 4, left: rect.left, openUp });
+    }
+    setOpen(o => !o);
+  };
+
   const label = selectedIds.length === 0
     ? '— none —'
     : selectedIds.length === 1
@@ -105,8 +117,9 @@ function BuilderMultiSelect({ selectedIds, builders, onChange }: {
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={handleOpen}
         style={{
           fontSize: 12, color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 4,
           padding: '3px 8px', background: 'var(--sidebar-bg)', cursor: 'pointer',
@@ -117,9 +130,12 @@ function BuilderMultiSelect({ selectedIds, builders, onChange }: {
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
         <span style={{ color: 'var(--muted)', flexShrink: 0 }}>▾</span>
       </button>
-      {open && (
+      {open && dropPos && (
         <div style={{
-          position: 'absolute', zIndex: 50, top: '100%', left: 0, marginTop: 2,
+          position: 'fixed', zIndex: 9999,
+          top: dropPos.openUp ? 'auto' : dropPos.top,
+          bottom: dropPos.openUp ? window.innerHeight - dropPos.top : 'auto',
+          left: dropPos.left,
           background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6,
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 200, maxHeight: 220, overflowY: 'auto',
         }}>
