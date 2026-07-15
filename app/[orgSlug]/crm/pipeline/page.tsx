@@ -18,7 +18,6 @@ export default async function PipelinePage({ params }: { params: Promise<{ orgSl
   const { data: deals } = await crm
     .from('deals')
     .select('*, contacts(first_name, last_name, phone)')
-    .not('stage', 'in', '("complete","lost")')
     .order('created_at', { ascending: false });
 
   const { data: users } = await crm.from('users').select('id, name');
