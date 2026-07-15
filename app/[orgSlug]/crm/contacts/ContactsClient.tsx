@@ -243,7 +243,7 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
                     {c.email && <span>{c.email}</span>}
                     {c.companies?.name && <span style={{ color: 'var(--accent)', opacity: 0.8 }}>{c.companies.name}</span>}
                     {c.lead_source && (
-                      <span style={{ color: 'var(--muted)', fontSize: 11, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '0 4px' }}>
+                      <span style={{ color: '#60a5fa', fontSize: 11, fontWeight: 600, background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.02em' }}>
                         {c.lead_source.replace(/_/g, ' ')}
                       </span>
                     )}
