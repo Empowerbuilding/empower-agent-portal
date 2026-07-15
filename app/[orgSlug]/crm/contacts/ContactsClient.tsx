@@ -224,38 +224,38 @@ export default function ContactsClient({ contacts: initialContacts, orgSlug, crm
               key={c.id}
               onClick={() => router.push(`/${orgSlug}/crm/contacts/${c.id}`)}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                display: 'flex', flexDirection: 'column',
                 padding: '12px 14px', background: 'var(--surface)',
                 border: '1px solid var(--border)', borderRadius: 8,
-                cursor: 'pointer', gap: 12,
+                cursor: 'pointer', gap: 6,
               }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}
             >
-              {/* Left */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>
-                  {c.first_name} {c.last_name}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {c.phone && <span>{c.phone}</span>}
-                  {c.email && <span>{c.email}</span>}
-                  {c.companies?.name && <span style={{ color: 'var(--accent)', opacity: 0.8 }}>{c.companies.name}</span>}
-                  {c.lead_source && (
-                    <span style={{ color: 'var(--muted)', fontSize: 11, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '0 4px' }}>
-                      {c.lead_source.replace(/_/g, ' ')}
-                    </span>
-                  )}
-                </div>
-              </div>
-              {/* Right */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  <LeadScoreBadge score={c.lead_score} />
-                  <WhaleBadge tier={c.whale_tier} score={c.whale_score} />
-                  <OwnerBadge ownerId={c.owner_id} ownerMap={ownerMap} />
+              {/* Top row: name + lifecycle */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>
+                    {c.first_name} {c.last_name}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {c.phone && <span>{c.phone}</span>}
+                    {c.email && <span>{c.email}</span>}
+                    {c.companies?.name && <span style={{ color: 'var(--accent)', opacity: 0.8 }}>{c.companies.name}</span>}
+                    {c.lead_source && (
+                      <span style={{ color: 'var(--muted)', fontSize: 11, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '0 4px' }}>
+                        {c.lead_source.replace(/_/g, ' ')}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <LifecyclePill stage={c.lifecycle_stage} />
+              </div>
+              {/* Badge row: spreads horizontally */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <LeadScoreBadge score={c.lead_score} />
+                <WhaleBadge tier={c.whale_tier} score={c.whale_score} />
+                <OwnerBadge ownerId={c.owner_id} ownerMap={ownerMap} />
               </div>
             </div>
           ))}
