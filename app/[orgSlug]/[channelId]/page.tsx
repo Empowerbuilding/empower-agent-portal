@@ -70,6 +70,7 @@ export default async function ChannelPage({
         initialMessages={messages ?? []}
         currentUser={{ id: portalUser.id, name: portalUser.name, role: portalUser.role }}
         orgId={org.id}
+        orgSlug={orgSlug}
       />
     );
   }

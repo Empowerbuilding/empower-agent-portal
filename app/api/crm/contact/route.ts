@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
   }
 
   const phone = req.nextUrl.searchParams.get('phone');
+  const orgSlug = req.nextUrl.searchParams.get('orgSlug');
   if (!phone) return NextResponse.json({ error: 'phone required' }, { status: 400 });
 
   const crm = createClient(CRM_URL, CRM_KEY);
@@ -71,7 +72,9 @@ export async function GET(req: NextRequest) {
     best_deal: deals?.[0]
       ? { title: deals[0].title, stage: deals[0].stage, value: deals[0].value }
       : null,
-    crm_url: `https://crm.empowerbuilding.ai/contacts/${contact.id}`,
+    crm_url: orgSlug
+      ? `/${orgSlug}/crm/contacts/${contact.id}`
+      : `https://crm.empowerbuilding.ai/contacts/${contact.id}`,
   };
 
   return NextResponse.json(result);

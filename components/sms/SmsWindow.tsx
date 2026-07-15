@@ -12,6 +12,7 @@ interface Props {
   initialMessages: PortalMessage[];
   currentUser: { id: string; name: string; role?: string };
   orgId: string;
+  orgSlug?: string;
 }
 
 interface SmsConversation {
@@ -78,7 +79,7 @@ function extractMediaUrls(content: string): string[] {
   return urls;
 }
 
-export default function SmsWindow({ channel, initialMessages, currentUser, orgId }: Props) {
+export default function SmsWindow({ channel, initialMessages, currentUser, orgId, orgSlug }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [smsSearchOpen, setSmsSearchOpen] = useState(false);
@@ -113,7 +114,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     if (crmCache[phone] !== undefined) return; // already fetched (null = not found)
     setCrmLoading(true);
     try {
-      const res = await fetch(`/api/crm/contact?phone=${encodeURIComponent(phone)}`);
+      const res = await fetch(`/api/crm/contact?phone=${encodeURIComponent(phone)}${orgSlug ? `&orgSlug=${orgSlug}` : ''}`);
       const data = res.ok ? await res.json() : null;
       setCrmCache(prev => ({ ...prev, [phone]: data }));
     } catch {
@@ -455,8 +456,8 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             )}
             <a
               href={crm.crm_url}
-              target="_blank"
-              rel="noreferrer"
+              target={crm.crm_url.startsWith('/') ? '_self' : '_blank'}
+              rel={crm.crm_url.startsWith('/') ? undefined : 'noreferrer'}
               style={{
                 marginLeft: 'auto', fontSize: '11px', color: 'var(--accent)',
                 textDecoration: 'none', opacity: 0.8, whiteSpace: 'nowrap',
