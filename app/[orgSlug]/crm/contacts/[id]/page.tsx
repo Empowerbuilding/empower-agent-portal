@@ -44,7 +44,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     crm.from('tasks').select('*').eq('contact_id', id).eq('completed', false).order('due_date', { ascending: true }),
     crm.from('deals').select('*').eq('contact_id', id).not('stage', 'in', '("complete","lost")').order('created_at', { ascending: false }).limit(1),
     crm.from('users').select('id, name, role'),
-    crm.from('scheduled_meetings').select('*').eq('contact_id', id).order('scheduled_at', { ascending: false }).limit(10).catch(() => ({ data: [] })),
+    crm.from('scheduled_meetings').select('*').eq('contact_id', id).order('scheduled_at', { ascending: false }).limit(10),
     // For attribution — get all activities sorted ascending (first touch)
     crm.from('activities').select('activity_type, title, created_at').eq('contact_id', id).order('created_at', { ascending: true }).limit(100),
   ]);
