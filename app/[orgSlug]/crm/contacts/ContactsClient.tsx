@@ -192,6 +192,8 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
 
   return (
     <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Sticky header: search + filters */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)', paddingBottom: 8, marginBottom: -4, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Search */}
       <div style={{ position: 'relative' }}>
         <input
@@ -239,6 +241,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
           ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${search}"`
           : `Showing ${allContacts.length.toLocaleString()} of ${totalCount.toLocaleString()} contacts`}
       </div>
+      </div>{/* end sticky header */}
 
       {/* List */}
       {paginated.length === 0 ? (
