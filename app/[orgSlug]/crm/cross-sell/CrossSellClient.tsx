@@ -159,6 +159,7 @@ export default function CrossSellClient({ rows: initial, builders, orgSlug, crmU
   const [sortKey, setSortKey] = useState<SortKey>('contact_name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<'cross-sell' | 'builders'>('cross-sell');
 
   const crm = createClient(crmUrl, crmKey);
 
@@ -234,8 +235,69 @@ export default function CrossSellClient({ rows: initial, builders, orgSlug, crmU
 
   const sortIcon = (key: SortKey) => sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
 
+  // Builders tab
+  const [builderSearch, setBuilderSearch] = useState('');
+  const filteredBuilders = (builders as any[]).filter(b =>
+    !builderSearch || b.company_name?.toLowerCase().includes(builderSearch.toLowerCase()) ||
+    b.contact_name?.toLowerCase().includes(builderSearch.toLowerCase())
+  );
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    padding: '8px 18px', fontSize: 13, fontWeight: active ? 600 : 400,
+    color: active ? 'var(--accent)' : 'var(--muted)',
+    borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+    cursor: 'pointer', background: 'none', border: 'none', marginBottom: -1,
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Tab switcher */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--surface)', paddingLeft: 16, flexShrink: 0 }}>
+        <button style={tabStyle(activeTab === 'cross-sell')} onClick={() => setActiveTab('cross-sell')}>Cross-Sell</button>
+        <button style={tabStyle(activeTab === 'builders')} onClick={() => setActiveTab('builders')}>🏗 Builders ({(builders as any[]).length})</button>
+      </div>
+
+      {/* Builders directory */}
+      {activeTab === 'builders' && (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)', padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
+            <input
+              placeholder="Search builders…"
+              value={builderSearch}
+              onChange={e => setBuilderSearch(e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }}
+            />
+          </div>
+          <div style={{ padding: '12px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
+            {filteredBuilders.map((b: any) => (
+              <div key={b.id} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{b.company_name}</div>
+                {b.contact_name && <div style={{ fontSize: 13, color: 'var(--muted)' }}>👤 {b.contact_name}</div>}
+                {b.phone && <a href={`tel:${b.phone}`} style={{ fontSize: 13, color: 'var(--accent)', textDecoration: 'none' }}>📞 {b.phone}</a>}
+                {b.email && <a href={`mailto:${b.email}`} style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none' }}>✉️ {b.email}</a>}
+                {Array.isArray(b.locations) && b.locations.length > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>📍 {b.locations.join(', ')}</div>
+                )}
+                {Array.isArray(b.specialties) && b.specialties.length > 0 && (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 2 }}>
+                    {b.specialties.map((s: string) => (
+                      <span key={s} style={{ fontSize: 10, background: 'rgba(96,165,250,0.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 4, padding: '1px 6px', fontWeight: 600 }}>{s}</span>
+                    ))}
+                  </div>
+                )}
+                {b.referral_fee_notes && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>💰 {b.referral_fee_notes}</div>}
+                <div style={{ marginTop: 2 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: b.status === 'active' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: b.status === 'active' ? '#4ade80' : '#f87171' }}>
+                    {b.status ?? 'unknown'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'cross-sell' && (<>
       {/* Summary bar */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)' }}>
         {[
@@ -335,6 +397,7 @@ export default function CrossSellClient({ rows: initial, builders, orgSlug, crmU
         </div>
         <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>{sorted.length} clients</div>
       </div>
+      </>)}
     </div>
   );
 }

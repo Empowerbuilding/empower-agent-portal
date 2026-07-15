@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import CrossSellClient from './CrossSellClient';
+import { createClient as createSupabaseClient2 } from '@supabase/supabase-js';
 
 export default async function CrossSellPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
@@ -31,11 +32,10 @@ export default async function CrossSellPage({ params }: { params: Promise<{ orgS
     .eq('client_type', 'consumer')
     .order('last_name');
 
-  // Fetch active referral builders
+  // Fetch all referral builders (for both the cross-sell picker AND the builders directory)
   const { data: builders } = await crm
     .from('referral_builders')
-    .select('id, company_name')
-    .eq('status', 'active')
+    .select('*')
     .order('company_name');
 
   // Merge: all customers get a row
@@ -70,4 +70,5 @@ export default async function CrossSellPage({ params }: { params: Promise<{ orgS
       crmKey={org.crm_supabase_key}
     />
   );
+
 }
