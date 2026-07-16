@@ -15,7 +15,7 @@ interface Props {
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   // Supports: ![alt](url) images, [text](url) links, **bold**, *italic*, `code`, bare image URLs
-  const regex = /(!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)|\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`|(https?:\/\/\S+\.(?:jpg|jpeg|png|gif|webp)(\?\S*)?))/gi;
+  const regex = /(!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)|\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`|(https?:\/\/\S+\.(?:jpg|jpeg|png|gif|webp)(?:\?\S*)?)|(https?:\/\/[^\s<>"')\]]+))/gi;
   let last = 0;
   let match;
   let key = 0;
@@ -35,7 +35,11 @@ function renderInline(text: string): React.ReactNode[] {
     } else if (match[6]) parts.push(<strong key={key++}>{match[6]}</strong>);
     else if (match[7]) parts.push(<em key={key++}>{match[7]}</em>);
     else if (match[8]) parts.push(<code key={key++} style={{ background: 'var(--border)', borderRadius: '3px', padding: '1px 5px', fontSize: '0.9em', fontFamily: 'monospace' }}>{match[8]}</code>);
-    else if (match[9]) {
+    } else if (match[10]) {
+      // Bare non-image URL — auto-link
+      const href10 = match[10].replace(/[.,;:!?]+$/, '');
+      parts.push(<a key={key++} href={href10} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>{href10}</a>);
+    } else if (match[9]) {
       // Bare image URL — auto-embed
       parts.push(
         <img key={key++} src={match[9]} alt="image"
