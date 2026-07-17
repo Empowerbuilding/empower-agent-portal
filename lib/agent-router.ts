@@ -77,13 +77,7 @@ export async function agentDockerExec(agentId: string, command: string): Promise
 export async function agentWriteFile(agentId: string, fileName: string, content: string): Promise<void> {
   const agent = await getAgent(agentId);
   if (!agent) throw new Error(`Agent ${agentId} not found`);
-  // Local agent (no server_host) — write directly via fs
-  if (!agent.server_host) {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    await fs.writeFile(path.join(agent.workspace_path, fileName), content, 'utf8');
-    return;
-  }
+  if (!agent.server_host) throw new Error('Files are managed locally for this agent.');
   const config = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
   const filePath = `${agent.workspace_path}/${fileName}`;
   await sshWriteFile(config, filePath, content);
@@ -95,12 +89,7 @@ export async function agentWriteFile(agentId: string, fileName: string, content:
 export async function agentReadFile(agentId: string, fileName: string): Promise<string> {
   const agent = await getAgent(agentId);
   if (!agent) throw new Error(`Agent ${agentId} not found`);
-  // Local agent (no server_host) — read directly via fs
-  if (!agent.server_host) {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    return fs.readFile(path.join(agent.workspace_path, fileName), 'utf8');
-  }
+  if (!agent.server_host) throw new Error('Files are managed locally for this agent.');
   const config = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
   return sshReadFile(config, `${agent.workspace_path}/${fileName}`);
 }
@@ -111,19 +100,8 @@ export async function agentReadFile(agentId: string, fileName: string): Promise<
 export async function agentListFiles(agentId: string): Promise<{ name: string; path: string; size: number }[]> {
   const agent = await getAgent(agentId);
   if (!agent) throw new Error(`Agent ${agentId} not found`);
-  // Local agent (no server_host) — list directly via fs
-  if (!agent.server_host) {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const entries = await fs.readdir(agent.workspace_path);
-    const mdFiles = entries.filter(f => f.endsWith('.md'));
-    const results = await Promise.all(mdFiles.map(async name => {
-      const fp = path.join(agent.workspace_path, name);
-      const stat = await fs.stat(fp);
-      return { name, path: fp, size: stat.size };
-    }));
-    return results;
-  }
+  // Local agent (no server_host) — files live on local machine, not accessible from portal server
+  if (!agent.server_host) return [];
   const config = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
   return sshListFiles(config, `${agent.workspace_path}/*.md`);
 }

@@ -188,6 +188,8 @@ export default function AgentFilesPage() {
             <div style={{ padding: '12px 8px', fontSize: '12px', color: 'var(--muted)' }}>Loading…</div>
           ) : fileError ? (
             <div style={{ padding: '12px 8px', fontSize: '12px', color: '#da3633' }}>{fileError}</div>
+          ) : files.length === 0 ? (
+            <div style={{ padding: '12px 8px', fontSize: '12px', color: 'var(--muted)', lineHeight: 1.5 }}>Files are managed locally on this agent&apos;s machine.</div>
           ) : files.map(f => (
             <button
               key={f.name}
