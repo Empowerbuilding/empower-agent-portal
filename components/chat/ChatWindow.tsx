@@ -628,6 +628,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               onChange={handleInputChange}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
               onPaste={handlePaste}
+              onFocus={() => { setTimeout(() => textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 300); }}
               placeholder={`Message ${channel.display_name}…`}
               rows={1}
             />

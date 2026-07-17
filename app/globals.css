@@ -164,11 +164,12 @@ html, body {
   background: var(--bg);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
-  height: 61px; /* match .sidebar-footer */
+  min-height: 61px; /* grows with textarea on mobile */
   box-sizing: border-box;
   display: flex;
   align-items: center;
   width: 100%;
+  padding-bottom: max(10px, env(safe-area-inset-bottom)); /* iPhone notch/home bar */
 }
 @media (min-width: 768px) {
   .input-area { padding: 10px 20px; }
