@@ -16,6 +16,8 @@ export interface AgentInfo {
   server_host: string;
   ssh_key_secret: string;
   org_id: string;
+  github_repo?: string;
+  github_token?: string;
 }
 
 export interface ContextStat {
@@ -31,7 +33,7 @@ export async function getAgent(agentId: string): Promise<AgentInfo | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from('agents')
-    .select('id, name, display_name, container_name, workspace_path, server_host, ssh_key_secret, org_id')
+    .select('id, name, display_name, container_name, workspace_path, server_host, ssh_key_secret, org_id, github_repo, github_token')
     .eq('id', agentId)
     .single();
   return data as AgentInfo | null;
@@ -77,6 +79,19 @@ export async function agentDockerExec(agentId: string, command: string): Promise
 export async function agentWriteFile(agentId: string, fileName: string, content: string): Promise<void> {
   const agent = await getAgent(agentId);
   if (!agent) throw new Error(`Agent ${agentId} not found`);
+  if (!agent.server_host && agent.github_repo) {
+    const token = agent.github_token;
+    const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // Get current SHA for update
+    const getRes = await fetch(`https://api.github.com/repos/${agent.github_repo}/contents/${fileName}`, { headers });
+    const sha = getRes.ok ? (await getRes.json()).sha : undefined;
+    const body: any = { message: `portal: update ${fileName}`, content: Buffer.from(content).toString('base64') };
+    if (sha) body.sha = sha;
+    const putRes = await fetch(`https://api.github.com/repos/${agent.github_repo}/contents/${fileName}`, { method: 'PUT', headers, body: JSON.stringify(body) });
+    if (!putRes.ok) throw new Error(`GitHub write error: ${putRes.status}`);
+    return;
+  }
   if (!agent.server_host) throw new Error('Files are managed locally for this agent.');
   const config = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
   const filePath = `${agent.workspace_path}/${fileName}`;
@@ -89,6 +104,15 @@ export async function agentWriteFile(agentId: string, fileName: string, content:
 export async function agentReadFile(agentId: string, fileName: string): Promise<string> {
   const agent = await getAgent(agentId);
   if (!agent) throw new Error(`Agent ${agentId} not found`);
+  if (!agent.server_host && agent.github_repo) {
+    const token = agent.github_token;
+    const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`https://api.github.com/repos/${agent.github_repo}/contents/${fileName}`, { headers });
+    if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+    const data = await res.json();
+    return Buffer.from(data.content, 'base64').toString('utf8');
+  }
   if (!agent.server_host) throw new Error('Files are managed locally for this agent.');
   const config = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
   return sshReadFile(config, `${agent.workspace_path}/${fileName}`);
@@ -100,7 +124,18 @@ export async function agentReadFile(agentId: string, fileName: string): Promise<
 export async function agentListFiles(agentId: string): Promise<{ name: string; path: string; size: number }[]> {
   const agent = await getAgent(agentId);
   if (!agent) throw new Error(`Agent ${agentId} not found`);
-  // Local agent (no server_host) — files live on local machine, not accessible from portal server
+  // GitHub-backed agent — list files from repo
+  if (!agent.server_host && agent.github_repo) {
+    const token = agent.github_token;
+    const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`https://api.github.com/repos/${agent.github_repo}/contents/`, { headers });
+    if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+    const items: any[] = await res.json();
+    return items
+      .filter((f: any) => f.type === 'file' && f.name.endsWith('.md'))
+      .map((f: any) => ({ name: f.name, path: f.path, size: f.size }));
+  }
   if (!agent.server_host) return [];
   const config = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
   return sshListFiles(config, `${agent.workspace_path}/*.md`);
