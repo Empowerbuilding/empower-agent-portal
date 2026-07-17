@@ -179,6 +179,25 @@ print(json.dumps(out))
 export async function agentResetContext(agentId: string, channelId: string): Promise<boolean> {
   const agent = await getAgent(agentId);
   if (!agent) return false;
+
+  // Local agent (Tony) — edit sessions.json directly on the gateway machine
+  if (!agent.server_host) {
+    try {
+      const fs = await import('fs/promises');
+      const os = await import('os');
+      const path = await import('path');
+      const sessionFile = path.join(os.homedir(), '.openclaw', 'agents', 'main', 'sessions', 'sessions.json');
+      const raw = await fs.readFile(sessionFile, 'utf8');
+      const d = JSON.parse(raw);
+      const prefix = `agent:main:portal:channel:${channelId}`;
+      for (const k of Object.keys(d)) {
+        if (k === prefix || k.startsWith(prefix + ':')) delete d[k];
+      }
+      await fs.writeFile(sessionFile, JSON.stringify(d, null, 2));
+      return true;
+    } catch { return false; }
+  }
+
   const config = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
 
   // Session keys use the full format: agent:main:portal:channel:<channelId>
