@@ -5,15 +5,16 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  /* Darkened theme — deeper blacks, less grey */
   --safe-top: 0px; /* updated by JS in OrgShell for Android PWA edge-to-edge */
-  --bg: #313338;
-  --sidebar-bg: #2b2d31;
-  --surface: #383a40;
-  --surface-hover: #404249;
-  --card: #3a3c43;
-  --border: #3f4147;
+  --bg: #23272a;
+  --sidebar-bg: #1e1f22;
+  --surface: #2b2d31;
+  --surface-hover: #35373c;
+  --card: #2e3035;
+  --border: #333438;
   --text: #dbdee1;
-  --muted: #80848e;
+  --muted: #949ba4;
   --accent: #3b82f6;
   --accent-dim: #2563eb;
   --user-bubble: #3b82f6;
