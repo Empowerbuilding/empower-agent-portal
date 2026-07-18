@@ -61,7 +61,7 @@ html, body {
     position: fixed;
     top: 0; left: 0; bottom: 0;
     width: 80vw;
-    max-width: 300px;
+    max-width: 260px;
     transform: translateX(-100%);
     box-shadow: 4px 0 24px rgba(0,0,0,0.6);
   }
