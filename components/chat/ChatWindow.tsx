@@ -558,7 +558,6 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               ); })()}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-              <PresenceButton orgId={orgId} openDirection="down" align="right" size={15} />
               <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={17} /></button>
               <button onClick={() => setShowMembers(v => !v)} title="Members" style={{ position: 'relative', background: showMembers ? 'var(--surface-hover)' : 'none', border: 'none', color: showMembers ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', padding: '4px 6px', borderRadius: 4, display: 'flex', alignItems: 'center', opacity: 0.85 }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -684,7 +683,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     {showMembers && (
       <div className="member-panel-desktop">
         <MemberPanel
-          channelId={channel.id}
+          orgId={orgId}
           onOnlineCountChange={setOnlineCount}
         />
       </div>

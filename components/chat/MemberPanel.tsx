@@ -11,7 +11,7 @@ interface Member {
 }
 
 interface Props {
-  channelId: string;
+  orgId: string;
   onOnlineCountChange?: (count: number) => void;
 }
 
@@ -20,27 +20,34 @@ function isOnline(lastSeen: string | null): boolean {
   return Date.now() - new Date(lastSeen).getTime() < 10 * 60 * 1000; // 10 min
 }
 
-export default function MemberPanel({ channelId, onOnlineCountChange }: Props) {
+export default function MemberPanel({ orgId, onOnlineCountChange }: Props) {
   const [members, setMembers] = useState<Member[]>([]);
   const supabase = createClient();
 
   useEffect(() => {
     async function load() {
-      const { data: memberships } = await supabase
-        .from('portal_channel_members')
-        .select('user_id, last_seen_at')
-        .eq('channel_id', channelId);
-      if (!memberships?.length) return;
-
-      const userIds = memberships.map(m => m.user_id);
+      // Query all org members + their last_seen from portal_channel_members (most recent across any channel)
       const { data: users } = await supabase
         .from('portal_users')
         .select('id, name, role')
-        .in('id', userIds);
-      if (!users) return;
+        .eq('org_id', orgId);
+      if (!users?.length) return;
+
+      // Get most recent last_seen_at per user across all channels
+      const userIds = users.map(u => u.id);
+      const { data: seen } = await supabase
+        .from('portal_channel_members')
+        .select('user_id, last_seen_at')
+        .in('user_id', userIds)
+        .order('last_seen_at', { ascending: false });
 
       const lastSeenMap: Record<string, string | null> = {};
-      for (const m of memberships) lastSeenMap[m.user_id] = m.last_seen_at;
+      for (const row of seen ?? []) {
+        // Keep the most recent seen time per user
+        if (!lastSeenMap[row.user_id] || (row.last_seen_at && row.last_seen_at > (lastSeenMap[row.user_id] ?? ''))) {
+          lastSeenMap[row.user_id] = row.last_seen_at;
+        }
+      }
 
       const result = users.map(u => ({ ...u, last_seen_at: lastSeenMap[u.id] ?? null }));
       setMembers(result);
@@ -49,7 +56,7 @@ export default function MemberPanel({ channelId, onOnlineCountChange }: Props) {
       onOnlineCountChange?.(onlineCount);
     }
     load();
-  }, [channelId]);
+  }, [orgId]);
 
   const online = members.filter(m => isOnline(m.last_seen_at));
   const offline = members.filter(m => !isOnline(m.last_seen_at));
