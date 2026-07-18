@@ -64,6 +64,9 @@ html, body {
     max-width: 260px;
     transform: translateX(-100%);
     box-shadow: 4px 0 24px rgba(0,0,0,0.6);
+    /* push sidebar content up by the same amount app-shell pads main-content,
+       so sidebar-footer border-top aligns with input-area border-top */
+    padding-bottom: var(--mob-btm, 8px);
   }
   .sidebar.open {
     transform: translateX(0);
@@ -170,7 +173,7 @@ html, body {
   display: flex;
   align-items: center;
   width: 100%;
-  padding-bottom: max(10px, env(safe-area-inset-bottom)); /* iPhone notch/home bar */
+  padding-bottom: 10px; /* safe-area handled at app-shell level */
 }
 @media (min-width: 768px) {
   .input-area { padding: 10px 20px; }
@@ -183,7 +186,7 @@ html, body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 24px;
-  padding: 10px 14px;
+  padding: 8px 14px; /* reduced from 10px so input-row (40px) fits inside 61px bar without inflating it */
   flex: 1;
   width: 100%;
   min-width: 0;
