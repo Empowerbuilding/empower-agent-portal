@@ -487,8 +487,8 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                 </button>
               );
             })}
-          {/* M avatar pinned to bottom of group rail — paddingBottom matches footer icon center */}
-            <div style={{ marginTop: 'auto', paddingBottom: 15, paddingTop: 4, display: 'flex', justifyContent: 'center', width: '100%' }}>
+          {/* M avatar pinned to bottom of group rail */}
+            <div style={{ marginTop: 'auto', paddingBottom: 8, paddingTop: 4 }}>
               <div style={{
                 width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
                 color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -625,16 +625,16 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
           ))}
         </div>
 
-        <div className="sidebar-footer" style={{ justifyContent: 'center', gap: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Link href="/" onClick={onClose} title="Switch workspace" style={{ color: 'var(--muted)', padding: '6px', textDecoration: 'none', display: 'flex', alignItems: 'center', borderRadius: '6px' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <div className="sidebar-footer">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+            <Link href="/" onClick={onClose} title="Switch workspace" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             </Link>
-            <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '6px', textDecoration: 'none', display: 'flex', alignItems: 'center', borderRadius: '6px' }}><IconClock size={16} /></Link>
+            <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={15} /></Link>
             {org.crm_supabase_url && (
-              <Link href={`/${orgSlug}/crm`} onClick={onClose} title="CRM" style={{ color: pathname.startsWith(`/${orgSlug}/crm`) ? 'var(--accent)' : 'var(--muted)', padding: '6px', textDecoration: 'none', display: 'flex', alignItems: 'center', borderRadius: '6px' }}><IconDatabase size={16} /></Link>
+              <Link href={`/${orgSlug}/crm`} onClick={onClose} title="CRM" style={{ color: pathname.startsWith(`/${orgSlug}/crm`) ? 'var(--accent)' : 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconDatabase size={15} /></Link>
             )}
-            <Link href={`/${orgSlug}/settings`} onClick={onClose} title="Settings" style={{ color: 'var(--muted)', padding: '6px', textDecoration: 'none', display: 'flex', alignItems: 'center', borderRadius: '6px' }}><IconGear size={16} /></Link>
+            <Link href={`/${orgSlug}/settings`} onClick={onClose} title="Settings" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGear size={15} /></Link>
           </div>
         </div>{/* end sidebar-footer */}
         </div>{/* end right panel */}
