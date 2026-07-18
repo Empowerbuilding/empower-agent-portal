@@ -97,12 +97,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
 
-  // Clear typing timer on unmount
+  // Clear typing timer and stop mic on unmount / channel switch
   useEffect(() => {
     return () => {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      // Fix Issue 4: stop recognition when component unmounts or channel changes
+      voiceActiveRef.current = false;
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
     };
-  }, []);
+  }, [channel.id]);
 
   const isInitialLoad = useRef(true);
   useEffect(() => {
@@ -404,14 +408,23 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     setStagedFiles(prev => { prev.forEach(f => URL.revokeObjectURL(f.previewUrl)); return []; });
   }
 
+  // Fix Issue 1+2: helper to fully stop the mic and reset all voice state
+  function stopVoice() {
+    voiceActiveRef.current = false;
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    voiceBaseRef.current = '';
+    voiceLastSetRef.current = '';
+    voiceSessionFinalsRef.current = '';
+    setListening(false);
+  }
+
   function toggleVoice() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) { alert('Voice input is not supported in this browser.'); return; }
 
     if (listening) {
-      voiceActiveRef.current = false;
-      recognitionRef.current?.stop();
-      setListening(false);
+      stopVoice();
       return;
     }
 
@@ -422,6 +435,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     setListening(true);
 
     function startRec() {
+      // Fix Issue 3: bail cleanly if voice was deactivated during the 100ms gap
+      if (!voiceActiveRef.current) return;
+
       const r = new SR();
       r.lang = 'en-US';
       r.interimResults = true;
@@ -454,19 +470,24 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           // Commit this phrase into base, then restart for next phrase
           voiceBaseRef.current = voiceLastSetRef.current;
           voiceSessionFinalsRef.current = '';
-          setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
+          setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 150);
         } else {
           setListening(false);
         }
       };
 
       r.onerror = (e: any) => {
+        // aborted = we called stop() ourselves, no-speech = silence timeout — both are fine
         if (e.error === 'no-speech' || e.error === 'aborted') return;
-        voiceActiveRef.current = false;
-        setListening(false);
+        stopVoice();
       };
 
-      r.start();
+      try {
+        r.start();
+      } catch {
+        // Fix Issue 3: r.start() can throw if browser not ready — back off and retry once
+        setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 300);
+      }
     }
 
     startRec();
@@ -483,6 +504,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   async function sendMessage() {
     const content = input.trim();
     if (!content && !stagedFiles.length || sending) return;
+    // Fix Issue 1+2: stop mic before sending so it doesn't stay zombie-alive
+    // and so voiceBaseRef doesn't carry old text into the next recording session
+    if (listening) stopVoice();
     setSending(true);
     localStorage.removeItem(draftKey);
     setInput('');
