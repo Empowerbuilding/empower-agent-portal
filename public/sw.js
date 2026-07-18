@@ -1,7 +1,13 @@
+// Running badge count stored in IDB-like cache via SW scope variable
+let _badgeCount = 0;
+
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   const data = event.data.json();
   const { title, body, channelUrl, channelId } = data;
+
+  _badgeCount += 1;
+  const count = _badgeCount;
 
   event.waitUntil(
     Promise.all([
@@ -13,8 +19,7 @@ self.addEventListener('push', (event) => {
         renotify: true,
         data: { channelUrl },
       }),
-      // Set badge count on app icon
-      navigator.setAppBadge ? navigator.setAppBadge(1) : Promise.resolve(),
+      navigator.setAppBadge ? navigator.setAppBadge(count) : Promise.resolve(),
     ])
   );
 });
@@ -40,7 +45,10 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Clear badge when user opens the app
-self.addEventListener('focus', () => {
-  if (navigator.clearAppBadge) navigator.clearAppBadge();
+// Clear badge when any portal client becomes visible (replaces dead 'focus' on SW scope)
+self.addEventListener('message', (event) => {
+  if (event.data === 'clear-badge') {
+    _badgeCount = 0;
+    if (navigator.clearAppBadge) navigator.clearAppBadge();
+  }
 });

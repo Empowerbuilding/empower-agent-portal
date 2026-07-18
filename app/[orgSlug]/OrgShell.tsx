@@ -52,8 +52,14 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
   }, []);
 
   // Clear app icon badge when user is in the portal
+  // Also tell the service worker to reset its running badge count
   useEffect(() => {
     if ('clearAppBadge' in navigator) (navigator as any).clearAppBadge();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.active?.postMessage('clear-badge');
+      }).catch(() => {});
+    }
   }, [pathname]);
 
   // Find active channel name for mobile header

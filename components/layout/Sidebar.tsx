@@ -237,15 +237,18 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
   }, [currentUser.id]);
 
   // Seed initial unread state from DB — catches messages that arrived before page load
+  // Bug 4 fix: limit to (channels * 2) so this doesn't do a full table scan
   useEffect(() => {
     const activeChannelIds = initialChannels.map(c => c.id);
     if (activeChannelIds.length === 0) return;
+    const cap = Math.max(activeChannelIds.length * 2, 50);
     supabase
       .from('portal_messages')
       .select('channel_id, created_at')
       .in('channel_id', activeChannelIds)
       .neq('sender_type', 'user')
       .order('created_at', { ascending: false })
+      .limit(cap)
       .then(({ data }) => {
         if (!data) return;
         const latest: Record<string, string> = {};
@@ -291,6 +294,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
   }, [pathname, orgSlug]);
 
   // Subscribe to new messages to track unread
+  // Bug 1 fix: if message arrives for the active channel, auto-clear the dot immediately
   useEffect(() => {
     const activeChannelIds = channels.map(c => c.id);
     if (activeChannelIds.length === 0) return;
@@ -298,13 +302,45 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
       .channel('sidebar_unread')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages' }, (payload) => {
         const msg = payload.new as { channel_id: string; created_at: string; sender_type: string };
-        if (msg.sender_type === 'user') return; // don't flag own messages as unread
+        if (msg.sender_type === 'user') return;
         if (!activeChannelIds.includes(msg.channel_id)) return;
         setLatestMsg(prev => ({ ...prev, [msg.channel_id]: msg.created_at }));
+        // If this message is for the channel we're currently viewing, mark it seen immediately
+        // so no false unread dot appears on the active channel
+        const parts = window.location.pathname.split('/');
+        const activeCh = parts[parts.length - 1];
+        if (msg.channel_id === activeCh) {
+          setLastSeen(prev => ({ ...prev, [msg.channel_id]: msg.created_at }));
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(sub); };
   }, [channels]);
+
+  // Bug 2 fix: cross-device seen sync via realtime on portal_channel_members
+  // When you read on phone → DB updates → desktop picks it up immediately
+  useEffect(() => {
+    if (!currentUser.id) return;
+    const sub = supabase
+      .channel(`seen_sync:${currentUser.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'portal_channel_members',
+        filter: `user_id=eq.${currentUser.id}`,
+      }, (payload) => {
+        const row = payload.new as { channel_id: string; last_seen_at: string };
+        if (row.channel_id && row.last_seen_at) {
+          setLastSeen(prev => {
+            // Only update if the incoming value is newer (don't regress)
+            if (prev[row.channel_id] && prev[row.channel_id] >= row.last_seen_at) return prev;
+            return { ...prev, [row.channel_id]: row.last_seen_at };
+          });
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(sub); };
+  }, [currentUser.id]);
 
   function hasUnread(chId: string) {
     const latest = latestMsg[chId];
