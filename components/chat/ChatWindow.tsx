@@ -235,6 +235,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const data = await res.json();
       console.log('[reset-context] response:', res.status, data);
       if (data.success) {
+        // Clear typing indicator immediately
+        if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+        setAgentTyping(false);
         // Insert a local system message so user sees confirmation
         setMessages(prev => [...prev, {
           id: `reset-${Date.now()}`,
