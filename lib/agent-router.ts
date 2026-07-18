@@ -203,20 +203,29 @@ export async function agentResetContext(agentId: string, channelId: string): Pro
   const agent = await getAgent(agentId);
   if (!agent) return false;
 
-  // Local agent (Tony) — edit sessions.json directly on the gateway machine
+  // Local agent (Tony) — can't reach local machine from portal server.
+  // Instead: post a /reset command to the portal channel so the local gateway handles it,
+  // and clear the context stats from Supabase so the badge resets immediately.
   if (!agent.server_host) {
     try {
-      const fs = await import('fs/promises');
-      const os = await import('os');
-      const path = await import('path');
-      const sessionFile = path.join(os.homedir(), '.openclaw', 'agents', 'main', 'sessions', 'sessions.json');
-      const raw = await fs.readFile(sessionFile, 'utf8');
-      const d = JSON.parse(raw);
-      const prefix = `agent:main:portal:channel:${channelId}`;
-      for (const k of Object.keys(d)) {
-        if (k === prefix || k.startsWith(prefix + ':')) delete d[k];
-      }
-      await fs.writeFile(sessionFile, JSON.stringify(d, null, 2));
+      const { createClient } = await import('@supabase/supabase-js');
+      const portalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const portalKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+      const sb = createClient(portalUrl, portalKey);
+
+      // Clear context stats so badge shows 0% immediately
+      await sb.from('portal_context_stats').delete().eq('channel_id', channelId);
+
+      // Post /reset as a system message to the channel so local gateway resets the session
+      await sb.from('portal_messages').insert({
+        channel_id: channelId,
+        org_id: agent.org_id,
+        sender_type: 'user',
+        sender_name: 'System',
+        content: '/reset',
+        processed: false,
+      });
+
       return true;
     } catch { return false; }
   }
