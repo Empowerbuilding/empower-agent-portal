@@ -576,10 +576,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
           }}>
             {currentUser.name.charAt(0)}
           </div>
-          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentUser.name}</div>
-            <div style={{ fontSize: '11px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{currentUser.role}</div>
-          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
             <Link href="/" onClick={onClose} title="Switch workspace" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
