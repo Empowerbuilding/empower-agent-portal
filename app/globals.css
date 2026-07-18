@@ -587,5 +587,7 @@ html, body {
   .member-panel-desktop {
     display: flex;
     flex-direction: column;
+    height: 100%; /* fill full height so no bleed-through */
+    align-self: stretch;
   }
 }

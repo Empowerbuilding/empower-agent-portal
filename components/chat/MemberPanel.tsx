@@ -65,12 +65,14 @@ export default function MemberPanel({ orgId, onOnlineCountChange }: Props) {
     <div style={{
       width: 240,
       flexShrink: 0,
-      background: 'var(--sidebar-bg)',
-      borderLeft: '1px solid var(--border)',
+      background: '#1a1b1e', /* slightly darker than sidebar for clear contrast */
+      borderLeft: '2px solid var(--border)',
       display: 'flex',
       flexDirection: 'column',
       overflowY: 'auto',
       padding: '16px 0',
+      minHeight: '100%',
+      flex: 1,
     }}>
       {online.length > 0 && (
         <div style={{ marginBottom: 16 }}>
