@@ -338,7 +338,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       );
     }
     return () => setToolbar(null);
-  }, [contextPct, resetting, deleteMode, allSelected, orgId]);
+  }, [contextPct, resetting, deleteMode, allSelected, orgId, onlineCount]);
 
   function handleSelect(id: string, checked: boolean) {
     setSelected(prev => { const n = new Set(prev); checked ? n.add(id) : n.delete(id); return n; });
