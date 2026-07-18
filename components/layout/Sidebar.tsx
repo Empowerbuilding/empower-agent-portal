@@ -487,6 +487,16 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                 </button>
               );
             })}
+          {/* M avatar pinned to bottom of group rail */}
+            <div style={{ marginTop: 'auto', paddingBottom: 8, paddingTop: 4 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '13px', fontWeight: 700,
+              }}>
+                {currentUser.name.charAt(0)}
+              </div>
+            </div>
           </div>
         )}
 
@@ -616,14 +626,6 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
         </div>
 
         <div className="sidebar-footer">
-          <div style={{
-            width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
-            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '13px', fontWeight: 700, flexShrink: 0,
-          }}>
-            {currentUser.name.charAt(0)}
-          </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
             <Link href="/" onClick={onClose} title="Switch workspace" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
