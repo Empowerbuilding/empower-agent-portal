@@ -401,6 +401,8 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
           }}>
             {groups.map(g => {
               const isActive = g.id === activeGroupId;
+              const groupChannels = channels.filter(ch => ch.agents?.group_id === g.id);
+              const groupHasUnread = !isActive && groupChannels.some(ch => hasUnread(ch.id));
               return (
                 <button
                   key={g.id}
@@ -425,6 +427,15 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                 >
                   {GROUP_ICONS[g.slug] ?? (
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{g.name.charAt(0)}</span>
+                  )}
+                  {/* Unread dot */}
+                  {groupHasUnread && (
+                    <span style={{
+                      position: 'absolute', top: 1, right: 1,
+                      width: 9, height: 9, borderRadius: '50%',
+                      background: 'var(--accent)',
+                      border: '1.5px solid var(--sidebar-bg)',
+                    }} />
                   )}
                   {/* Active indicator pill */}
                   {isActive && (
