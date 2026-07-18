@@ -577,6 +577,21 @@ export default function SettingsPage() {
         </section>
       )}
     </div>
+
+      {/* Sign out */}
+      <section style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: '#c0c4cc', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Account</h2>
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            router.push('/login');
+          }}
+          style={{ padding: '8px 16px', background: 'none', border: '1px solid #da3633', borderRadius: '6px', color: '#da3633', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+        >
+          Sign Out
+        </button>
+      </section>
+    </div>
     </div>
   );
 }

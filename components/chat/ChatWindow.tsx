@@ -9,6 +9,7 @@ import MessageBubble from './MessageBubble';
 import SearchModal from './SearchModal';
 import ChatOverflowMenu from './ChatOverflowMenu';
 import PresenceButton from '@/components/presence/PresenceButton';
+import MemberPanel from './MemberPanel';
 import { playSend, playReceive, unlockAudio } from '@/lib/sounds';
 
 interface Props {
@@ -40,6 +41,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [stagedFiles, setStagedFiles] = useState<{ file: File; previewUrl: string }[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [memberCount, setMemberCount] = useState<number | null>(null);
+  const [showMembers, setShowMembers] = useState(false);
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -476,6 +478,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   }
 
   return (
+    <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
     <div
       style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}
       onDragOver={handleDragOver}
@@ -529,6 +532,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
               <PresenceButton orgId={orgId} openDirection="down" align="right" size={15} />
               <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={17} /></button>
+              <button onClick={() => setShowMembers(v => !v)} title="Members" style={{ background: showMembers ? 'var(--surface-hover)' : 'none', border: 'none', color: showMembers ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', padding: '4px 6px', borderRadius: 4, display: 'flex', alignItems: 'center', opacity: 0.85 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </button>
               <ChatOverflowMenu
                 contextPct={contextPct}
                 resetting={resetting}
@@ -642,6 +648,17 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           </div>
         </div>
       )}
+    </div>
+    {/* Right member panel — desktop only */}
+    {showMembers && (
+      <div className="member-panel-desktop">
+        <MemberPanel
+          channelId={channel.id}
+          agentName={channel.id.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+          agentStatus="running"
+        />
+      </div>
+    )}
     </div>
   );
 }
