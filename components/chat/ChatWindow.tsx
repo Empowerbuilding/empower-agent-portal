@@ -142,6 +142,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       setMessages(data as PortalMessage[]);
       const lastMsg = data[data.length - 1];
       const isRecentUserMsg = lastMsg && lastMsg.sender_type === 'user' &&
+        lastMsg.content !== '/reset' &&
         (Date.now() - new Date(lastMsg.created_at).getTime()) < 5 * 60 * 1000;
       if (isRecentUserMsg) {
         setAgentTyping(true);
@@ -179,7 +180,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         (payload) => {
           const msg = payload.new as PortalMessage;
           const msgIsRecent = (Date.now() - new Date(msg.created_at).getTime()) < 5 * 60 * 1000;
-          if (msg.sender_type === 'user' && msgIsRecent) {
+          if (msg.sender_type === 'user' && msgIsRecent && msg.content !== '/reset') {
             setAgentTyping(true);
             if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
             typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
