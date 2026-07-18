@@ -300,7 +300,7 @@ export default function ContactDetailClient({
                 )}
               </div>
             )}
-            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               {editMode ? (
                 <>
                   <button onClick={() => setEditMode(false)} style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
