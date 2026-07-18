@@ -508,20 +508,18 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   async function sendMessage() {
     const content = input.trim();
     if (!content && !stagedFiles.length || sending) return;
-    // Fix Issue 1+2: stop mic before sending so it doesn't stay zombie-alive
-    // and so voiceBaseRef doesn't carry old text into the next recording session
+    // Stop mic before sending — must happen before clearing input so voice onresult can't re-populate it
     if (listening) stopVoice();
     setSending(true);
     localStorage.removeItem(draftKey);
     setInput('');
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    // Explicitly clear textarea DOM value too (mobile browsers can lag on controlled input)
+    if (textareaRef.current) {
+      textareaRef.current.value = '';
+      textareaRef.current.style.height = 'auto';
+    }
     // Update last_seen on send so user shows as online
     fetch('/api/mark-seen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channelId: channel.id }) }).catch(() => {});
-    // Stop microphone if still listening
-    if (listening) {
-      recognitionRef.current?.stop();
-      setListening(false);
-    }
 
     let attachments: { url: string; name: string; type: string }[] = [];
     if (stagedFiles.length) {
