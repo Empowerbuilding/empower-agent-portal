@@ -576,8 +576,6 @@ export default function SettingsPage() {
           </div>
         </section>
       )}
-    </div>
-
       {/* Sign out */}
       <section style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
         <h2 style={{ fontSize: 13, fontWeight: 700, color: '#c0c4cc', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Account</h2>
