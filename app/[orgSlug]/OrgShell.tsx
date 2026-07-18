@@ -6,7 +6,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
 import { MobileToolbarProvider, useMobileToolbar } from '@/context/MobileToolbar';
-import PresenceButton from '@/components/presence/PresenceButton';
+// PresenceButton removed — replaced by Members panel
 import { registerServiceWorker } from '@/lib/push';
 
 interface Props {
@@ -102,18 +102,28 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
             </svg>
           </button>
           <div style={{ flex: 1, minWidth: 0, paddingLeft: '4px' }}>
-            <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activeChannel ? `# ${activeChannel.display_name}` : org.name}
-            </div>
-            {mobileMemberCount !== null && activeChannel && (
-              <div style={{ fontSize: '11px', color: 'var(--muted)', lineHeight: 1, marginTop: '1px' }}>
-                {mobileMemberCount} member{mobileMemberCount !== 1 ? 's' : ''}
-              </div>
+            {activeChannel ? (() => {
+              const KNOWN_AGENTS = ['vanessa','atlas','relay','ceo','esry','finley','claw','blueprint','codie','juanito','frank'];
+              const stripped = activeChannel.id.replace(/^barnhaus-/,'').replace(/^its-training-/,'');
+              const parts = stripped.split('-');
+              const agentIdx = parts.findIndex((p: string) => KNOWN_AGENTS.includes(p.toLowerCase()));
+              const agent = agentIdx >= 0 ? parts[agentIdx] : parts[0];
+              const rest = agentIdx >= 0 ? parts.slice(agentIdx + 1) : parts.slice(1);
+              const agentLabel = agent.charAt(0).toUpperCase() + agent.slice(1);
+              const channelLabel = rest.map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ') || 'General';
+              return (
+                <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: 12 }}>{agentLabel}</span>
+                  <span style={{ color: 'var(--muted)', margin: '0 4px', fontSize: 12 }}>/</span>
+                  # {channelLabel}
+                </div>
+              );
+            })() : (
+              <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>{org.name}</div>
             )}
           </div>
-          {/* Channel-specific action buttons injected by child components (includes presence button) */}
+          {/* Channel-specific action buttons injected by child components */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, paddingRight: '2px' }}>
-            {activeChannelId && <PresenceButton orgId={org.id} openDirection="down" align="right" size={15} />}
             {toolbar}
           </div>
         </div>

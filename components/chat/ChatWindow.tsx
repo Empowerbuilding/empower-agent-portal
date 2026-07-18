@@ -70,26 +70,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     }).catch(() => {});
   }, [channel.id]);
 
-  // Fetch online count on mount so badge shows before panel is opened
+  // Fetch online count on mount using last_active_at (same source as PresenceButton, updated every 30s)
   useEffect(() => {
-    const TEN_MIN = 10 * 60 * 1000;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    // Get all org members
-    fetch(`${SUPABASE_URL}/rest/v1/portal_users?org_id=eq.${orgId}&select=id`, {
+    const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    fetch(`${SUPABASE_URL}/rest/v1/portal_users?org_id=eq.${orgId}&last_active_at=gte.${since}&select=id`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` },
-    }).then(r => r.json()).then(async (users: any[]) => {
-      if (!Array.isArray(users) || !users.length) return;
-      const ids = users.map((u: any) => u.id).join(',');
-      const since = new Date(Date.now() - TEN_MIN).toISOString();
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/portal_channel_members?user_id=in.(${ids})&last_seen_at=gte.${since}&select=user_id`,
-        { headers: { apikey: key, Authorization: `Bearer ${key}` } }
-      );
-      const rows = await res.json();
-      if (Array.isArray(rows)) {
-        const unique = new Set(rows.map((r: any) => r.user_id));
-        setOnlineCount(unique.size);
-      }
+    }).then(r => r.json()).then((rows: any[]) => {
+      if (Array.isArray(rows)) setOnlineCount(rows.length);
     }).catch(() => {});
   }, [orgId]);
   const [agentTyping, setAgentTyping] = useState(false);
