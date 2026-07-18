@@ -320,7 +320,7 @@ html, body {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  height: 61px;
+  height: 73px; /* matches actual input-area rendered height: send-btn(34) + row-pad(8×2) + row-border(2) + area-pad(10×2) + area-border(1) = 73px */
   box-sizing: border-box;
   overflow: hidden;
 }
