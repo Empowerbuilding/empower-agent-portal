@@ -31,15 +31,29 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
   // Dynamic bottom padding — keeps content above Android gesture nav bar (28px),
   // but drops to 0 when keyboard is open so the input bar doesn't jump.
   useEffect(() => {
-    function updateBottomPad() {
+    function updateViewport() {
       const vv = window.visualViewport;
       if (!vv) return;
-      const keyboardOpen = (window.innerHeight - vv.height) > 150;
+      const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
+      const keyboardOpen = keyboardHeight > 150;
+      // Shrink app-shell to visualViewport height so input bar stays above keyboard
+      const shell = document.querySelector('.app-shell') as HTMLElement | null;
+      if (shell) {
+        shell.style.height = `${vv.height}px`;
+        shell.style.position = 'fixed';
+        shell.style.top = `${vv.offsetTop}px`;
+        shell.style.left = '0';
+        shell.style.right = '0';
+      }
       document.documentElement.style.setProperty('--mob-btm', keyboardOpen ? '0px' : '8px');
     }
-    updateBottomPad();
-    window.visualViewport?.addEventListener('resize', updateBottomPad);
-    return () => window.visualViewport?.removeEventListener('resize', updateBottomPad);
+    updateViewport();
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('scroll', updateViewport);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('scroll', updateViewport);
+    };
   }, []);
 
   // Presence heartbeat — ping every 30s while the portal is open so other
