@@ -717,8 +717,30 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     {/* Mobile members bottom sheet */}
     {showMembers && (
       <div className="member-panel-mobile" onClick={() => setShowMembers(false)}>
-        <div onClick={e => e.stopPropagation()} style={{ background: '#1a1b1e', borderRadius: '16px 16px 0 0', padding: '12px 0 32px', maxHeight: '60vh', overflowY: 'auto' }}>
-          <div style={{ width: 36, height: 4, background: 'var(--border)', borderRadius: 2, margin: '0 auto 16px' }} />
+        <div
+          onClick={e => e.stopPropagation()}
+          onTouchStart={e => { (e.currentTarget as any)._touchY = e.touches[0].clientY; }}
+          onTouchMove={e => {
+            const el = e.currentTarget as any;
+            const dy = e.touches[0].clientY - el._touchY;
+            if (dy > 0) {
+              el.style.transform = `translateY(${dy}px)`;
+              el.style.transition = 'none';
+            }
+          }}
+          onTouchEnd={e => {
+            const el = e.currentTarget as any;
+            const dy = e.changedTouches[0].clientY - el._touchY;
+            if (dy > 80) {
+              setShowMembers(false);
+            } else {
+              el.style.transform = '';
+              el.style.transition = 'transform 0.25s ease';
+            }
+          }}
+          style={{ background: '#1a1b1e', borderRadius: '16px 16px 0 0', padding: '12px 0 32px', maxHeight: '60vh', overflowY: 'auto', transition: 'transform 0.25s ease' }}
+        >
+          <div style={{ width: 36, height: 4, background: 'var(--border)', borderRadius: 2, margin: '0 auto 16px', cursor: 'grab' }} />
           <MemberPanel orgId={orgId} onOnlineCountChange={setOnlineCount} />
         </div>
       </div>
