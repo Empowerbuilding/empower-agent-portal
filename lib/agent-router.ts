@@ -148,6 +148,29 @@ export async function agentListFiles(agentId: string): Promise<{ name: string; p
 export async function agentGetContextStats(agentId: string): Promise<Record<string, ContextStat>> {
   const agent = await getAgent(agentId);
   if (!agent) return {};
+
+  // Local agent (Tony/Claw) — read sessions.json directly from filesystem
+  if (!agent.server_host) {
+    try {
+      const fs = await import('fs/promises');
+      const os = await import('os');
+      const path = await import('path');
+      const sessionFile = path.join(os.homedir(), '.openclaw', 'agents', 'main', 'sessions', 'sessions.json');
+      const raw = await fs.readFile(sessionFile, 'utf8');
+      const d = JSON.parse(raw);
+      const out: Record<string, ContextStat> = {};
+      for (const [k, v] of Object.entries(d as any)) {
+        if (k.includes('portal:channel:')) {
+          const channelId = k.split('portal:channel:').pop()!;
+          const tokens = (v as any).totalTokens ?? 0;
+          const ctx = (v as any).contextTokens ?? 1;
+          out[channelId] = { tokens, ctx, pct: Math.round(tokens / ctx * 1000) / 10 };
+        }
+      }
+      return out;
+    } catch { return {}; }
+  }
+
   const config = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
 
   const command = `docker exec ${agent.container_name} python3 -c "
