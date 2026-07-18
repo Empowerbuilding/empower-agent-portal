@@ -451,7 +451,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     setInput(e.target.value);
     const el = e.target;
     el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+    el.style.height = Math.min(el.scrollHeight, 200) + 'px';
   }
 
   async function sendMessage() {
@@ -461,6 +461,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     localStorage.removeItem(draftKey);
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    // Stop microphone if still listening
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+    }
 
     let attachments: { url: string; name: string; type: string }[] = [];
     if (stagedFiles.length) {
