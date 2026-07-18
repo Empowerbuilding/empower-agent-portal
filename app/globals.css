@@ -7,7 +7,6 @@
 :root {
   /* Darkened theme — deeper blacks, less grey */
   --safe-top: 0px; /* updated by JS in OrgShell for Android PWA edge-to-edge */
-  --bar-h: 61px; /* single source of truth for sidebar-footer + input-area height */
   --bg: #23272a;
   --sidebar-bg: #1e1f22;
   --surface: #2b2d31;
@@ -101,12 +100,6 @@ html, body {
   .app-shell {
     padding-bottom: var(--mob-btm, 8px);
   }
-  /* sidebar is position:fixed bottom:0, so it extends past app-shell padding-bottom.
-     Add equivalent bottom padding to sidebar-footer so its content aligns with input-area. */
-  .sidebar-footer {
-    height: calc(var(--bar-h) + var(--mob-btm, 8px));
-    padding-bottom: calc(8px + var(--mob-btm, 8px));
-  }
   .mobile-header {
     display: flex;
     align-items: center;
@@ -172,7 +165,7 @@ html, body {
   background: var(--bg);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
-  min-height: var(--bar-h); /* grows with textarea, but starts at sidebar-footer height */
+  min-height: 61px; /* grows with textarea on mobile */
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -190,7 +183,7 @@ html, body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 24px;
-  padding: 8px 14px; /* 8px (not 10px) so input-row (40px) fits within 41px content space of input-area */
+  padding: 10px 14px;
   flex: 1;
   width: 100%;
   min-width: 0;
@@ -324,7 +317,7 @@ html, body {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  height: var(--bar-h);
+  height: 61px;
   box-sizing: border-box;
   overflow: hidden;
 }
