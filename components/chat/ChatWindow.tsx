@@ -21,6 +21,23 @@ interface Props {
 
 const SUPABASE_URL = 'https://xqvnpcxyyxxxydescfzw.supabase.co';
 
+// Derive agent name + short channel name from channel ID
+// e.g. "barnhaus-atlas-lead-alerts" → { agent: "Atlas", channelLabel: "Lead Alerts" }
+function parseChannelId(id: string): { agent: string; channelLabel: string } {
+  const KNOWN_AGENTS = ['vanessa', 'atlas', 'relay', 'ceo', 'esry', 'finley', 'claw', 'blueprint', 'codie', 'juanito', 'frank'];
+  // Strip known org prefixes
+  const stripped = id.replace(/^barnhaus-/, '').replace(/^its-training-/, '');
+  const parts = stripped.split('-');
+  const agentIdx = parts.findIndex(p => KNOWN_AGENTS.includes(p.toLowerCase()));
+  if (agentIdx === -1) {
+    // No known agent — treat first part as agent
+    return { agent: parts[0].charAt(0).toUpperCase() + parts[0].slice(1), channelLabel: parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ') || 'General' };
+  }
+  const agent = parts[agentIdx].charAt(0).toUpperCase() + parts[agentIdx].slice(1);
+  const rest = parts.slice(agentIdx + 1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+  return { agent, channelLabel: rest || 'General' };
+}
+
 export default function ChatWindow({ channel, initialMessages, currentUser, orgId }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
   const draftKey = `portal-draft-${channel.id}`;
@@ -525,7 +542,15 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}># {channel.display_name}</span>
+              {(() => { const { agent, channelLabel } = parseChannelId(channel.id); return (
+                <>
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>
+                    <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: 13 }}>{agent}</span>
+                    <span style={{ color: 'var(--muted)', margin: '0 5px', fontSize: 13 }}>/</span>
+                    # {channelLabel}
+                  </span>
+                </>
+              ); })()}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
               <PresenceButton orgId={orgId} openDirection="down" align="right" size={15} />

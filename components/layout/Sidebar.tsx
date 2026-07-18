@@ -424,7 +424,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                   }}
                 >
                   {GROUP_ICONS[g.slug] ?? (
-                    <span style={{ fontSize: 13, fontWeight: 700 }}>{g.name.charAt(0)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{g.name.charAt(0)}</span>
                   )}
                   {/* Active indicator pill */}
                   {isActive && (
