@@ -221,6 +221,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     return () => clearInterval(interval);
   }, [channel.name]);
 
+  // Heartbeat: update last_seen every 3 min while on channel so user stays "online"
+  useEffect(() => {
+    const ping = () => fetch('/api/mark-seen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channelId: channel.id }) }).catch(() => {});
+    ping(); // mark seen immediately on mount
+    const hb = setInterval(ping, 3 * 60 * 1000);
+    return () => clearInterval(hb);
+  }, [channel.id]);
+
   async function handleResetContext() {
     setResetting(true);
     try {
@@ -484,6 +492,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     localStorage.removeItem(draftKey);
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    // Update last_seen on send so user shows as online
+    fetch('/api/mark-seen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channelId: channel.id }) }).catch(() => {});
     // Stop microphone if still listening
     if (listening) {
       recognitionRef.current?.stop();
