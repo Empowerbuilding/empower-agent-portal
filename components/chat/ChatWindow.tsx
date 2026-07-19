@@ -239,6 +239,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         // Clear typing indicator immediately
         if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
         setAgentTyping(false);
+        // Reset context pct to 0 immediately, then re-fetch to confirm
+        setContextPct(0);
+        setTimeout(() => {
+          fetch('/api/context-stats').then(r => r.ok ? r.json() : null).then(data => {
+            if (data && data[channel.id] !== undefined) setContextPct(data[channel.id].pct);
+            else setContextPct(0);
+          }).catch(() => {});
+        }, 1000);
         // Insert a local system message so user sees confirmation
         setMessages(prev => [...prev, {
           id: `reset-${Date.now()}`,

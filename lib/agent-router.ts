@@ -213,8 +213,12 @@ export async function agentResetContext(agentId: string, channelId: string): Pro
       const portalKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
       const sb = createClient(portalUrl, portalKey);
 
-      // Clear context stats so badge shows 0% immediately
+      // Write 0% to context stats immediately so badge resets (delete + reinsert at 0)
       await sb.from('portal_context_stats').delete().eq('channel_id', channelId);
+      await sb.from('portal_context_stats').upsert(
+        { channel_id: channelId, tokens: 0, ctx: 1000000, pct: 0 },
+        { onConflict: 'channel_id' }
+      );
 
       // Post /reset as a system message to the channel so local gateway resets the session
       await sb.from('portal_messages').insert({
