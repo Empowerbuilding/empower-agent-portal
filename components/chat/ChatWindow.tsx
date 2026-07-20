@@ -567,9 +567,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       processed: false,
     });
     setSending(false);
-    setAgentTyping(true);
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
+    if (shouldShowTyping(channel.id, content)) {
+      setAgentTyping(true);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
+    }
   }
 
   return (
