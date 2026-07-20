@@ -7,10 +7,10 @@ import { createClient } from '@supabase/supabase-js';
 // ── Stage definitions matching original CRM ──────────────────────────────────
 const B2C_STAGES = [
   { key: 'qualified',   label: 'Qualified',   color: '#4c8bf0' },
-  { key: 'concept',     label: 'Concept',     color: '#06b6d4' },
-  { key: 'design',      label: 'Design',      color: '#6366f1' },
-  { key: 'engineering', label: 'Engineering', color: '#8b5cf6' },
-  { key: 'complete',    label: 'Complete',    color: '#22c55e' },
+  { key: 'design',            label: 'Design',           color: '#6366f1' },
+  { key: 'engineering',      label: 'Engineering',      color: '#8b5cf6' },
+  { key: 'builder_referral', label: 'Builder Referral', color: '#f97316' },
+  { key: 'complete',         label: 'Complete',         color: '#22c55e' },
   { key: 'lost',        label: 'Lost',        color: '#ef4444' },
 ];
 

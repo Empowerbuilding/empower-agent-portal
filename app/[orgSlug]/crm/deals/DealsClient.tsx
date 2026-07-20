@@ -17,25 +17,25 @@ const B2B_STAGES = [
 
 // Barnhaus (B2C) stages
 const B2C_STAGES = [
-  { key: 'concept',     label: 'Concept',     color: '#6366f1' },
-  { key: 'qualified',   label: 'Qualified',   color: '#4c8bf0' },
-  { key: 'proposal',    label: 'Proposal',    color: '#f59e0b' },
-  { key: 'design',      label: 'Design',      color: '#8b5cf6' },
-  { key: 'engineering', label: 'Engineering', color: '#ec4899' },
-  { key: 'active',      label: 'Active',      color: '#10b981' },
-  { key: 'complete',    label: 'Complete',    color: '#22c55e' },
-  { key: 'lost',        label: 'Lost',        color: '#ef4444' },
+  { key: 'qualified',        label: 'Qualified',        color: '#4c8bf0' },
+  { key: 'proposal',         label: 'Proposal',         color: '#f59e0b' },
+  { key: 'design',           label: 'Design',           color: '#8b5cf6' },
+  { key: 'engineering',      label: 'Engineering',      color: '#ec4899' },
+  { key: 'builder_referral', label: 'Builder Referral', color: '#f97316' },
+  { key: 'active',           label: 'Active',           color: '#10b981' },
+  { key: 'complete',         label: 'Complete',         color: '#22c55e' },
+  { key: 'lost',             label: 'Lost',             color: '#ef4444' },
 ];
 
 // B2C consumer deal types (homeowners)
-const CONSUMER_DEAL_TYPES = ['custom_design', 'concept', 'engineering', 'budget_builder'];
+const CONSUMER_DEAL_TYPES = ['custom_design', 'builder_referral', 'engineering', 'budget_builder'];
 // B2C builder/partner deal types
 const BUILDER_DEAL_TYPES = ['referral', 'marketing', 'software_fees'];
 
 const DEAL_TYPE_LABELS: Record<string, string> = {
-  custom_design:  'Custom Design',
-  concept:        'Concept',
-  engineering:    'Engineering',
+  custom_design:    'Custom Design',
+  builder_referral: 'Builder Referral',
+  engineering:      'Engineering',
   software_fees:  'Software Fees',
   referral:       'Referral',
   budget_builder: 'Budget Builder',

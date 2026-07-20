@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 const B2C_STAGES = [
-  { key: 'concept',     label: 'Concept',     color: '#6366f1' },
-  { key: 'qualified',   label: 'Qualified',   color: '#4c8bf0' },
-  { key: 'proposal',    label: 'Proposal',    color: '#f59e0b' },
-  { key: 'design',      label: 'Design',      color: '#8b5cf6' },
-  { key: 'engineering', label: 'Engineering', color: '#ec4899' },
-  { key: 'active',      label: 'Active',      color: '#10b981' },
-  { key: 'complete',    label: 'Complete',    color: '#22c55e' },
-  { key: 'lost',        label: 'Lost',        color: '#ef4444' },
+  { key: 'qualified',        label: 'Qualified',        color: '#4c8bf0' },
+  { key: 'proposal',         label: 'Proposal',         color: '#f59e0b' },
+  { key: 'design',           label: 'Design',           color: '#8b5cf6' },
+  { key: 'engineering',      label: 'Engineering',      color: '#ec4899' },
+  { key: 'builder_referral', label: 'Builder Referral', color: '#f97316' },
+  { key: 'active',           label: 'Active',           color: '#10b981' },
+  { key: 'complete',         label: 'Complete',         color: '#22c55e' },
+  { key: 'lost',             label: 'Lost',             color: '#ef4444' },
 ];
 
 const LIFECYCLE_OPTIONS = [
@@ -686,7 +686,7 @@ export default function ContactDetailClient({
               style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }} autoFocus />
             <select value={newDeal.stage} onChange={e => setNewDeal(d => ({...d, stage: e.target.value}))}
               style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }}>
-              {[['qualified','Qualified'],['concept','Concept'],['design','Design'],['engineering','Engineering']].map(([k,l]) => <option key={k} value={k}>{l}</option>)}
+              {[['qualified','Qualified'],['design','Design'],['engineering','Engineering'],['builder_referral','Builder Referral'],['complete','Complete']].map(([k,l]) => <option key={k} value={k}>{l}</option>)}
             </select>
             <select value={newDeal.deal_type} onChange={e => setNewDeal(d => ({...d, deal_type: e.target.value}))}
               style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }}>

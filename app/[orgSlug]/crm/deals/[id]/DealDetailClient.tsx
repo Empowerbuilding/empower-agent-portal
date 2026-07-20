@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 const STAGES = [
-  { key: 'concept',     label: 'Concept',     color: '#6366f1' },
-  { key: 'qualified',   label: 'Qualified',   color: '#4c8bf0' },
-  { key: 'proposal',    label: 'Proposal',    color: '#f59e0b' },
-  { key: 'design',      label: 'Design',      color: '#8b5cf6' },
-  { key: 'engineering', label: 'Engineering', color: '#ec4899' },
-  { key: 'active',      label: 'Active',      color: '#10b981' },
-  { key: 'complete',    label: 'Complete',    color: '#22c55e' },
-  { key: 'lost',        label: 'Lost',        color: '#ef4444' },
+  { key: 'qualified',        label: 'Qualified',        color: '#4c8bf0' },
+  { key: 'proposal',         label: 'Proposal',         color: '#f59e0b' },
+  { key: 'design',           label: 'Design',           color: '#8b5cf6' },
+  { key: 'engineering',      label: 'Engineering',      color: '#ec4899' },
+  { key: 'builder_referral', label: 'Builder Referral', color: '#f97316' },
+  { key: 'active',           label: 'Active',           color: '#10b981' },
+  { key: 'complete',         label: 'Complete',         color: '#22c55e' },
+  { key: 'lost',             label: 'Lost',             color: '#ef4444' },
 ];
 
 const ACTIVITY_ICONS: Record<string, string> = {
