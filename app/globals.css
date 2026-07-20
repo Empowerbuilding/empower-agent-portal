@@ -101,7 +101,7 @@ html, body {
      env(safe-area-inset-bottom) returns 0 on this device, so use a hard-coded
      fallback that covers any Android gesture nav bar height. */
   .app-shell {
-    padding-bottom: var(--mob-btm, 8px);
+    padding-bottom: max(var(--mob-btm, 8px), env(safe-area-inset-bottom, 0px));
   }
   .mobile-header {
     display: flex;
