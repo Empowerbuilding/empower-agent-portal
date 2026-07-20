@@ -97,6 +97,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
 
+  // Summon-only channels: only show typing indicator if agent is explicitly mentioned
+  const SUMMON_ONLY_CHANNELS: Record<string, RegExp> = {
+    'juanito-production': /@juanito|hey juanito/i,
+  };
+  const shouldShowTyping = (channelId: string, content: string) => {
+    const pattern = SUMMON_ONLY_CHANNELS[channelId];
+    if (pattern) return pattern.test(content);
+    return true;
+  };
+
   // Clear typing timer and stop mic on unmount / channel switch
   useEffect(() => {
     return () => {
@@ -144,7 +154,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const isRecentUserMsg = lastMsg && lastMsg.sender_type === 'user' &&
         lastMsg.content !== '/reset' &&
         (Date.now() - new Date(lastMsg.created_at).getTime()) < 5 * 60 * 1000;
-      if (isRecentUserMsg) {
+      if (isRecentUserMsg && shouldShowTyping(channel.id, lastMsg.content)) {
         setAgentTyping(true);
         if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
         typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
@@ -180,7 +190,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         (payload) => {
           const msg = payload.new as PortalMessage;
           const msgIsRecent = (Date.now() - new Date(msg.created_at).getTime()) < 5 * 60 * 1000;
-          if (msg.sender_type === 'user' && msgIsRecent && msg.content !== '/reset') {
+          if (msg.sender_type === 'user' && msgIsRecent && msg.content !== '/reset' && shouldShowTyping(channel.id, msg.content)) {
             setAgentTyping(true);
             if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
             typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
