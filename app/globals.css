@@ -107,9 +107,9 @@ html, body {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 0 16px;
-    height: 52px;
-    min-height: 52px;
+    padding: env(safe-area-inset-top, 0px) 16px 0 16px;
+    height: calc(52px + env(safe-area-inset-top, 0px));
+    min-height: calc(52px + env(safe-area-inset-top, 0px));
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
