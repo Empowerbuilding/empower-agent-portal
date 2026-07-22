@@ -724,8 +724,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                 <div style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', minWidth: 200, zIndex: 100, overflow: 'hidden' }}>
                   {[
                     { label: 'Pipeline Report',  cmd: 'generate report: pipeline' },
-                    { label: 'Daily Activity',   cmd: 'generate report: daily_activity' },
-                    { label: 'Rep Comparison',   cmd: 'generate report: rep_comparison' },
+                    { label: 'Activity Report',  cmd: 'generate report: activity' },
                     { label: 'Whale Prospects',  cmd: 'generate report: whale_prospects' },
                     { label: 'Call Summary',     cmd: 'generate report: call_summary' },
                   ].map(({ label, cmd }, idx, arr) => (
