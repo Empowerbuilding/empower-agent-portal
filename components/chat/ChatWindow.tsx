@@ -46,6 +46,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     return '';
   });
   const [sending, setSending] = useState(false);
+  const [showReportPicker, setShowReportPicker] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
