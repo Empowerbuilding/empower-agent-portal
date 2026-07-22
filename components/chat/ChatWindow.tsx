@@ -524,8 +524,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     el.style.height = Math.min(el.scrollHeight, 200) + 'px';
   }
 
-  async function sendMessage() {
-    const content = input.trim();
+  async function sendMessage(overrideContent?: string) {
+    const content = (overrideContent ?? input).trim();
     if (!content && !stagedFiles.length || sending) return;
     // Stop mic before sending — must happen before clearing input so voice onresult can't re-populate it
     if (listening) stopVoice();
@@ -732,9 +732,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                     <button
                       key={cmd}
                       onClick={() => {
-                        setInput(cmd);
                         setShowReportPicker(false);
-                        setTimeout(() => sendMessage(), 50);
+                        sendMessage(cmd);
                       }}
                       style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: idx < arr.length - 1 ? '1px solid var(--border)' : 'none', padding: '9px 14px', fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
