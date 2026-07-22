@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useMobileToolbar } from '@/context/MobileToolbar';
-import { IconMic, IconMicOff, IconPaperclip, IconSend, IconSearch } from '@/components/ui/Icons';
+import { IconMic, IconMicOff, IconPaperclip, IconSend, IconSearch, IconBarChart } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 import { PortalChannel, PortalMessage } from '@/lib/types';
 import MessageBubble from './MessageBubble';
