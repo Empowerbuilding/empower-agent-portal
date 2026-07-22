@@ -184,6 +184,12 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [channel.id]);
 
+  // Polling fallback — realtime can drop silently; poll every 10s to ensure messages always appear
+  useEffect(() => {
+    const interval = setInterval(() => { refresh(); }, 10000);
+    return () => clearInterval(interval);
+  }, [channel.id]);
+
   useEffect(() => {
     const sub = supabase
       .channel(`chat:${channel.id}`)
