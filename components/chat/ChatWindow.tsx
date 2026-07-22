@@ -710,8 +710,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         <div className="input-area">
           <input ref={fileRef} type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" multiple onChange={handleFileChange} style={{ display: 'none' }} />
           <div className="input-row">
-            {/* Report picker button */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
+            {/* Report picker button — Vanessa channels only */}
+            {channel.id.startsWith('barnhaus-vanessa-') && <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
                 onClick={() => setShowReportPicker(v => !v)}
                 title="Generate report"
@@ -744,7 +744,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                   ))}
                 </div>
               )}
-            </div>
+            </div>}
             <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Attach file"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '20px', padding: '0 4px', flexShrink: 0, opacity: uploading ? 0.4 : 0.7 }}>
               <IconPaperclip size={18} />
