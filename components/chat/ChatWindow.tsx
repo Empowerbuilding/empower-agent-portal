@@ -87,6 +87,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [listening, setListening] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const isAtBottom = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -119,6 +120,19 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     };
   }, [channel.id]);
 
+  const scrollToBottom = (force = false) => {
+    if (!listRef.current) return;
+    if (force || isAtBottom.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  };
+
+  const handleListScroll = () => {
+    if (!listRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+    isAtBottom.current = scrollHeight - scrollTop - clientHeight < 80;
+  };
+
   const isInitialLoad = useRef(true);
   useEffect(() => {
     if (isInitialLoad.current) {
@@ -127,12 +141,12 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       // scroll position. Without this, PWA cold-opens can render the first
       // message behind the fixed header.
       requestAnimationFrame(() => {
-        if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
+        scrollToBottom(true);
       });
       isInitialLoad.current = false;
     } else {
-      // Smooth scroll only for new incoming messages
-      if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
+      // Only scroll if user is already at the bottom
+      scrollToBottom();
     }
   }, [messages]);
 
@@ -162,7 +176,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       } else {
         setAgentTyping(false);
       }
-      setTimeout(() => { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, 50);
+      setTimeout(() => scrollToBottom(), 50);
     }
   };
 
@@ -536,6 +550,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     // Stop mic before sending — must happen before clearing input so voice onresult can't re-populate it
     if (listening) stopVoice();
     setSending(true);
+    isAtBottom.current = true; // snap to bottom after user sends
     localStorage.removeItem(draftKey);
     setInput('');
     // Explicitly clear textarea DOM value too (mobile browsers can lag on controlled input)
@@ -657,7 +672,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       </div>
 
       {/* Messages */}
-      <div className="messages-list" ref={listRef}>
+      <div className="messages-list" ref={listRef} onScroll={handleListScroll}>
         {messages.length === 0 && (
           <div className="empty-state">
             <span className="label" style={{ color: 'var(--muted)', fontSize: '13px' }}>No messages yet — start the conversation</span>
