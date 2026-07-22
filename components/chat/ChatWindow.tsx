@@ -778,7 +778,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', fontSize: '18px', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
               {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
             </button>
-            <button className="send-btn" onClick={sendMessage} disabled={(!input.trim() && !stagedFiles.length) || sending}>
+            <button className="send-btn" onClick={() => sendMessage()} disabled={(!input.trim() && !stagedFiles.length) || sending}>
               {sending ? '…' : <IconSend size={15} />}
             </button>
           </div>
