@@ -710,6 +710,41 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         <div className="input-area">
           <input ref={fileRef} type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" multiple onChange={handleFileChange} style={{ display: 'none' }} />
           <div className="input-row">
+            {/* Report picker button */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => setShowReportPicker(v => !v)}
+                title="Generate report"
+                style={{ background: showReportPicker ? 'var(--surface-hover)' : 'none', border: 'none', cursor: 'pointer', color: showReportPicker ? 'var(--text)' : 'var(--muted)', padding: '0 4px', display: 'flex', alignItems: 'center', borderRadius: 4, opacity: 0.85 }}
+              >
+                <IconBarChart size={17} />
+              </button>
+              {showReportPicker && (
+                <div style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', minWidth: 200, zIndex: 100, overflow: 'hidden' }}>
+                  {[
+                    { label: 'Pipeline Report',  cmd: 'generate report: pipeline' },
+                    { label: 'Daily Activity',   cmd: 'generate report: daily_activity' },
+                    { label: 'Rep Comparison',   cmd: 'generate report: rep_comparison' },
+                    { label: 'Whale Prospects',  cmd: 'generate report: whale_prospects' },
+                    { label: 'Call Summary',     cmd: 'generate report: call_summary' },
+                  ].map(({ label, cmd }, idx, arr) => (
+                    <button
+                      key={cmd}
+                      onClick={() => {
+                        setInput(cmd);
+                        setShowReportPicker(false);
+                        setTimeout(() => sendMessage(), 50);
+                      }}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: idx < arr.length - 1 ? '1px solid var(--border)' : 'none', padding: '9px 14px', fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Attach file"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '20px', padding: '0 4px', flexShrink: 0, opacity: uploading ? 0.4 : 0.7 }}>
               <IconPaperclip size={18} />

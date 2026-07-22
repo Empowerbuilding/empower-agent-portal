@@ -127,3 +127,13 @@ export function IconGear({ size = 15 }: { size?: number }) {
     </svg>
   );
 }
+
+export function IconBarChart({ size = 16 }: { size?: number }) {
+  return (
+    <svg style={s} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="12" width="4" height="9" />
+      <rect x="10" y="7" width="4" height="14" />
+      <rect x="17" y="3" width="4" height="18" />
+    </svg>
+  );
+}
