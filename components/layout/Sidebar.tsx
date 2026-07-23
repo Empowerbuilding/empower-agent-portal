@@ -236,27 +236,28 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
     loadLastSeen();
   }, [currentUser.id]);
 
-  // Seed initial unread state from DB — catches messages that arrived before page load
-  // Bug 4 fix: limit to (channels * 2) so this doesn't do a full table scan
+  // Seed initial unread state — one query per channel, includes all senders except self
   useEffect(() => {
     const activeChannelIds = initialChannels.map(c => c.id);
     if (activeChannelIds.length === 0) return;
-    const cap = Math.max(activeChannelIds.length * 2, 50);
-    supabase
-      .from('portal_messages')
-      .select('channel_id, created_at')
-      .in('channel_id', activeChannelIds)
-      .neq('sender_type', 'user')
-      .order('created_at', { ascending: false })
-      .limit(cap)
-      .then(({ data }) => {
-        if (!data) return;
-        const latest: Record<string, string> = {};
-        for (const row of data) {
-          if (!latest[row.channel_id]) latest[row.channel_id] = row.created_at;
-        }
-        setLatestMsg(latest);
-      });
+    Promise.all(
+      activeChannelIds.map(chId =>
+        supabase
+          .from('portal_messages')
+          .select('channel_id, created_at')
+          .eq('channel_id', chId)
+          .neq('sender_id', currentUser.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      )
+    ).then(results => {
+      const latest: Record<string, string> = {};
+      for (const { data } of results) {
+        if (data) latest[data.channel_id] = data.created_at;
+      }
+      setLatestMsg(latest);
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -301,8 +302,8 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
     const sub = supabase
       .channel('sidebar_unread')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages' }, (payload) => {
-        const msg = payload.new as { channel_id: string; created_at: string; sender_type: string };
-        if (msg.sender_type === 'user') return;
+        const msg = payload.new as { channel_id: string; created_at: string; sender_type: string; sender_id: string | null };
+        if (msg.sender_id === currentUser.id) return;
         if (!activeChannelIds.includes(msg.channel_id)) return;
         setLatestMsg(prev => ({ ...prev, [msg.channel_id]: msg.created_at }));
         // If this message is for the channel we're currently viewing, mark it seen immediately

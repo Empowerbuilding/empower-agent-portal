@@ -68,6 +68,7 @@ export interface PortalMessage {
   metadata: Record<string, unknown>;
   processed: boolean;
   created_at: string;
+  reply_to_id?: string | null;
 }
 
 export interface Attachment {

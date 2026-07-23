@@ -61,6 +61,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const [showMembers, setShowMembers] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
+  const [replyTo, setReplyTo] = useState<PortalMessage | null>(null);
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -578,6 +579,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
 
     unlockAudio();
     playSend();
+    setReplyTo(null);
     await supabase.from('portal_messages').insert({
       channel_id: channel.id,
       org_id: orgId,
@@ -586,6 +588,10 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       sender_name: currentUser.name,
       content: content || attachments.map(a => a.name).join(', ') || '',
       ...(attachments.length ? { attachments } : {}),
+      ...(replyTo ? {
+        reply_to_id: replyTo.id,
+        metadata: { reply_to: { id: replyTo.id, sender_name: replyTo.sender_name, content: replyTo.content } },
+      } : {}),
       processed: false,
     });
     setSending(false);
@@ -687,7 +693,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             <div key={msg.id} ref={el => { messageRefs.current[msg.id] = el; }} style={{ transition: 'background 0.5s' }}>
               <MessageBubble message={msg} currentUserId={currentUser.id}
                 deleteMode={deleteMode} selected={selected.has(msg.id)} onSelect={handleSelect}
-                showHeader={!grouped} grouped={grouped} />
+                showHeader={!grouped} grouped={grouped}
+                onReply={(msg) => { setReplyTo(msg); textareaRef.current?.focus(); }} />
             </div>
           );
         })}
@@ -724,6 +731,23 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           >
             Delete{selected.size > 0 ? ` (${selected.size})` : ''}
           </button>
+        </div>
+      )}
+
+      {/* Reply bar */}
+      {replyTo && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '6px 12px 0',
+          borderTop: '1px solid var(--border)',
+          background: 'var(--surface)',
+          fontSize: '12px', color: 'var(--muted)',
+        }}>
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>↩ Replying to {replyTo.sender_name}</span>
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {replyTo.content.slice(0, 80)}{replyTo.content.length > 80 ? '\u2026' : ''}
+          </span>
+          <button onClick={() => setReplyTo(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '14px', padding: '0 2px', flexShrink: 0 }}>✕</button>
         </div>
       )}
 

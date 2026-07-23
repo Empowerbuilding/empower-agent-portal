@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { PortalMessage } from '@/lib/types';
 import Markdown from '@/components/ui/Markdown';
 
@@ -11,10 +12,40 @@ interface Props {
   onSelect: (id: string, checked: boolean) => void;
   showHeader?: boolean;
   grouped?: boolean;
+  onReply?: (msg: PortalMessage) => void;
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+function formatDateTime(iso: string) {
+  const date = new Date(iso);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (isToday) return time;
+  if (isYesterday) return `Yesterday ${time}`;
+  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${time}`;
+}
+
+function ReplyQuote({ replyTo }: { replyTo: { sender_name: string; content: string } }) {
+  return (
+    <div style={{
+      borderLeft: '3px solid var(--accent)',
+      paddingLeft: '8px',
+      marginBottom: '4px',
+      opacity: 0.75,
+      fontSize: '12px',
+      color: 'var(--muted)',
+      maxWidth: '100%',
+      overflow: 'hidden',
+    }}>
+      <span style={{ fontWeight: 600, color: 'var(--text)', marginRight: '6px' }}>{replyTo.sender_name}</span>
+      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+        {replyTo.content.slice(0, 120)}{replyTo.content.length > 120 ? '\u2026' : ''}
+      </span>
+    </div>
+  );
 }
 
 function AttachmentPreview({ attachments }: { attachments: any[] }) {
@@ -35,7 +66,8 @@ function AttachmentPreview({ attachments }: { attachments: any[] }) {
   );
 }
 
-export default function MessageBubble({ message, currentUserId, deleteMode, selected, onSelect, showHeader = true, grouped = false }: Props) {
+export default function MessageBubble({ message, currentUserId, deleteMode, selected, onSelect, showHeader = true, grouped = false, onReply }: Props) {
+  const [hovered, setHovered] = useState(false);
   const isUser = message.sender_type === 'user';
   const isSystem = message.sender_type === 'system';
 
@@ -58,6 +90,9 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--muted)' }}>{message.sender_name ?? 'System'}</span>
             <span style={{ fontSize: '11px', fontWeight: 600, color: stateColor }}>{stateLabel}</span>
           </div>
+          {message.metadata?.reply_to ? (
+            <ReplyQuote replyTo={message.metadata.reply_to as { sender_name: string; content: string }} />
+          ) : null}
           <Markdown content={message.content} />
         </div>
       </div>
@@ -80,6 +115,8 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
     <div
       className={`msg-row${grouped ? ' grouped' : ''} ${isUser ? 'user' : 'agent'}`}
       style={{ paddingLeft: deleteMode && !grouped ? '28px' : undefined, position: 'relative' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {deleteMode && (
         <input type="checkbox" checked={selected} onChange={e => onSelect(message.id, e.target.checked)}
@@ -90,18 +127,35 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
           {isUser ? (message.sender_name?.charAt(0) ?? 'U') : <img src="/logo.png" alt="Agent" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '2px' }} />}
         </div>
       )}
-      <div className="msg-body">
+      <div className="msg-body" style={{ position: 'relative' }}>
         {showHeader && (
           <div className="msg-meta">
             <span style={{ color: '#fff', fontWeight: 600 }}>
               {message.sender_name ?? (isUser ? 'User' : 'Agent')}
             </span>
-            <span>{formatTime(message.created_at)}</span>
+            <span>{formatDateTime(message.created_at)}</span>
           </div>
         )}
-        <div className={`msg-bubble ${isUser ? 'user' : 'agent'}`} title={!showHeader ? formatTime(message.created_at) : undefined}>
+        {message.metadata?.reply_to ? (
+          <ReplyQuote replyTo={message.metadata.reply_to as { sender_name: string; content: string }} />
+        ) : null}
+        <div className={`msg-bubble ${isUser ? 'user' : 'agent'}`} title={!showHeader ? formatDateTime(message.created_at) : undefined}>
           <Markdown content={message.content} />
         </div>
+        {onReply && hovered && !deleteMode && (
+          <button
+            onClick={() => onReply(message)}
+            title="Reply"
+            style={{
+              position: 'absolute', right: isUser ? 'auto' : '-28px', left: isUser ? '-28px' : 'auto',
+              top: '50%', transform: 'translateY(-50%)',
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: '6px', cursor: 'pointer', color: 'var(--muted)',
+              padding: '3px 5px', fontSize: '12px', lineHeight: 1,
+              display: 'flex', alignItems: 'center',
+            }}
+          >↩</button>
+        )}
         <AttachmentPreview attachments={message.attachments ?? []} />
       </div>
     </div>
