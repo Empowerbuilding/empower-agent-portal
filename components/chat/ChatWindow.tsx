@@ -757,7 +757,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
           <input ref={fileRef} type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" multiple onChange={handleFileChange} style={{ display: 'none' }} />
           <div className="input-row">
             {/* Report picker button — Vanessa channels only */}
-            {channel.id.startsWith('barnhaus-vanessa-') && <div style={{ position: 'relative', flexShrink: 0 }}>
+            {(channel.id.startsWith('barnhaus-vanessa-') || channel.id === 'ceo-general') && <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
                 onClick={() => setShowReportPicker(v => !v)}
                 title="Generate report"
@@ -767,12 +767,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               </button>
               {showReportPicker && (
                 <div style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', minWidth: 200, zIndex: 100, overflow: 'hidden' }}>
-                  {[
+                  {(channel.id === 'ceo-general' ? [
+                    { label: '🧠 CEO Digest',  cmd: 'generate report: ceo_digest' },
+                  ] : [
                     { label: 'Pipeline Report',  cmd: 'generate report: pipeline' },
                     { label: 'Activity Report',  cmd: 'generate report: activity' },
                     { label: 'Whale Prospects',  cmd: 'generate report: whale_prospects' },
                     { label: 'Call Summary',     cmd: 'generate report: call_summary' },
-                  ].map(({ label, cmd }, idx, arr) => (
+                  ]).map(({ label, cmd }, idx, arr) => (
                     <button
                       key={cmd}
                       onClick={() => {
