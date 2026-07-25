@@ -288,12 +288,14 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
     rollback.agentId = agent.id;
 
     // Write reps to agents.reps column so n8n can look them up for call routing
+    // crm_user_id is backfilled after CRM provisioning (see below)
     const repsForDb = input.reps.map(r => ({
       name: r.name,
       slug: r.name.toLowerCase().replace(/\s+/g, '-'),
       email: r.email || '',
       phone: r.phone || '',
       label: r.label || 'Sales Rep',
+      crm_user_id: '', // backfilled after CRM provisioning
     }));
     await supabase.from('agents').update({ reps: repsForDb }).eq('id', agent.id);
 
@@ -380,6 +382,13 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
               // Build lookup: email -> crm user id
               crmRepIds = Object.fromEntries(repRows.map((r: { id: string; email: string }) => [r.email, r.id]));
               console.log('[provision] CRM rep users created:', Object.keys(crmRepIds).length);
+              // Backfill crm_user_id into agents.reps so n8n can route calls by owner
+              const repsWithCrmIds = repsForDb.map(r => ({
+                ...r,
+                crm_user_id: crmRepIds[r.email] || '',
+              }));
+              await supabase.from('agents').update({ reps: repsWithCrmIds }).eq('id', agent.id);
+              console.log('[provision] agents.reps backfilled with crm_user_id');
             }
           } catch (e) {
             console.warn('[provision] CRM rep insert failed (non-fatal):', e);
