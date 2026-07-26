@@ -774,7 +774,6 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                     { label: 'Activity Report',  cmd: 'generate report: activity' },
                     { label: 'Whale Prospects',  cmd: 'generate report: whale_prospects' },
                     { label: 'Call Summary',     cmd: 'generate report: call_summary' },
-                    { label: 'Task Priority',    cmd: 'generate report: task_priority' },
                   ]).map(({ label, cmd }, idx, arr) => (
                     <button
                       key={cmd}
