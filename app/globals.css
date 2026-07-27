@@ -581,6 +581,11 @@ html, body {
     min-height: 40px;
     padding: 0 12px;
   }
+  /* SMS contact list — preserve natural height, don't force 40px touch target */
+  .sms-contact-list button,
+  .sms-mobile-layout button {
+    min-height: unset;
+  }
 }
 
 /* ── Deals list → mobile card layout ── */
