@@ -3,6 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import TaskFormModal from '../../tasks/TaskFormModal';
+
+const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+const TASK_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'to_do', label: 'To Do' },
+  { value: 'call', label: 'Call' },
+  { value: 'email', label: 'Email' },
+  { value: 'meeting', label: 'Meeting' },
+  { value: 'follow_up', label: 'Follow Up' },
+];
 
 const STAGES = [
   { key: 'qualified',        label: 'Qualified',        color: '#4c8bf0' },
@@ -23,17 +33,19 @@ const ACTIVITY_ICONS: Record<string, string> = {
 interface Props {
   deal: any;
   activities: any[];
+  tasks?: any[];
   users: { id: string; name: string }[];
   orgSlug: string;
   crmUrl: string;
   crmKey: string;
 }
 
-export default function DealDetailClient({ deal: initialDeal, activities: initActivities, users, orgSlug, crmUrl, crmKey }: Props) {
+export default function DealDetailClient({ deal: initialDeal, activities: initActivities, tasks: initTasks = [], users, orgSlug, crmUrl, crmKey }: Props) {
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
   const [deal, setDeal] = useState(initialDeal);
   const [activities, setActivities] = useState(initActivities);
+  const [tasks, setTasks] = useState(initTasks);
   const [editValue, setEditValue] = useState<string>(String(deal.value ?? ''));
   const [editingValue, setEditingValue] = useState(false);
   const [savingValue, setSavingValue] = useState(false);
@@ -41,6 +53,15 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
   const [noteText, setNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
+
+  // Tasks
+  const [addingTask, setAddingTask] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '', due_date: '', due_time: '', priority: 'medium', task_type: 'to_do', assigned_to: '',
+  });
+  const [savingTask, setSavingTask] = useState(false);
+  const [confirmCompleteTaskId, setConfirmCompleteTaskId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<any | null>(null);
 
   const stageIdx = STAGES.findIndex(s => s.key === deal.stage);
   const curStage = STAGES[stageIdx];
@@ -79,6 +100,54 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
     if (data) { setActivities(prev => [data, ...prev]); setNoteText(''); setAddingNote(false); }
   }
 
+  async function addTask() {
+    if (!newTask.title.trim() || savingTask) return;
+    setSavingTask(true);
+    const { data } = await crm.from('tasks').insert({
+      deal_id: deal.id,
+      contact_id: deal.contact?.id ?? null,
+      title: newTask.title.trim(),
+      due_date: newTask.due_date || null,
+      due_time: newTask.due_time || null,
+      priority: newTask.priority || null,
+      task_type: newTask.task_type || null,
+      assigned_to: newTask.assigned_to || null,
+      completed: false,
+      status: 'open',
+    }).select().single();
+    setSavingTask(false);
+    if (data) {
+      setTasks(prev => [...prev, data]);
+      setNewTask({ title: '', due_date: '', due_time: '', priority: 'medium', task_type: 'to_do', assigned_to: '' });
+      setAddingTask(false);
+    }
+  }
+
+  function requestCompleteTask(taskId: string) {
+    setConfirmCompleteTaskId(taskId);
+  }
+
+  async function confirmCompleteTask(task: any) {
+    setConfirmCompleteTaskId(null);
+    const { data } = await crm.from('tasks').update({ completed: true, status: 'completed', completed_at: new Date().toISOString() }).eq('id', task.id).select().single();
+    if (data) setTasks(prev => prev.map(t => t.id === task.id ? data : t));
+  }
+
+  function handleTaskSaved(task: any) {
+    setTasks(prev => {
+      const exists = prev.some(t => t.id === task.id);
+      return exists ? prev.map(t => t.id === task.id ? task : t) : [...prev, task];
+    });
+    setEditingTask(null);
+  }
+
+  function handleTaskDeleted(taskId: string) {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    setEditingTask(null);
+  }
+
+  const userMap: Record<string, string> = Object.fromEntries(users.map(u => [u.id, u.name]));
+
   const inputStyle: React.CSSProperties = {
     background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
     borderRadius: 6, color: 'var(--text)', padding: '8px 12px',
@@ -90,6 +159,7 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
   };
 
   return (
+    <>
     <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 720, margin: '0 auto' }}>
 
       {/* Header */}
@@ -215,6 +285,102 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
         ))}
       </div>
 
+      {/* Tasks */}
+      <div style={sectionStyle}>
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13, color: 'var(--text)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>Tasks ({tasks.filter(t => !t.completed).length})</span>
+          <button onClick={() => setAddingTask(v => !v)}
+            style={{ padding: '4px 10px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            + Add Task
+          </button>
+        </div>
+
+        {addingTask && (
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <input value={newTask.title} onChange={e => setNewTask(f => ({ ...f, title: e.target.value }))}
+              placeholder="Task title *" style={inputStyle} autoFocus />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select value={newTask.priority} onChange={e => setNewTask(f => ({ ...f, priority: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                {TASK_PRIORITIES.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+              </select>
+              <select value={newTask.task_type} onChange={e => setNewTask(f => ({ ...f, task_type: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                {TASK_TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input type="date" value={newTask.due_date} onChange={e => setNewTask(f => ({ ...f, due_date: e.target.value }))} style={inputStyle} />
+              <input type="time" value={newTask.due_time} onChange={e => setNewTask(f => ({ ...f, due_time: e.target.value }))} style={inputStyle} />
+            </div>
+            <select value={newTask.assigned_to} onChange={e => setNewTask(f => ({ ...f, assigned_to: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+              <option value="">Unassigned</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => { setAddingTask(false); setNewTask({ title: '', due_date: '', due_time: '', priority: 'medium', task_type: 'to_do', assigned_to: '' }); }} style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
+              <button onClick={addTask} disabled={!newTask.title.trim() || savingTask}
+                style={{ padding: '6px 12px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 12, opacity: !newTask.title.trim() || savingTask ? 0.5 : 1 }}>
+                {savingTask ? 'Saving…' : 'Add Task'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tasks.length === 0 ? (
+          <div style={{ padding: '14px', color: 'var(--muted)', fontSize: 13 }}>No tasks yet.</div>
+        ) : tasks.map((t, i) => (
+          <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: i < tasks.length - 1 ? '1px solid var(--border)' : 'none', opacity: t.completed ? 0.5 : 1 }}>
+            <span style={{ position: 'relative', marginTop: 2, flexShrink: 0 }}>
+              <input type="checkbox" checked={!!t.completed}
+                onChange={() => { if (!t.completed) requestCompleteTask(t.id); }}
+                style={{ cursor: 'pointer', accentColor: 'var(--accent)' }} />
+              {confirmCompleteTaskId === t.id && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, marginTop: 6, zIndex: 20,
+                  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
+                  padding: 10, display: 'flex', flexDirection: 'column', gap: 8, width: 160,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                }}>
+                  <span style={{ fontSize: 12, color: 'var(--text)' }}>Mark as complete?</span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => confirmCompleteTask(t)}
+                      style={{ flex: 1, padding: '5px 8px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      Yes
+                    </button>
+                    <button onClick={() => setConfirmCompleteTaskId(null)}
+                      style={{ flex: 1, padding: '5px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--muted)', fontSize: 11, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </span>
+            <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setEditingTask(t)}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', textDecoration: t.completed ? 'line-through' : 'none' }}>{t.title}</div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
+                {t.due_date && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Due {new Date(t.due_date).toLocaleDateString()}{t.due_time ? ` ${t.due_time.slice(0,5)}` : ''}</span>}
+                {t.priority && <span style={{ fontSize: 11, fontWeight: 600, color: t.priority === 'high' || t.priority === 'urgent' ? '#ef4444' : t.priority === 'medium' ? '#f59e0b' : '#6b7280', textTransform: 'capitalize' }}>{t.priority}</span>}
+                {t.assigned_to && userMap[t.assigned_to] && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{userMap[t.assigned_to].split(' ')[0]}</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
     </div>
+
+    {/* Edit Task modal */}
+    {editingTask && (
+      <TaskFormModal
+        task={editingTask}
+        dealId={deal.id}
+        users={users}
+        crmUrl={crmUrl}
+        crmKey={crmKey}
+        onClose={() => setEditingTask(null)}
+        onSaved={handleTaskSaved}
+        onDeleted={handleTaskDeleted}
+      />
+    )}
+    </>
   );
 }

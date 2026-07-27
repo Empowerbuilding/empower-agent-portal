@@ -3,6 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import TaskFormModal from '../../tasks/TaskFormModal';
+
+const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+const TASK_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'to_do', label: 'To Do' },
+  { value: 'call', label: 'Call' },
+  { value: 'email', label: 'Email' },
+  { value: 'meeting', label: 'Meeting' },
+  { value: 'follow_up', label: 'Follow Up' },
+];
 
 const B2C_STAGES = [
   { key: 'qualified',        label: 'Qualified',        color: '#4c8bf0' },
@@ -53,7 +63,9 @@ interface Props {
   activities: any[];
   allActivities: any[];
   tasks: any[];
+  completedTasks?: any[];
   deal: any | null;
+  deals?: { id: string; title: string }[];
   meetings: any[];
   users: User[];
   ownerMap: Record<string, string>;
@@ -64,8 +76,8 @@ interface Props {
 }
 
 export default function ContactDetailClient({
-  contact, activities: initActivities, allActivities, tasks: initTasks, deal: initDeal,
-  meetings, users, ownerMap, orgSlug, crmUrl, crmKey, crmNotes = [],
+  contact, activities: initActivities, allActivities, tasks: initTasks, completedTasks: initCompletedTasks = [], deal: initDeal,
+  deals = [], meetings, users, ownerMap, orgSlug, crmUrl, crmKey, crmNotes = [],
 }: Props) {
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
@@ -73,6 +85,8 @@ export default function ContactDetailClient({
   const [deal, setDeal] = useState(initDeal);
   const [activities, setActivities] = useState(initActivities);
   const [tasks, setTasks] = useState(initTasks);
+  const [completedTasks, setCompletedTasks] = useState(initCompletedTasks);
+  const [showCompletedTasks, setShowCompletedTasks] = useState(false);
 
   // Editable contact fields
   const [editMode, setEditMode] = useState(false);
@@ -99,9 +113,13 @@ export default function ContactDetailClient({
   const [savingNote, setSavingNote] = useState(false);
 
   // Tasks
-  const [newTask, setNewTask] = useState({ title: '', due_date: '' });
+  const [newTask, setNewTask] = useState({
+    title: '', due_date: '', due_time: '', priority: 'medium', task_type: 'to_do', assigned_to: '', deal_id: '',
+  });
   const [addingTask, setAddingTask] = useState(false);
   const [savingTask, setSavingTask] = useState(false);
+  const [confirmCompleteTaskId, setConfirmCompleteTaskId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<any | null>(null);
 
   // Deal stage
   const [movingStage, setMovingStage] = useState(false);
@@ -213,9 +231,15 @@ export default function ContactDetailClient({
     if (data) { setActivities(prev => [data, ...prev]); setNoteText(''); setAddingNote(false); }
   }
 
-  async function toggleTask(task: any) {
-    await crm.from('tasks').update({ completed: true, status: 'completed' }).eq('id', task.id);
+  function requestCompleteTask(taskId: string) {
+    setConfirmCompleteTaskId(taskId);
+  }
+
+  async function confirmCompleteTask(task: any) {
+    setConfirmCompleteTaskId(null);
+    const { data } = await crm.from('tasks').update({ completed: true, status: 'completed', completed_at: new Date().toISOString() }).eq('id', task.id).select().single();
     setTasks(prev => prev.filter(t => t.id !== task.id));
+    if (data) setCompletedTasks(prev => [data, ...prev]);
   }
 
   async function addTask() {
@@ -225,11 +249,42 @@ export default function ContactDetailClient({
       contact_id: contactData.id,
       title: newTask.title.trim(),
       due_date: newTask.due_date || null,
+      due_time: newTask.due_time || null,
+      priority: newTask.priority || null,
+      task_type: newTask.task_type || null,
+      assigned_to: newTask.assigned_to || null,
+      deal_id: newTask.deal_id || null,
       completed: false,
       status: 'open',
     }).select().single();
     setSavingTask(false);
-    if (data) { setTasks(prev => [...prev, data]); setNewTask({ title: '', due_date: '' }); setAddingTask(false); }
+    if (data) {
+      setTasks(prev => [...prev, data]);
+      setNewTask({ title: '', due_date: '', due_time: '', priority: 'medium', task_type: 'to_do', assigned_to: '', deal_id: '' });
+      setAddingTask(false);
+    }
+  }
+
+  function handleTaskSaved(task: any) {
+    setTasks(prev => {
+      const exists = prev.some(t => t.id === task.id);
+      if (task.completed) {
+        return prev.filter(t => t.id !== task.id);
+      }
+      return exists ? prev.map(t => t.id === task.id ? task : t) : [...prev, task];
+    });
+    setCompletedTasks(prev => {
+      const exists = prev.some(t => t.id === task.id);
+      if (!task.completed) return prev.filter(t => t.id !== task.id);
+      return exists ? prev.map(t => t.id === task.id ? task : t) : [task, ...prev];
+    });
+    setEditingTask(null);
+  }
+
+  function handleTaskDeleted(taskId: string) {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    setCompletedTasks(prev => prev.filter(t => t.id !== taskId));
+    setEditingTask(null);
   }
 
   const inputStyle: React.CSSProperties = {
@@ -645,9 +700,30 @@ export default function ContactDetailClient({
           <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input value={newTask.title} onChange={e => setNewTask(f => ({ ...f, title: e.target.value }))}
               placeholder="Task title *" style={inputStyle} autoFocus />
-            <input type="date" value={newTask.due_date} onChange={e => setNewTask(f => ({ ...f, due_date: e.target.value }))} style={inputStyle} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select value={newTask.priority} onChange={e => setNewTask(f => ({ ...f, priority: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                {TASK_PRIORITIES.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+              </select>
+              <select value={newTask.task_type} onChange={e => setNewTask(f => ({ ...f, task_type: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                {TASK_TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input type="date" value={newTask.due_date} onChange={e => setNewTask(f => ({ ...f, due_date: e.target.value }))} style={inputStyle} />
+              <input type="time" value={newTask.due_time} onChange={e => setNewTask(f => ({ ...f, due_time: e.target.value }))} style={inputStyle} />
+            </div>
+            <select value={newTask.assigned_to} onChange={e => setNewTask(f => ({ ...f, assigned_to: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+              <option value="">Unassigned</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+            {deals.length > 0 && (
+              <select value={newTask.deal_id} onChange={e => setNewTask(f => ({ ...f, deal_id: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                <option value="">No deal linked</option>
+                {deals.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+              </select>
+            )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setAddingTask(false); setNewTask({ title: '', due_date: '' }); }} style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
+              <button onClick={() => { setAddingTask(false); setNewTask({ title: '', due_date: '', due_time: '', priority: 'medium', task_type: 'to_do', assigned_to: '', deal_id: '' }); }} style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
               <button onClick={addTask} disabled={!newTask.title.trim() || savingTask}
                 style={{ padding: '6px 12px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 12, opacity: !newTask.title.trim() || savingTask ? 0.5 : 1 }}>
                 {savingTask ? 'Saving…' : 'Add Task'}
@@ -658,14 +734,55 @@ export default function ContactDetailClient({
         {tasks.length === 0 ? (
           <div style={{ padding: '14px', color: 'var(--muted)', fontSize: 13 }}>No open tasks.</div>
         ) : tasks.map((t, i) => (
-          <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: i < tasks.length - 1 ? '1px solid var(--border)' : 'none' }}>
-            <input type="checkbox" checked={false} onChange={() => toggleTask(t)}
-              style={{ marginTop: 2, cursor: 'pointer', accentColor: 'var(--accent)', flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
+          <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: i < tasks.length - 1 ? '1px solid var(--border)' : 'none', position: 'relative' }}>
+            <span style={{ position: 'relative', marginTop: 2, flexShrink: 0 }}>
+              <input type="checkbox" checked={false} onChange={() => requestCompleteTask(t.id)}
+                style={{ cursor: 'pointer', accentColor: 'var(--accent)' }} />
+              {confirmCompleteTaskId === t.id && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, marginTop: 6, zIndex: 20,
+                  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
+                  padding: 10, display: 'flex', flexDirection: 'column', gap: 8, width: 160,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                }}>
+                  <span style={{ fontSize: 12, color: 'var(--text)' }}>Mark as complete?</span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => confirmCompleteTask(t)}
+                      style={{ flex: 1, padding: '5px 8px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      Yes
+                    </button>
+                    <button onClick={() => setConfirmCompleteTaskId(null)}
+                      style={{ flex: 1, padding: '5px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--muted)', fontSize: 11, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </span>
+            <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setEditingTask(t)}>
               <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{t.title}</div>
               <div style={{ display: 'flex', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
-                {t.due_date && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Due {new Date(t.due_date).toLocaleDateString()}</span>}
-                {t.priority && <span style={{ fontSize: 11, fontWeight: 600, color: t.priority === 'high' ? '#ef4444' : t.priority === 'medium' ? '#f59e0b' : '#6b7280', textTransform: 'capitalize' }}>{t.priority}</span>}
+                {t.due_date && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Due {new Date(t.due_date).toLocaleDateString()}{t.due_time ? ` ${t.due_time.slice(0,5)}` : ''}</span>}
+                {t.priority && <span style={{ fontSize: 11, fontWeight: 600, color: t.priority === 'high' || t.priority === 'urgent' ? '#ef4444' : t.priority === 'medium' ? '#f59e0b' : '#6b7280', textTransform: 'capitalize' }}>{t.priority}</span>}
+                {t.assigned_to && ownerMap[t.assigned_to] && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{ownerMap[t.assigned_to].split(' ')[0]}</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Show completed toggle */}
+        <button onClick={() => setShowCompletedTasks(v => !v)}
+          style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', borderTop: '1px solid var(--border)', color: 'var(--muted)', fontSize: 12, cursor: 'pointer', textAlign: 'left' } as React.CSSProperties}>
+          {showCompletedTasks ? '▲ Hide' : '▼ Show'} {completedTasks.length} completed
+        </button>
+        {showCompletedTasks && completedTasks.map((t, i) => (
+          <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderTop: '1px solid var(--border)', opacity: 0.6, cursor: 'pointer' }}
+            onClick={() => setEditingTask(t)}>
+            <input type="checkbox" checked readOnly style={{ marginTop: 2, cursor: 'pointer', accentColor: 'var(--accent)', flexShrink: 0 }} onClick={e => e.stopPropagation()} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', textDecoration: 'line-through' }}>{t.title}</div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
+                {t.completed_at && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Completed {new Date(t.completed_at).toLocaleDateString()}</span>}
               </div>
             </div>
           </div>
@@ -705,26 +822,32 @@ export default function ContactDetailClient({
         </div>
       )}
 
-      {/* ── Quick Task from this contact (reuse addTask) ── */}
+      {/* ── Quick Task from this contact (full form, pre-linked to contact) ── */}
       {showQuickTask && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setShowQuickTask(false)}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 360, display: 'flex', flexDirection: 'column', gap: 12 }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>New Task</div>
-            <input placeholder="Task title *" value={newTask.title} onChange={e => setNewTask(f => ({...f, title: e.target.value}))}
-              style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }} autoFocus />
-            <input type="date" value={newTask.due_date} onChange={e => setNewTask(f => ({...f, due_date: e.target.value}))}
-              style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13 }} />
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowQuickTask(false)} style={{ padding: '8px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
-              <button onClick={async () => { await addTask(); setShowQuickTask(false); }} disabled={!newTask.title.trim() || savingTask}
-                style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13, opacity: !newTask.title.trim() || savingTask ? 0.5 : 1 }}>
-                {savingTask ? 'Saving…' : 'Create Task'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <TaskFormModal
+          contactId={contactData.id}
+          deals={deals}
+          users={users}
+          crmUrl={crmUrl}
+          crmKey={crmKey}
+          onClose={() => setShowQuickTask(false)}
+          onSaved={(task) => { handleTaskSaved(task); setShowQuickTask(false); }}
+        />
+      )}
+
+      {/* ── Edit Task modal ── */}
+      {editingTask && (
+        <TaskFormModal
+          task={editingTask}
+          contactId={contactData.id}
+          deals={deals}
+          users={users}
+          crmUrl={crmUrl}
+          crmKey={crmKey}
+          onClose={() => setEditingTask(null)}
+          onSaved={handleTaskSaved}
+          onDeleted={handleTaskDeleted}
+        />
       )}
     </>
     </>
