@@ -282,11 +282,17 @@ export default function TasksClient({ tasks: initial, contacts, users, deals, or
       </div>{/* end sticky */}
 
       {/* Table */}
+      <style>{`
+        .tasks-grid { display: grid; grid-template-columns: 32px 1fr 160px 100px 80px 90px 110px; }
+        .tasks-col-associated, .tasks-col-type, .tasks-col-assigned { display: block; }
+        @media (max-width: 640px) {
+          .tasks-grid { grid-template-columns: 32px 1fr 85px 65px; }
+          .tasks-col-associated, .tasks-col-type, .tasks-col-assigned { display: none; }
+        }
+      `}</style>
       <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '32px 1fr 160px 100px 80px 90px 110px',
+        <div className="tasks-grid" style={{
           padding: '8px 14px',
           background: 'rgba(255,255,255,0.03)',
           borderBottom: '1px solid var(--border)',
@@ -294,11 +300,11 @@ export default function TasksClient({ tasks: initial, contacts, users, deals, or
         }}>
           <span></span>
           <span onClick={() => toggleSort('title')} style={{ cursor: 'pointer', userSelect: 'none' }}>Task{sortIcon('title')}</span>
-          <span>Associated</span>
+          <span className="tasks-col-associated">Associated</span>
           <span onClick={() => toggleSort('due_date')} style={{ cursor: 'pointer', userSelect: 'none' }}>Due Date{sortIcon('due_date')}</span>
           <span onClick={() => toggleSort('priority')} style={{ cursor: 'pointer', userSelect: 'none' }}>Priority{sortIcon('priority')}</span>
-          <span>Type</span>
-          <span>Assigned To</span>
+          <span className="tasks-col-type">Type</span>
+          <span className="tasks-col-assigned">Assigned To</span>
         </div>
 
         {filtered.length === 0 ? (
@@ -316,9 +322,8 @@ export default function TasksClient({ tasks: initial, contacts, users, deals, or
             return (
               <div
                 key={task.id}
+                className="tasks-grid"
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '32px 1fr 160px 100px 80px 90px 110px',
                   padding: '10px 14px',
                   borderBottom: i < sorted.length - 1 ? '1px solid var(--border)' : 'none',
                   opacity: done ? 0.5 : 1,
@@ -375,7 +380,7 @@ export default function TasksClient({ tasks: initial, contacts, users, deals, or
                 </div>
 
                 {/* Associated with */}
-                <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="tasks-col-associated" style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {contactName ?? dealTitle ?? '—'}
                 </div>
 
@@ -401,12 +406,12 @@ export default function TasksClient({ tasks: initial, contacts, users, deals, or
                 </div>
 
                 {/* Type */}
-                <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                <div className="tasks-col-type" style={{ fontSize: 12, color: 'var(--muted)' }}>
                   {TASK_TYPE_LABELS[task.task_type] ?? task.task_type ?? '—'}
                 </div>
 
                 {/* Assigned to */}
-                <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="tasks-col-assigned" style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {task.assigned_to ? (userMap[task.assigned_to]?.split(' ')[0] ?? '—') : '—'}
                 </div>
               </div>
