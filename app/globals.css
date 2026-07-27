@@ -701,3 +701,15 @@ html, body {
     justify-content: flex-end;
   }
 }
+
+/* ── Contact detail header — stack name + buttons on mobile ── */
+@media (max-width: 640px) {
+  .contact-header-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .contact-header-row > div:last-child {
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+  }
+}

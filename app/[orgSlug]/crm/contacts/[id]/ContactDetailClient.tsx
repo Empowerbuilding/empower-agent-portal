@@ -363,7 +363,7 @@ export default function ContactDetailClient({
         <div style={{ padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
           {/* Name row */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div className="contact-header-row" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             {editMode ? (
               <div style={{ display: 'flex', gap: 8, flex: 1, flexWrap: 'wrap' }}>
                 <input value={editFields.first_name} onChange={e => setEditFields(f => ({ ...f, first_name: e.target.value }))}
