@@ -119,8 +119,8 @@ export default function PipelineClient({ deals: initialDeals, users, orgSlug, cr
       </div>
 
       {/* Kanban board */}
-      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', display: 'flex', padding: '12px 12px 0' }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', minWidth: 'max-content', paddingBottom: 16 }}>
+      <div className="pipeline-kanban-scroll" style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', display: 'flex', flexDirection: 'column', padding: '12px 12px 0', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', minWidth: 'max-content', paddingBottom: 16, flex: 1 }}>
           {stages.map(stage => {
             const stageDeals = byStage(stage.key);
             const stageValue = stageDeals.reduce((s, d) => s + (d.value ?? 0), 0);
@@ -139,7 +139,7 @@ export default function PipelineClient({ deals: initialDeals, users, orgSlug, cr
                   setDragging(null);
                 }}
                 style={{
-                  width: 230, flexShrink: 0, display: 'flex', flexDirection: 'column',
+                  width: 280, minWidth: 280, flexShrink: 0, display: 'flex', flexDirection: 'column',
                   background: isDragTarget ? `${stage.color}12` : 'var(--surface)',
                   border: `1px solid ${isDragTarget ? stage.color : 'var(--border)'}`,
                   borderRadius: 10, overflow: 'hidden',

@@ -172,6 +172,16 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
     border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', background: 'var(--surface)',
   };
 
+  // Ensures action buttons (+ Task, + Add Note, ← Back, stage moves, etc.) meet
+  // the 40px minimum touch-target height on mobile while staying compact on desktop.
+  const actionBtnStyle = (base: React.CSSProperties): React.CSSProperties => ({
+    ...base,
+    minHeight: 40,
+    padding: '8px 14px',
+    display: 'inline-flex',
+    alignItems: 'center',
+  });
+
   return (
     <>
     <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 720, margin: '0 auto' }}>
@@ -187,7 +197,7 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
               {deal.company_name && <div style={{ fontSize: 13, color: 'var(--accent)', marginTop: 2, opacity: 0.85 }}>{deal.company_name}</div>}
             </div>
             <button onClick={() => router.back()}
-              style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>
+              style={actionBtnStyle({ background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12, flexShrink: 0 })}>
               ← Back
             </button>
           </div>
@@ -207,18 +217,18 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {prevStage && (
               <button onClick={() => moveStage(prevStage.key)} disabled={movingStage}
-                style={{ padding: '5px 12px', background: 'var(--sidebar-bg)', border: `1px solid ${prevStage.color}66`, borderRadius: 6, color: prevStage.color, cursor: 'pointer', fontSize: 12 }}>
+                style={actionBtnStyle({ background: 'var(--sidebar-bg)', border: `1px solid ${prevStage.color}66`, borderRadius: 6, color: prevStage.color, cursor: 'pointer', fontSize: 12 })}>
                 ← {prevStage.label}
               </button>
             )}
             {curStage && (
-              <span style={{ padding: '5px 14px', background: `${curStage.color}18`, border: `1px solid ${curStage.color}44`, borderRadius: 6, color: curStage.color, fontSize: 13, fontWeight: 700 }}>
+              <span style={{ padding: '5px 14px', background: `${curStage.color}18`, border: `1px solid ${curStage.color}44`, borderRadius: 6, color: curStage.color, fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', minHeight: 40 }}>
                 ● {curStage.label}
               </span>
             )}
             {nextStage && (
               <button onClick={() => moveStage(nextStage.key)} disabled={movingStage}
-                style={{ padding: '5px 12px', background: 'var(--sidebar-bg)', border: `1px solid ${nextStage.color}66`, borderRadius: 6, color: nextStage.color, cursor: 'pointer', fontSize: 12 }}>
+                style={actionBtnStyle({ background: 'var(--sidebar-bg)', border: `1px solid ${nextStage.color}66`, borderRadius: 6, color: nextStage.color, cursor: 'pointer', fontSize: 12 })}>
                 {nextStage.label} →
               </button>
             )}
@@ -230,12 +240,12 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
             {editingValue ? (
               <>
                 <input value={editValue} onChange={e => setEditValue(e.target.value)} placeholder="e.g. 350000"
-                  style={{ ...inputStyle, width: 150 }} autoFocus onKeyDown={e => e.key === 'Enter' && saveValue()} />
+                  style={{ ...inputStyle, width: 150, minHeight: 40 }} autoFocus onKeyDown={e => e.key === 'Enter' && saveValue()} />
                 <button onClick={saveValue} disabled={savingValue}
-                  style={{ padding: '6px 12px', background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: savingValue ? 0.6 : 1 }}>
+                  style={actionBtnStyle({ background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: savingValue ? 0.6 : 1 })}>
                   {savingValue ? 'Saving…' : 'Save'}
                 </button>
-                <button onClick={() => setEditingValue(false)} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', fontSize: 12, cursor: 'pointer' }}>✕</button>
+                <button onClick={() => setEditingValue(false)} style={actionBtnStyle({ background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', fontSize: 12, cursor: 'pointer' })}>✕</button>
               </>
             ) : (
               <>
@@ -243,7 +253,7 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
                   {deal.value != null ? `$${Number(deal.value).toLocaleString()}` : '—'}
                 </span>
                 <button onClick={() => { setEditingValue(true); setEditValue(String(deal.value ?? '')); }}
-                  style={{ padding: '3px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--muted)', fontSize: 11, cursor: 'pointer' }}>
+                  style={actionBtnStyle({ background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--muted)', fontSize: 11, cursor: 'pointer' })}>
                   ✏️
                 </button>
               </>
@@ -264,7 +274,7 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
         <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13, color: 'var(--text)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Activity ({activities.length})</span>
           <button onClick={() => setAddingNote(v => !v)}
-            style={{ padding: '4px 10px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            style={actionBtnStyle({ background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' })}>
             + Add Note
           </button>
         </div>
@@ -304,7 +314,7 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
         <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13, color: 'var(--text)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Tasks ({tasks.filter(t => !t.completed).length})</span>
           <button onClick={() => setAddingTask(v => !v)}
-            style={{ padding: '4px 10px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            style={actionBtnStyle({ background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' })}>
             + Add Task
           </button>
         </div>

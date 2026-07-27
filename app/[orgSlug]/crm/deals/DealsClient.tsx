@@ -282,7 +282,7 @@ export default function DealsClient({ deals: initial, companies, contacts, users
       <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
         {/* Headers */}
         {crmMode === 'b2c' ? (
-          <div style={{
+          <div className="deals-list-header" style={{
             display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 80px',
             padding: '8px 14px', background: 'rgba(255,255,255,0.03)',
             borderBottom: '1px solid var(--border)',
@@ -295,7 +295,7 @@ export default function DealsClient({ deals: initial, companies, contacts, users
             <span onClick={() => toggleDealSort('value')} style={{ cursor: 'pointer', userSelect: 'none' }}>Value{dealSortIcon('value')}</span>
           </div>
         ) : (
-          <div style={{
+          <div className="deals-list-header" style={{
             display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 80px 80px 1fr',
             padding: '8px 14px', background: 'rgba(255,255,255,0.03)',
             borderBottom: '1px solid var(--border)',
@@ -318,6 +318,7 @@ export default function DealsClient({ deals: initial, companies, contacts, users
           filtered.map((d, i) => crmMode === 'b2c' ? (
             <div
               key={d.id}
+              className="deals-list-row"
               onClick={() => window.location.href = `/${orgSlug}/crm/deals/${d.id}`}
               style={{
                 display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 80px',
@@ -327,15 +328,16 @@ export default function DealsClient({ deals: initial, companies, contacts, users
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <span style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13 }}>{d.title}</span>
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>{contactMap[d.contact_id] ?? '—'}</span>
-              <span><StageBadge stage={d.stage} crmMode={crmMode} /></span>
-              <span style={{ color: 'var(--muted)', fontSize: 12 }}>{DEAL_TYPE_LABELS[d.deal_type] ?? d.deal_type ?? '—'}</span>
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>{d.value ? `$${Number(d.value).toLocaleString()}` : '—'}</span>
+              <span className="deals-card-name" style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13 }}>{d.title}</span>
+              <span className="deals-card-contact" style={{ color: 'var(--muted)', fontSize: 13 }}>{contactMap[d.contact_id] ?? '—'}</span>
+              <span className="deals-card-badges"><StageBadge stage={d.stage} crmMode={crmMode} /></span>
+              <span className="deals-card-badges" style={{ color: 'var(--muted)', fontSize: 12 }}>{DEAL_TYPE_LABELS[d.deal_type] ?? d.deal_type ?? '—'}</span>
+              <span className="deals-card-value" style={{ color: 'var(--muted)', fontSize: 13 }}>{d.value ? `$${Number(d.value).toLocaleString()}` : '—'}</span>
             </div>
           ) : (
             <div
               key={d.id}
+              className="deals-list-row"
               style={{
                 display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 80px 80px 1fr',
                 padding: '10px 14px', cursor: 'default',
@@ -344,12 +346,12 @@ export default function DealsClient({ deals: initial, companies, contacts, users
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <span style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13 }}>{d.title}</span>
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>{companyMap[d.company_id] ?? '—'}</span>
-              <span><StageBadge stage={d.stage} crmMode={crmMode} /></span>
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>{d.value ? `$${Number(d.value).toLocaleString()}` : '—'}</span>
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>{d.seats ?? '—'}</span>
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>
+              <span className="deals-card-name" style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13 }}>{d.title}</span>
+              <span className="deals-card-contact" style={{ color: 'var(--muted)', fontSize: 13 }}>{companyMap[d.company_id] ?? '—'}</span>
+              <span className="deals-card-badges"><StageBadge stage={d.stage} crmMode={crmMode} /></span>
+              <span className="deals-card-value" style={{ color: 'var(--muted)', fontSize: 13 }}>{d.value ? `$${Number(d.value).toLocaleString()}` : '—'}</span>
+              <span className="deals-card-hide-mobile" style={{ color: 'var(--muted)', fontSize: 13 }}>{d.seats ?? '—'}</span>
+              <span className="deals-card-hide-mobile" style={{ color: 'var(--muted)', fontSize: 13 }}>
                 {d.training_type ?? ''}{d.training_date ? ` · ${new Date(d.training_date).toLocaleDateString()}` : ''}
                 {!d.training_type && !d.training_date ? '—' : ''}
               </span>

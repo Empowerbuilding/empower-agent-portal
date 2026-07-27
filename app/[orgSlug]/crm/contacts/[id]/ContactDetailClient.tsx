@@ -324,6 +324,16 @@ export default function ContactDetailClient({
     fontSize: 13, cursor: 'pointer',
   };
 
+  // Ensures action buttons (+ Task, Edit, + Add Note, ← Back, etc.) meet the
+  // 40px minimum touch-target height on mobile while keeping desktop compact.
+  const actionBtnStyle = (base: React.CSSProperties): React.CSSProperties => ({
+    ...base,
+    minHeight: 40,
+    padding: '8px 14px',
+    display: 'inline-flex',
+    alignItems: 'center',
+  });
+
   // Separate notes from other activities
   // Merge activity-based notes + notes table — sort by created_at desc, dedupe by id
   const activityNotes = activities.filter(a => a.activity_type === 'note');
@@ -380,19 +390,19 @@ export default function ContactDetailClient({
               ) : (
                 <>
                   <button onClick={() => setShowAddDeal(true)}
-                    style={{ padding: '6px 12px', background: '#166534', border: '1px solid #22c55e55', borderRadius: 6, color: '#4ade80', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                    style={actionBtnStyle({ background: '#166534', border: '1px solid #22c55e55', borderRadius: 6, color: '#4ade80', cursor: 'pointer', fontSize: 12, fontWeight: 600 })}>
                     + Pipeline
                   </button>
                   <button onClick={() => setShowQuickTask(true)}
-                    style={{ padding: '6px 12px', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>
+                    style={actionBtnStyle({ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 })}>
                     + Task
                   </button>
                   <button onClick={() => { setEditMode(true); setEditFields({ first_name: contactData.first_name ?? '', last_name: contactData.last_name ?? '', phone: contactData.phone ?? '', email: contactData.email ?? '' }); }}
-                    style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>
+                    style={actionBtnStyle({ background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 })}>
                     ✏️ Edit
                   </button>
                   <button onClick={() => router.push(`/${orgSlug}/crm/contacts`)}
-                    style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>
+                    style={actionBtnStyle({ background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 })}>
                     ← Back
                   </button>
                 </>
@@ -650,7 +660,7 @@ export default function ContactDetailClient({
       <div style={sectionStyle}>
         {sectionHeader(`Notes (${notes.length})`,
           <button onClick={() => setAddingNote(v => !v)}
-            style={{ padding: '4px 10px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            style={actionBtnStyle({ background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' })}>
             + Add Note
           </button>
         )}
@@ -706,7 +716,7 @@ export default function ContactDetailClient({
       <div style={sectionStyle}>
         {sectionHeader(`Open Tasks (${tasks.length})`,
           <button onClick={() => setAddingTask(v => !v)}
-            style={{ padding: '4px 10px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            style={actionBtnStyle({ background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' })}>
             + Add Task
           </button>
         )}

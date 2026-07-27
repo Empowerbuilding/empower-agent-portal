@@ -571,6 +571,96 @@ html, body {
   }
 }
 
+/* ── Global mobile touch targets ── */
+@media (max-width: 768px) {
+  button, .btn, select, input[type="text"], input[type="search"], input[type="date"], input[type="time"] {
+    min-height: 40px;
+  }
+  /* Filter chips */
+  .filter-chip, [class*="filter"] button, [class*="chip"] {
+    min-height: 40px;
+    padding: 0 12px;
+  }
+}
+
+/* ── Deals list → mobile card layout ── */
+@media (max-width: 639px) {
+  .deals-list-header {
+    display: none !important;
+  }
+  .deals-list-row {
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px !important;
+  }
+  .deals-card-name {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    order: 1;
+  }
+  .deals-card-contact {
+    font-size: 12px !important;
+    order: 2;
+  }
+  .deals-card-badges {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    order: 3;
+  }
+  .deals-card-value {
+    order: 4;
+    align-self: flex-end;
+    font-size: 13px !important;
+  }
+  /* hide non-essential columns (seats/training) on mobile b2b cards */
+  .deals-card-hide-mobile {
+    display: none !important;
+  }
+}
+
+/* ── Pipeline Kanban horizontal scroll hint ── */
+.pipeline-kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+.pipeline-kanban-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.pipeline-kanban-scroll::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 3px;
+}
+.pipeline-kanban-scroll::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+/* ── CRM Sub-Nav (tab bar) ── */
+.crm-sub-nav {
+  scrollbar-width: none; /* Firefox */
+}
+.crm-sub-nav::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Edge */
+}
+.crm-sub-nav-fade {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 1px; /* sit above the border-bottom */
+  width: 28px;
+  background: linear-gradient(to right, transparent, var(--surface));
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+@media (max-width: 767px) {
+  .crm-sub-nav-fade {
+    opacity: 1;
+  }
+}
+
 /* ── Channel drag-to-reorder ── */
 .channel-link-dragging {
   opacity: 0.5;
