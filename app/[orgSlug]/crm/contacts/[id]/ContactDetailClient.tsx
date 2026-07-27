@@ -245,9 +245,22 @@ export default function ContactDetailClient({
   async function addTask() {
     if (!newTask.title.trim() || savingTask) return;
     setSavingTask(true);
+    const title = newTask.title.trim();
+    let ai_summary: string | null = null;
+    try {
+      const res = await fetch('/api/generate-task-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description: null }),
+      });
+      const data = await res.json();
+      ai_summary = data.summary ?? null;
+    } catch {
+      // non-fatal — proceed without a summary
+    }
     const { data } = await crm.from('tasks').insert({
       contact_id: contactData.id,
-      title: newTask.title.trim(),
+      title,
       due_date: newTask.due_date || null,
       due_time: newTask.due_time || null,
       priority: newTask.priority || null,
@@ -256,6 +269,7 @@ export default function ContactDetailClient({
       deal_id: newTask.deal_id || null,
       completed: false,
       status: 'open',
+      ai_summary,
     }).select().single();
     setSavingTask(false);
     if (data) {

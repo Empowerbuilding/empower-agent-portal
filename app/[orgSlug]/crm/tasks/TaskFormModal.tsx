@@ -54,9 +54,24 @@ export default function TaskFormModal({
     setSaving(true);
     setError('');
 
+    const title = form.title.trim();
+    const description = form.description.trim() || null;
+    let ai_summary: string | null = null;
+    try {
+      const res = await fetch('/api/generate-task-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description }),
+      });
+      const data = await res.json();
+      ai_summary = data.summary ?? null;
+    } catch {
+      // non-fatal — proceed without a summary
+    }
+
     const payload: any = {
-      title: form.title.trim(),
-      description: form.description.trim() || null,
+      title,
+      description,
       priority: form.priority || null,
       task_type: form.task_type || null,
       due_date: form.due_date || null,
@@ -64,6 +79,7 @@ export default function TaskFormModal({
       assigned_to: form.assigned_to || null,
       contact_id: form.contact_id || null,
       deal_id: form.deal_id || null,
+      ai_summary,
     };
 
     if (isEdit) {

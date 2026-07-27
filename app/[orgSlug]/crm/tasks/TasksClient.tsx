@@ -364,10 +364,10 @@ export default function TasksClient({ tasks: initial, contacts, users, deals, or
                   <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--text)', textDecoration: done ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {task.title}
                   </div>
-                  {task.description && (
+                  {(task.ai_summary || task.description) && (
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {(() => {
-                        const plain = task.description.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1').replace(/#{1,6}\s*/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/`([^`]+)`/g, '$1').trim()
+                      {task.ai_summary || (() => {
+                        const plain = (task.description || '').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1').replace(/#{1,6}\s*/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/`([^`]+)`/g, '$1').trim()
                         return plain.length > 100 ? plain.slice(0, 97) + '...' : plain
                       })()}
                     </div>
