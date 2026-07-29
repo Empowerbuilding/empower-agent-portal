@@ -205,14 +205,16 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
   // Active group — default to first group, persist in localStorage
   const [activeGroupId, setActiveGroupId] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('portal_active_group') ?? (groups[0]?.id ?? null);
+      const stored = localStorage.getItem(`portal_active_group_${orgSlug}`);
+      // Validate stored ID belongs to this org's groups — stale IDs from other orgs cause blank sidebar
+      if (stored && groups.some(g => g.id === stored)) return stored;
     }
     return groups[0]?.id ?? null;
   });
 
   function selectGroup(id: string) {
     setActiveGroupId(id);
-    if (typeof window !== 'undefined') localStorage.setItem('portal_active_group', id);
+    if (typeof window !== 'undefined') localStorage.setItem(`portal_active_group_${orgSlug}`, id);
   }
 
   // Unread tracking via DB (portal_channel_members.last_seen_at)
