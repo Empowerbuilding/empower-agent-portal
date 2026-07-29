@@ -167,13 +167,16 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     if (data) {
       setMessages(data as PortalMessage[]);
       const lastMsg = data[data.length - 1];
-      const isRecentUserMsg = lastMsg && lastMsg.sender_type === 'user' &&
+      // Show typing indicator whenever the last message is from a user (no time limit).
+      // This handles long-running agent tasks (code changes, deploys) that take >90s.
+      const isPendingAgentReply = lastMsg && lastMsg.sender_type === 'user' &&
         lastMsg.content !== '/reset' &&
-        (Date.now() - new Date(lastMsg.created_at).getTime()) < 5 * 60 * 1000;
-      if (isRecentUserMsg && shouldShowTyping(channel.id, lastMsg.content)) {
+        shouldShowTyping(channel.id, lastMsg.content);
+      if (isPendingAgentReply) {
         setAgentTyping(true);
         if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-        typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
+        // Long timeout (10 min) as a safety fallback only
+        typingTimerRef.current = setTimeout(() => setAgentTyping(false), 10 * 60 * 1000);
       } else {
         setAgentTyping(false);
       }
@@ -211,11 +214,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages', filter: `channel_id=eq.${channel.id}` },
         (payload) => {
           const msg = payload.new as PortalMessage;
-          const msgIsRecent = (Date.now() - new Date(msg.created_at).getTime()) < 5 * 60 * 1000;
-          if (msg.sender_type === 'user' && msgIsRecent && msg.content !== '/reset' && shouldShowTyping(channel.id, msg.content)) {
+          if (msg.sender_type === 'user' && msg.content !== '/reset' && shouldShowTyping(channel.id, msg.content)) {
             setAgentTyping(true);
             if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-            typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
+            // 10-min safety fallback; cleared immediately when agent reply lands
+            typingTimerRef.current = setTimeout(() => setAgentTyping(false), 10 * 60 * 1000);
           } else {
             setAgentTyping(false);
             // Play receive sound for agent/system messages
