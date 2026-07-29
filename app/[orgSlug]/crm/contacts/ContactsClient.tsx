@@ -45,6 +45,7 @@ const LIFECYCLE_STYLES: Record<string, { bg: string; color: string }> = {
   sql:           { bg: '#ede9fe', color: '#7c3aed' },
   customer:      { bg: '#dcfce7', color: '#15803d' },
   former_client: { bg: '#f3f4f6', color: '#6b7280' },
+  dead:          { bg: '#f3f4f6', color: '#9ca3af' },
 };
 
 function LeadScoreBadge({ score }: { score: string | null }) {
@@ -263,7 +264,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stage:</span>
         <button style={pillBtn(!lifecycleFilter)} onClick={() => { setLifecycleFilter(''); setPage(0); }}>All</button>
-        {['subscriber','lead','mql','sql','customer','former_client'].map(s => (
+        {['subscriber','lead','mql','sql','customer','former_client','dead'].map(s => (
           <button key={s} style={pillBtn(lifecycleFilter === s)} onClick={() => { setLifecycleFilter(lifecycleFilter === s ? '' : s); setPage(0); }}>
             {s.replace('_',' ').replace(/\b\w/g, c => c.toUpperCase())}
           </button>

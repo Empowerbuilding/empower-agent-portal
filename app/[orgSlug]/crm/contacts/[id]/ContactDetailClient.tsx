@@ -32,6 +32,7 @@ const LIFECYCLE_OPTIONS = [
   { key: 'sql',           label: 'SQL',           color: '#7c3aed' },
   { key: 'customer',      label: 'Customer',      color: '#15803d' },
   { key: 'former_client', label: 'Former Client', color: '#6b7280' },
+  { key: 'dead',         label: 'Dead',         color: '#9ca3af' },
 ];
 
 const LEAD_SCORE_STYLES: Record<string, { bg: string; color: string }> = {
