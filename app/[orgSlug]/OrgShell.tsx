@@ -76,6 +76,13 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
     }
   }, [pathname]);
 
+  // Persist last CRM path so sidebar link can restore it
+  useEffect(() => {
+    if (pathname.startsWith(`/${orgSlug}/crm`)) {
+      try { localStorage.setItem(`claw_crm_last_${orgSlug}`, pathname); } catch {}
+    }
+  }, [pathname, orgSlug]);
+
   // Find active channel name for mobile header
   const activeChannelId = pathname.split('/')[2];
   const activeChannel = channels.find(ch => ch.id === activeChannelId);

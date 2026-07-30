@@ -635,7 +635,19 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             </Link>
             <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={15} /></Link>
             {org.crm_supabase_url && (
-              <Link href={`/${orgSlug}/crm`} onClick={onClose} title="CRM" style={{ color: pathname.startsWith(`/${orgSlug}/crm`) ? 'var(--accent)' : 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconDatabase size={15} /></Link>
+              <button
+                title="CRM"
+                onClick={() => {
+                  let dest = `/${orgSlug}/crm`;
+                  try {
+                    const last = localStorage.getItem(`claw_crm_last_${orgSlug}`);
+                    if (last) dest = last;
+                  } catch {}
+                  onClose();
+                  router.push(dest);
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: pathname.startsWith(`/${orgSlug}/crm`) ? 'var(--accent)' : 'var(--muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
+              ><IconDatabase size={15} /></button>
             )}
             <Link href={`/${orgSlug}/settings`} onClick={onClose} title="Settings" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGear size={15} /></Link>
           </div>
