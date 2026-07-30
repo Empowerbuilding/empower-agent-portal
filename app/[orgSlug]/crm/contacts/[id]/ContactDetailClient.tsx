@@ -124,6 +124,9 @@ export default function ContactDetailClient({
 
   // Deal stage
   const [movingStage, setMovingStage] = useState(false);
+  const [stageError, setStageError] = useState<string | null>(null);
+  const [confirmComplete, setConfirmComplete] = useState(false);
+  const [closeDate, setCloseDate] = useState('');
 
   // Add to Pipeline modal
   const [showAddDeal, setShowAddDeal] = useState(false);
@@ -162,10 +165,46 @@ export default function ContactDetailClient({
 
   async function moveStage(newStage: string) {
     if (!deal || movingStage) return;
+    // Intercept 'complete' — trigger requires actual_close_date + value
+    if (newStage === 'complete') {
+      setCloseDate(new Date().toISOString().split('T')[0]);
+      setConfirmComplete(true);
+      return;
+    }
+    setStageError(null);
     setMovingStage(true);
-    const { data } = await crm.from('deals').update({ stage: newStage }).eq('id', deal.id).select().single();
+    const { data, error } = await crm.from('deals').update({ stage: newStage }).eq('id', deal.id).select().single();
+    if (error) setStageError(error.message ?? 'Failed to update stage.');
     if (data) setDeal(data);
     setMovingStage(false);
+  }
+
+  async function confirmMoveComplete() {
+    if (!deal || movingStage) return;
+    setStageError(null);
+    setMovingStage(true);
+    const payload: any = {
+      stage: 'complete',
+      actual_close_date: closeDate || new Date().toISOString().split('T')[0],
+    };
+    // If deal has no value, we can't pass the trigger — surface a clear error
+    if (!deal.value || deal.value <= 0) {
+      setStageError('A revenue amount (value) is required to mark a deal as Won. Edit the deal to add one first.');
+      setMovingStage(false);
+      setConfirmComplete(false);
+      return;
+    }
+    const { data, error } = await crm.from('deals').update(payload).eq('id', deal.id).select().single();
+    if (error) {
+      const msg = error.message ?? '';
+      if (msg.includes('MISSING_CLOSE_DATE')) setStageError('A close date is required.');
+      else if (msg.includes('MISSING_REVENUE')) setStageError('A revenue amount is required. Edit the deal to add one first.');
+      else setStageError(msg || 'Failed to mark as complete.');
+    } else if (data) {
+      setDeal(data);
+    }
+    setMovingStage(false);
+    setConfirmComplete(false);
   }
 
   async function saveLeadSource(src: string) {
@@ -627,6 +666,11 @@ export default function ContactDetailClient({
                   </button>
                 )}
               </div>
+              {stageError && (
+                <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4, padding: '6px 10px', background: '#ef444415', border: '1px solid #ef444433', borderRadius: 5 }}>
+                  ⚠️ {stageError}
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ color: 'var(--muted)', fontSize: 13 }}>No active deal.</div>
@@ -873,6 +917,42 @@ export default function ContactDetailClient({
           onSaved={handleTaskSaved}
           onDeleted={handleTaskDeleted}
         />
+      )}
+
+      {/* ── Mark Deal Complete confirmation ── */}
+      {confirmComplete && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setConfirmComplete(false)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 320, display: 'flex', flexDirection: 'column', gap: 14 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Mark Deal as Won 🎉</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>Set the actual close date to complete the deal.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Close Date *</label>
+              <input
+                type="date"
+                value={closeDate}
+                onChange={e => setCloseDate(e.target.value)}
+                style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '9px 12px', fontSize: 13, width: '100%', boxSizing: 'border-box' as const }}
+              />
+            </div>
+            {stageError && (
+              <div style={{ fontSize: 12, color: '#ef4444', padding: '6px 10px', background: '#ef444415', border: '1px solid #ef444433', borderRadius: 5 }}>
+                ⚠️ {stageError}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => { setConfirmComplete(false); setStageError(null); }}
+                style={{ padding: '8px 14px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', fontSize: 13, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={confirmMoveComplete} disabled={!closeDate || movingStage}
+                style={{ padding: '8px 16px', background: '#22c55e', border: 'none', borderRadius: 6, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: !closeDate || movingStage ? 0.5 : 1 }}>
+                {movingStage ? 'Saving…' : 'Mark Won'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
     </>
