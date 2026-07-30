@@ -380,8 +380,16 @@ export default function TasksClient({ tasks: initial, contacts, users, deals, or
                 </div>
 
                 {/* Associated with */}
-                <div className="tasks-col-associated" style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {contactName ?? dealTitle ?? '—'}
+                <div className="tasks-col-associated" style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                  {task.contact_id && contactName ? (
+                    <a href={`/${orgSlug}/crm/contacts/${task.contact_id}`} style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+                      {contactName}
+                    </a>
+                  ) : task.deal_id && dealTitle ? (
+                    <a href={`/${orgSlug}/crm/deals/${task.deal_id}`} style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+                      {dealTitle}
+                    </a>
+                  ) : <span style={{ color: 'var(--muted)' }}>—</span>}
                 </div>
 
                 {/* Due date */}
