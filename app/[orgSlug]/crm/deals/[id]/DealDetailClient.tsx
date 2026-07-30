@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import TaskFormModal from '../../tasks/TaskFormModal';
+import EditDealSlideOver from './EditDealSlideOver';
 
 const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 const TASK_TYPE_OPTIONS: { value: string; label: string }[] = [
@@ -35,12 +36,13 @@ interface Props {
   activities: any[];
   tasks?: any[];
   users: { id: string; name: string }[];
+  contacts: { id: string; first_name: string; last_name: string }[];
   orgSlug: string;
   crmUrl: string;
   crmKey: string;
 }
 
-export default function DealDetailClient({ deal: initialDeal, activities: initActivities, tasks: initTasks = [], users, orgSlug, crmUrl, crmKey }: Props) {
+export default function DealDetailClient({ deal: initialDeal, activities: initActivities, tasks: initTasks = [], users, contacts, orgSlug, crmUrl, crmKey }: Props) {
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
   const [deal, setDeal] = useState(initialDeal);
@@ -62,6 +64,7 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
   const [savingTask, setSavingTask] = useState(false);
   const [confirmCompleteTaskId, setConfirmCompleteTaskId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<any | null>(null);
+  const [editingDeal, setEditingDeal] = useState(false);
 
   const stageIdx = STAGES.findIndex(s => s.key === deal.stage);
   const curStage = STAGES[stageIdx];
@@ -196,10 +199,16 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
               </h1>
               {deal.company_name && <div style={{ fontSize: 13, color: 'var(--accent)', marginTop: 2, opacity: 0.85 }}>{deal.company_name}</div>}
             </div>
-            <button onClick={() => router.back()}
-              style={actionBtnStyle({ background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12, flexShrink: 0 })}>
-              ← Back
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <button onClick={() => setEditingDeal(true)}
+                style={actionBtnStyle({ background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 })}>
+                ✏️ Edit
+              </button>
+              <button onClick={() => router.back()}
+                style={actionBtnStyle({ background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 })}>
+                ← Back
+              </button>
+            </div>
           </div>
 
           {/* Contact link */}
@@ -405,6 +414,18 @@ export default function DealDetailClient({ deal: initialDeal, activities: initAc
         onDeleted={handleTaskDeleted}
       />
     )}
+
+    {/* Edit Deal slide-over */}
+    <EditDealSlideOver
+      open={editingDeal}
+      onClose={() => setEditingDeal(false)}
+      deal={deal}
+      contacts={contacts}
+      crmUrl={crmUrl}
+      crmKey={crmKey}
+      onSaved={(updated) => { setDeal(updated); setEditingDeal(false); }}
+      onDeleted={() => router.back()}
+    />
     </>
   );
 }

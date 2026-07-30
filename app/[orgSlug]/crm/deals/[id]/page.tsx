@@ -23,10 +23,11 @@ export default async function DealDetailPage({ params }: { params: Promise<{ org
 
   if (error || !deal) return notFound();
 
-  const [activitiesRes, usersRes, tasksRes] = await Promise.all([
+  const [activitiesRes, usersRes, tasksRes, contactsRes] = await Promise.all([
     crm.from('activities').select('*').eq('deal_id', id).order('created_at', { ascending: false }).limit(30),
     crm.from('users').select('id, name'),
     crm.from('tasks').select('*').eq('deal_id', id).order('completed', { ascending: true }).order('due_date', { ascending: true, nullsFirst: false }),
+    crm.from('contacts').select('id, first_name, last_name').order('last_name', { ascending: true }).limit(500),
   ]);
 
   const normalizedDeal = {
@@ -41,6 +42,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ org
       activities={activitiesRes.data ?? []}
       tasks={tasksRes.data ?? []}
       users={usersRes.data ?? []}
+      contacts={contactsRes.data ?? []}
       orgSlug={orgSlug}
       crmUrl={org.crm_supabase_url}
       crmKey={org.crm_supabase_key}
