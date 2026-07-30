@@ -718,62 +718,6 @@ export default function ContactDetailClient({
         </div>
       )}
 
-      {/* ── Notes ── */}
-      <div style={sectionStyle}>
-        {sectionHeader(`Notes (${notes.length})`,
-          <button onClick={() => setAddingNote(v => !v)}
-            style={actionBtnStyle({ background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' })}>
-            + Add Note
-          </button>
-        )}
-        {addingNote && (
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Write a note…"
-              rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} autoFocus />
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setAddingNote(false); setNoteText(''); }} style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
-              <button onClick={submitNote} disabled={!noteText.trim() || savingNote}
-                style={{ padding: '6px 12px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 12, opacity: !noteText.trim() || savingNote ? 0.5 : 1 }}>
-                {savingNote ? 'Saving…' : 'Save Note'}
-              </button>
-            </div>
-          </div>
-        )}
-        {notes.length === 0 && !addingNote ? (
-          <div style={{ padding: '14px', color: 'var(--muted)', fontSize: 13 }}>No notes yet.</div>
-        ) : notes.map((a, i) => (
-          <div key={a.id} style={{ padding: '12px 14px', borderBottom: i < notes.length - 1 ? '1px solid var(--border)' : 'none' }}>
-            <div style={{ fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{a.title}</div>
-            {a.description && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, whiteSpace: 'pre-wrap' }}>{a.description}</div>}
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, display: 'flex', gap: 8 }}>
-              <span>{new Date(a.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
-              {a.user_id && ownerMap[a.user_id] && <span style={{ color: 'var(--accent)', opacity: 0.7 }}>— {ownerMap[a.user_id].split(' ')[0]}</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Activity Feed ── */}
-      <div style={sectionStyle}>
-        {sectionHeader(`Activity (${otherActivities.length})`)}
-        {otherActivities.length === 0 ? (
-          <div style={{ padding: '14px', color: 'var(--muted)', fontSize: 13 }}>No activity yet.</div>
-        ) : otherActivities.map((a, i) => (
-          <div key={a.id} style={{ display: 'flex', gap: 10, padding: '10px 14px', borderBottom: i < otherActivities.length - 1 ? '1px solid var(--border)' : 'none' }}>
-            <span style={{ fontSize: 16, flexShrink: 0 }}>{ACTIVITY_ICONS[a.activity_type] ?? '📋'}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{a.title}</div>
-              {a.description && (
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{a.description}</div>
-              )}
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-                {new Date(a.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* ── Tasks ── */}
       <div style={sectionStyle}>
         {sectionHeader(`Open Tasks (${tasks.length})`,
@@ -874,6 +818,63 @@ export default function ContactDetailClient({
           </div>
         ))}
       </div>
+
+      {/* ── Notes ── */}
+      <div style={sectionStyle}>
+        {sectionHeader(`Notes (${notes.length})`,
+          <button onClick={() => setAddingNote(v => !v)}
+            style={actionBtnStyle({ background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' })}>
+            + Add Note
+          </button>
+        )}
+        {addingNote && (
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Write a note…"
+              rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} autoFocus />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => { setAddingNote(false); setNoteText(''); }} style={{ padding: '6px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
+              <button onClick={submitNote} disabled={!noteText.trim() || savingNote}
+                style={{ padding: '6px 12px', background: 'var(--accent)', border: 'none', borderRadius: 5, color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 12, opacity: !noteText.trim() || savingNote ? 0.5 : 1 }}>
+                {savingNote ? 'Saving…' : 'Save Note'}
+              </button>
+            </div>
+          </div>
+        )}
+        {notes.length === 0 && !addingNote ? (
+          <div style={{ padding: '14px', color: 'var(--muted)', fontSize: 13 }}>No notes yet.</div>
+        ) : notes.map((a, i) => (
+          <div key={a.id} style={{ padding: '12px 14px', borderBottom: i < notes.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{a.title}</div>
+            {a.description && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, whiteSpace: 'pre-wrap' }}>{a.description}</div>}
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, display: 'flex', gap: 8 }}>
+              <span>{new Date(a.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+              {a.user_id && ownerMap[a.user_id] && <span style={{ color: 'var(--accent)', opacity: 0.7 }}>— {ownerMap[a.user_id].split(' ')[0]}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Activity Feed ── */}
+      <div style={sectionStyle}>
+        {sectionHeader(`Activity (${otherActivities.length})`)}
+        {otherActivities.length === 0 ? (
+          <div style={{ padding: '14px', color: 'var(--muted)', fontSize: 13 }}>No activity yet.</div>
+        ) : otherActivities.map((a, i) => (
+          <div key={a.id} style={{ display: 'flex', gap: 10, padding: '10px 14px', borderBottom: i < otherActivities.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>{ACTIVITY_ICONS[a.activity_type] ?? '📋'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{a.title}</div>
+              {a.description && (
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{a.description}</div>
+              )}
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+                {new Date(a.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
 
 
     </div>
