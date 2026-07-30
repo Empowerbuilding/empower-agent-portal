@@ -67,6 +67,7 @@ interface Props {
   completedTasks?: any[];
   deal: any | null;
   deals?: { id: string; title: string }[];
+  allDeals?: any[];
   meetings: any[];
   users: User[];
   ownerMap: Record<string, string>;
@@ -78,7 +79,7 @@ interface Props {
 
 export default function ContactDetailClient({
   contact, activities: initActivities, allActivities, tasks: initTasks, completedTasks: initCompletedTasks = [], deal: initDeal,
-  deals = [], meetings, users, ownerMap, orgSlug, crmUrl, crmKey, crmNotes = [],
+  deals = [], allDeals = [], meetings, users, ownerMap, orgSlug, crmUrl, crmKey, crmNotes = [],
 }: Props) {
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
@@ -636,46 +637,62 @@ export default function ContactDetailClient({
         </div>
       )}
 
-      {/* ── Deal ── */}
+      {/* ── Deals ── */}
       <div style={sectionStyle}>
-        {sectionHeader('Active Deal')}
-        <div style={{ padding: 14 }}>
-          {deal ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                <StageBadge stage={deal.stage} />
-                {deal.deal_type && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{deal.deal_type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}</span>}
-                {deal.value && <span style={{ fontSize: 14, fontWeight: 700, color: '#22c55e' }}>${Number(deal.value).toLocaleString()}</span>}
-                {deal.expected_close_date && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Close: {new Date(deal.expected_close_date).toLocaleDateString()}</span>}
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>MOVE:</span>
-                {prevStage && (
-                  <button onClick={() => moveStage(prevStage.key)} disabled={movingStage}
-                    style={{ padding: '5px 12px', background: 'var(--sidebar-bg)', border: `1px solid ${prevStage.color}66`, borderRadius: 6, color: prevStage.color, cursor: 'pointer', fontSize: 12 }}>
-                    ← {prevStage.label}
-                  </button>
-                )}
-                <span style={{ padding: '5px 12px', background: `${B2C_STAGES[currentStageIdx]?.color ?? '#6b7280'}18`, border: `1px solid ${B2C_STAGES[currentStageIdx]?.color ?? '#6b7280'}44`, borderRadius: 6, color: B2C_STAGES[currentStageIdx]?.color ?? '#6b7280', fontSize: 12, fontWeight: 600 }}>
-                  ● {B2C_STAGES[currentStageIdx]?.label ?? deal.stage}
+        {sectionHeader(`Deals (${allDeals.length})`)}
+        {allDeals.length === 0 ? (
+          <div style={{ padding: 14, color: 'var(--muted)', fontSize: 13 }}>No deals yet.</div>
+        ) : allDeals.map((d: any, i: number) => {
+          const isActive = d.stage !== 'complete' && d.stage !== 'lost';
+          const isPrimary = deal && d.id === deal.id;
+          const s = B2C_STAGES.find(x => x.key === d.stage) ?? { label: d.stage, color: '#6b7280' };
+          const dStageIdx = B2C_STAGES.findIndex(x => x.key === d.stage);
+          const dPrev = dStageIdx > 0 ? B2C_STAGES[dStageIdx - 1] : null;
+          const dNext = dStageIdx >= 0 && dStageIdx < B2C_STAGES.length - 1 ? B2C_STAGES[dStageIdx + 1] : null;
+          return (
+            <div key={d.id} style={{ borderBottom: i < allDeals.length - 1 ? '1px solid var(--border)' : 'none', padding: '12px 14px', opacity: isActive ? 1 : 0.65 }}>
+              {/* Title row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                <a href={`/${orgSlug}/crm/deals/${d.id}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', flex: 1 }}>
+                  {d.title || 'Untitled Deal'}
+                </a>
+                <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${s.color}20`, color: s.color, border: `1px solid ${s.color}44`, flexShrink: 0 }}>
+                  {s.label}
                 </span>
-                {nextStage && (
-                  <button onClick={() => moveStage(nextStage.key)} disabled={movingStage}
-                    style={{ padding: '5px 12px', background: 'var(--sidebar-bg)', border: `1px solid ${nextStage.color}66`, borderRadius: 6, color: nextStage.color, cursor: 'pointer', fontSize: 12 }}>
-                    {nextStage.label} →
-                  </button>
-                )}
               </div>
-              {stageError && (
-                <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4, padding: '6px 10px', background: '#ef444415', border: '1px solid #ef444433', borderRadius: 5 }}>
+              {/* Meta row */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)', marginBottom: isPrimary ? 10 : 0 }}>
+                {d.value != null && <span style={{ fontWeight: 700, color: isActive ? '#22c55e' : 'var(--muted)' }}>${Number(d.value).toLocaleString()}</span>}
+                {d.deal_type && <span>{d.deal_type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}</span>}
+                {d.expected_close_date && !d.actual_close_date && <span>Close: {new Date(d.expected_close_date).toLocaleDateString()}</span>}
+                {d.actual_close_date && <span>Closed: {new Date(d.actual_close_date).toLocaleDateString()}</span>}
+              </div>
+              {/* Stage move — primary active deal only */}
+              {isPrimary && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>MOVE:</span>
+                  {dPrev && (
+                    <button onClick={() => moveStage(dPrev.key)} disabled={movingStage}
+                      style={{ padding: '4px 10px', background: 'var(--sidebar-bg)', border: `1px solid ${dPrev.color}66`, borderRadius: 6, color: dPrev.color, cursor: 'pointer', fontSize: 11 }}>
+                      ← {dPrev.label}
+                    </button>
+                  )}
+                  {dNext && (
+                    <button onClick={() => moveStage(dNext.key)} disabled={movingStage}
+                      style={{ padding: '4px 10px', background: 'var(--sidebar-bg)', border: `1px solid ${dNext.color}66`, borderRadius: 6, color: dNext.color, cursor: 'pointer', fontSize: 11 }}>
+                      {dNext.label} →
+                    </button>
+                  )}
+                </div>
+              )}
+              {isPrimary && stageError && (
+                <div style={{ fontSize: 12, color: '#ef4444', marginTop: 6, padding: '6px 10px', background: '#ef444415', border: '1px solid #ef444433', borderRadius: 5 }}>
                   ⚠️ {stageError}
                 </div>
               )}
             </div>
-          ) : (
-            <div style={{ color: 'var(--muted)', fontSize: 13 }}>No active deal.</div>
-          )}
-        </div>
+          );
+        })}
       </div>
 
       {/* ── Meetings ── */}

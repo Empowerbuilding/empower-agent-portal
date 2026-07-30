@@ -46,7 +46,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     crm.from('activities').select('*').eq('contact_id', id).order('created_at', { ascending: false }).limit(50),
     crm.from('tasks').select('*').eq('contact_id', id).eq('completed', false).order('due_date', { ascending: true }),
     crm.from('tasks').select('*').eq('contact_id', id).eq('completed', true).order('completed_at', { ascending: false }).limit(20),
-    crm.from('deals').select('*').eq('contact_id', id).not('stage', 'in', '("complete","lost")').order('created_at', { ascending: false }).limit(1),
+    crm.from('deals').select('*').eq('contact_id', id).order('created_at', { ascending: false }),
     crm.from('users').select('id, name, role'),
     crm.from('scheduled_meetings').select('*').eq('contact_id', id).order('scheduled_at', { ascending: false }).limit(10),
     // For attribution — get all activities sorted ascending (first touch)
@@ -57,7 +57,9 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     crm.from('deals').select('id, title').eq('contact_id', id).order('created_at', { ascending: false }),
   ]);
 
-  const deal = (dealsRaw.data ?? [])[0] ?? null;
+  const allDeals = dealsRaw.data ?? [];
+  // Primary active deal = first non-complete/non-lost (drives stage-move buttons)
+  const deal = allDeals.find((d: any) => d.stage !== 'complete' && d.stage !== 'lost') ?? null;
 
   // Build owner map
   const ownerMap: Record<string, string> = {};
@@ -73,6 +75,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       completedTasks={completedTasksRes.data ?? []}
       deal={deal}
       deals={allDealsRes.data ?? []}
+      allDeals={allDeals}
       meetings={(meetingsRes as any).data ?? []}
       users={usersRes.data ?? []}
       ownerMap={ownerMap}
