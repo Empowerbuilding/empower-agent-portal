@@ -541,10 +541,25 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             }
 
             if (isInbound) {
+              const attachments = (msg.attachments ?? []) as Array<{ url: string; type?: string; name?: string }>;
+              const imageAttachments = attachments.filter(a => a.type?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(a.url));
               return (
                 <div key={msg.id} style={{ alignSelf: 'flex-start', maxWidth: '80%' }}>
                   <div style={{ background: 'var(--surface)', borderRadius: '18px 18px 18px 4px', padding: '10px 14px' }}>
-                    <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
+                    {body ? <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div> : null}
+                    {imageAttachments.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: body ? '8px' : '0' }}>
+                        {imageAttachments.map((a, i) => (
+                          <img
+                            key={i}
+                            src={a.url}
+                            alt={a.name ?? 'MMS Image'}
+                            style={{ maxWidth: '220px', maxHeight: '180px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer', display: 'block' }}
+                            onClick={() => window.open(a.url, '_blank')}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                     <span style={{ fontSize: '11px', color: 'var(--muted)' }} suppressHydrationWarning>{formatFull(msg.created_at)}</span>
