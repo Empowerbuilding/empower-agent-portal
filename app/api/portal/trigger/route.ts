@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     content: string
     senderType?: string
     metadata?: Record<string, unknown>
+    attachments?: Array<{ url: string; type?: string; name?: string }>
   }
 
   try {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { orgId, channelId, content, senderType = 'system', metadata } = body
+  const { orgId, channelId, content, senderType = 'system', metadata, attachments } = body
 
   if (!orgId || !channelId || !content) {
     return NextResponse.json({ error: 'Missing required fields: orgId, channelId, content' }, { status: 400 })
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
       sender_type: senderType,
       content,
       metadata: metadata || null,
+      attachments: attachments?.length ? attachments : null,
     })
     .select('id, created_at')
     .single()
