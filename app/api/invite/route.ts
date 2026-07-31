@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const { email, role, orgId } = await req.json();
     if (!email || !orgId) return NextResponse.json({ error: 'Missing email or orgId' }, { status: 400 });
 
-    const validRoles = ['owner', 'admin', 'rep'];
+    const validRoles = ['owner', 'admin', 'rep', 'contractor'];
     if (role && !validRoles.includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }

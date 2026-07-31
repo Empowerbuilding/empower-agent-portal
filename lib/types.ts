@@ -83,7 +83,7 @@ export interface PortalUser {
   org_id: string;
   name: string;
   email: string;
-  role: 'owner' | 'admin' | 'rep';
+  role: 'owner' | 'admin' | 'rep' | 'contractor';
   active: boolean;
   last_active_at?: string | null;
 }

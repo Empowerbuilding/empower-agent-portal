@@ -633,8 +633,10 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             <Link href="/" onClick={onClose} title="Switch workspace" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             </Link>
-            <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={15} /></Link>
-            {org.crm_supabase_url && (
+            {currentUser.role !== 'contractor' && (
+              <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={15} /></Link>
+            )}
+            {org.crm_supabase_url && currentUser.role !== 'contractor' && (
               <button
                 title="CRM"
                 onClick={() => {
