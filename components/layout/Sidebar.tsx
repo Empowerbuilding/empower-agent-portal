@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconGear, IconClock, IconDatabase, IconRender } from '@/components/ui/Icons';
+import { IconGear, IconClock, IconDatabase, IconRender, IconFolder } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -634,6 +634,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             </Link>
             <Link href={`/${orgSlug}/render`} onClick={onClose} title="Render Studio" style={{ color: pathname.startsWith(`/${orgSlug}/render`) ? 'var(--accent)' : 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={15} /></Link>
+            <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={15} /></Link>
             {currentUser.role !== 'contractor' && (
               <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={15} /></Link>
             )}
