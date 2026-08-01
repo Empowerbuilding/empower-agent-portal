@@ -53,7 +53,7 @@ export default function SettingsPage() {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'admin' | 'rep'>('rep');
+  const [inviteRole, setInviteRole] = useState<'admin' | 'rep' | 'contractor'>('rep');
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
@@ -419,7 +419,7 @@ export default function SettingsPage() {
             <div>
               <label style={{ display: 'block', fontSize: '12px', color: 'var(--muted)', marginBottom: '6px', fontWeight: 500 }}>Role</label>
               <div style={{ display: 'flex', gap: '8px' }}>
-                {(['rep', 'admin'] as const).map(r => (
+                {(['rep', 'admin', 'contractor'] as const).map(r => (
                   <button key={r} onClick={() => setInviteRole(r)} style={{
                     flex: 1, padding: '8px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 600,
                     border: inviteRole === r ? '1px solid var(--accent)' : '1px solid var(--border)',
@@ -431,7 +431,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px' }}>
-                {inviteRole === 'rep' ? 'Can chat with agents, cannot manage settings or invite others.' : 'Can manage channels and invite reps. Cannot manage billing or owners.'}
+                {inviteRole === 'rep' ? 'Can chat with agents, cannot manage settings or invite others.' : inviteRole === 'admin' ? 'Can manage channels and invite reps. Cannot manage billing or owners.' : 'Access limited to their assigned channel + Render Studio only.'}
               </div>
             </div>
 
