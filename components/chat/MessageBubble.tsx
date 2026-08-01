@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { PortalMessage } from '@/lib/types';
 import Markdown from '@/components/ui/Markdown';
+import ImageLightbox from '@/components/ui/ImageLightbox';
 
 interface Props {
   message: PortalMessage;
@@ -49,13 +50,16 @@ function ReplyQuote({ replyTo }: { replyTo: { sender_name: string; content: stri
 }
 
 function AttachmentPreview({ attachments }: { attachments: any[] }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
   if (!attachments?.length) return null;
   return (
+    <>
+    {lightbox && <ImageLightbox src={lightbox} onClose={() => setLightbox(null)} />}
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
       {attachments.map((a: any, i: number) => {
         const isImage = a.type?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(a.url);
         return isImage ? (
-          <img key={i} src={a.url} alt={a.name ?? 'attachment'} style={{ maxWidth: '240px', maxHeight: '200px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer' }} onClick={() => window.open(a.url, '_blank')} />
+          <img key={i} src={a.url} alt={a.name ?? 'attachment'} style={{ maxWidth: '240px', maxHeight: '200px', borderRadius: '8px', objectFit: 'cover', cursor: 'zoom-in' }} onClick={() => setLightbox(a.url)} />
         ) : (
           <a key={i} href={a.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--border)', borderRadius: '6px', padding: '6px 10px', color: 'var(--text)', textDecoration: 'none', fontSize: '13px' }}>
             📎 {a.name ?? 'File'}
@@ -63,6 +67,7 @@ function AttachmentPreview({ attachments }: { attachments: any[] }) {
         );
       })}
     </div>
+    </>
   );
 }
 

@@ -1,4 +1,6 @@
 'use client';
+import { useState } from 'react';
+import ImageLightbox from '@/components/ui/ImageLightbox';
 
 /**
  * Markdown renderer for portal messages.
@@ -12,7 +14,7 @@ interface Props {
   className?: string;
 }
 
-function renderInline(text: string): React.ReactNode[] {
+function renderInline(text: string, onImageClick?: (src: string) => void): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   // Supports: ![alt](url) images, [text](url) links, **bold**, *italic*, `code`, bare image URLs
   const regex = /(!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)|\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`|(https?:\/\/\S+\.(?:jpg|jpeg|png|gif|webp)(?:\?\S*)?)|(https?:\/\/[^\s<>"')\]]+))/gi;
@@ -24,10 +26,11 @@ function renderInline(text: string): React.ReactNode[] {
     if (match.index > last) parts.push(text.slice(last, match.index));
     if (match[0].startsWith('![') && match[3]) {
       // Markdown image: ![alt](url)
+      const src3 = match[3];
       parts.push(
-        <img key={key++} src={match[3]} alt={match[2] || 'image'}
-          style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', display: 'block', margin: '6px 0', cursor: 'pointer', objectFit: 'contain' }}
-          onClick={() => window.open(match![3], '_blank')} />
+        <img key={key++} src={src3} alt={match[2] || 'image'}
+          style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', display: 'block', margin: '6px 0', cursor: 'zoom-in', objectFit: 'contain' }}
+          onClick={() => onImageClick ? onImageClick(src3) : window.open(src3, '_blank')} />
       );
     } else if (match[4] && match[5]) {
       // Markdown link: [text](url)
@@ -41,10 +44,11 @@ function renderInline(text: string): React.ReactNode[] {
       parts.push(<a key={key++} href={href10} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>{href10}</a>);
     } else if (match[9]) {
       // Bare image URL — auto-embed
+      const src9 = match[9];
       parts.push(
-        <img key={key++} src={match[9]} alt="image"
-          style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', display: 'block', margin: '6px 0', cursor: 'pointer', objectFit: 'contain' }}
-          onClick={() => window.open(match![9], '_blank')} />
+        <img key={key++} src={src9} alt="image"
+          style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', display: 'block', margin: '6px 0', cursor: 'zoom-in', objectFit: 'contain' }}
+          onClick={() => onImageClick ? onImageClick(src9) : window.open(src9, '_blank')} />
       );
     }
     last = match.index + match[0].length;
@@ -66,6 +70,7 @@ function parseTableRow(line: string): string[] {
 }
 
 export default function Markdown({ content, className }: Props) {
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   if (!content) return null;
 
   const lines = content.split('\n');
@@ -122,7 +127,7 @@ export default function Markdown({ content, className }: Props) {
       const margins = ['10px 0 4px', '8px 0 4px', '6px 0 2px'];
       blocks.push(
         <div key={lineKey++} style={{ fontSize: sizes[level - 1], fontWeight: 700, color: 'var(--text)', margin: margins[level - 1], lineHeight: 1.3 }}>
-          {renderInline(headingMatch[2])}
+          {renderInline(headingMatch[2], setLightboxSrc)}
         </div>
       );
       i++; continue;
@@ -149,7 +154,7 @@ export default function Markdown({ content, className }: Props) {
                 <tr>
                   {headers.map((h, hi) => (
                     <th key={hi} style={{ padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap', background: 'var(--card)' }}>
-                      {renderInline(h)}
+                      {renderInline(h, setLightboxSrc)}
                     </th>
                   ))}
                 </tr>
@@ -160,7 +165,7 @@ export default function Markdown({ content, className }: Props) {
                 <tr key={ri} style={{ borderBottom: '1px solid var(--border)' }}>
                   {parseTableRow(row).map((cell, ci) => (
                     <td key={ci} style={{ padding: '6px 10px', color: 'var(--text)', verticalAlign: 'top' }}>
-                      {renderInline(cell)}
+                      {renderInline(cell, setLightboxSrc)}
                     </td>
                   ))}
                 </tr>
@@ -177,7 +182,7 @@ export default function Markdown({ content, className }: Props) {
       blocks.push(
         <div key={lineKey++} style={{ display: 'flex', gap: '6px', marginBottom: '2px' }}>
           <span style={{ color: 'var(--muted)', flexShrink: 0 }}>•</span>
-          <span style={{ minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{renderInline(line.replace(/^[-*•]\s/, ''))}</span>
+          <span style={{ minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{renderInline(line.replace(/^[-*•]\s/, ''), setLightboxSrc)}</span>
         </div>
       );
       i++; continue;
@@ -189,16 +194,21 @@ export default function Markdown({ content, className }: Props) {
       blocks.push(
         <div key={lineKey++} style={{ display: 'flex', gap: '6px', marginBottom: '2px' }}>
           <span style={{ color: 'var(--muted)', flexShrink: 0, minWidth: '16px' }}>{numMatch[1]}.</span>
-          <span style={{ minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{renderInline(numMatch[2])}</span>
+          <span style={{ minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{renderInline(numMatch[2], setLightboxSrc)}</span>
         </div>
       );
       i++; continue;
     }
 
     // Plain paragraph
-    blocks.push(<div key={lineKey++} style={{ marginBottom: '2px' }}>{renderInline(line)}</div>);
+    blocks.push(<div key={lineKey++} style={{ marginBottom: '2px' }}>{renderInline(line, setLightboxSrc)}</div>);
     i++;
   }
 
-  return <div className={className} style={{ lineHeight: 1.5, overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0 }}>{blocks}</div>;
+  return (
+    <>
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      <div className={className} style={{ lineHeight: 1.5, overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0 }}>{blocks}</div>
+    </>
+  );
 }
