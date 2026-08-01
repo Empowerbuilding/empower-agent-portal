@@ -426,7 +426,7 @@ export default function SettingsPage() {
                     background: inviteRole === r ? 'rgba(76,139,240,0.15)' : 'var(--sidebar-bg)',
                     color: inviteRole === r ? 'var(--accent)' : 'var(--muted)',
                   }}>
-                    {r === 'rep' ? 'Rep' : 'Admin'}
+                    {r === 'rep' ? 'Rep' : r === 'admin' ? 'Admin' : 'Contractor'}
                   </button>
                 ))}
               </div>
