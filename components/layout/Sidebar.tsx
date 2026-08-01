@@ -356,7 +356,8 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
   // Filter channels to active group
   const filteredChannels = channels.filter(ch => {
     if (!activeGroupId) return true;
-    return ch.agents?.group_id === activeGroupId;
+    const effectiveGroupId = (ch as any).group_id ?? ch.agents?.group_id;
+    return effectiveGroupId === activeGroupId;
   });
 
   const grouped = filteredChannels.filter(ch => ch.agents?.active !== false && ch.active !== false).reduce<Record<string, { agent: Agent; channels: (PortalChannel & { agents: Agent })[] }>>(
@@ -440,7 +441,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
           }}>
             {groups.map(g => {
               const isActive = g.id === activeGroupId;
-              const groupChannels = channels.filter(ch => ch.agents?.group_id === g.id);
+              const groupChannels = channels.filter(ch => ((ch as any).group_id ?? ch.agents?.group_id) === g.id);
               const groupHasUnread = !isActive && groupChannels.some(ch => hasUnread(ch.id));
               return (
                 <button
