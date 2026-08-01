@@ -130,57 +130,36 @@ export default function FilesPage() {
     setUploadProgress(0);
 
     try {
-      // Step 1: Get presigned URL
-      const presignRes = await fetch('/api/files', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'presign-upload',
-          planName: effectiveName,
-          filename: uploadFile.name,
-          contentType: uploadFile.type || 'application/octet-stream',
-          orgId,
-          uploadedBy: currentUser.name,
-        }),
-      });
-      const { uploadUrl, key, version, planSlug } = await presignRes.json();
+      // Single-step proxy upload — file goes through API route, no CORS issues
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('planName', effectiveName);
+      formData.append('projectName', uploadProjectName.trim() || '');
+      formData.append('contactName', uploadContactName.trim() || '');
+      formData.append('orgId', orgId);
+      formData.append('uploadedBy', currentUser.name);
 
-      // Step 2: Upload to Spaces via XHR (so we can track progress)
+      const xhr = new XMLHttpRequest();
       await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
         });
-        xhr.onload = () => xhr.status < 400 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+        xhr.onload = () => {
+          if (xhr.status < 400) resolve();
+          else {
+            try { const r = JSON.parse(xhr.responseText); reject(new Error(r.error || `Upload failed: ${xhr.status}`)); }
+            catch { reject(new Error(`Upload failed: ${xhr.status}`)); }
+          }
+        };
         xhr.onerror = () => reject(new Error('Network error'));
-        xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('Content-Type', uploadFile.type || 'application/octet-stream');
-        xhr.send(uploadFile);
+        xhr.open('POST', '/api/files/upload');
+        xhr.send(formData);
       });
 
-      // Step 3: Confirm upload — save metadata
-      const confirmRes = await fetch('/api/files', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'confirm-upload',
-          key,
-          planName: effectiveName,
-          planSlug,
-          projectName: uploadProjectName.trim() || null,
-          contactName: uploadContactName.trim() || null,
-          filename: uploadFile.name,
-          version,
-          contentType: uploadFile.type || 'application/octet-stream',
-          fileSize: uploadFile.size,
-          orgId,
-          uploadedBy: currentUser.name,
-        }),
-      });
-      const result = await confirmRes.json();
+      const result = JSON.parse(xhr.responseText);
       if (result.error) throw new Error(result.error);
 
-      showToast(`✅ ${uploadFile.name} uploaded — v${version}`);
+      showToast(`✅ ${uploadFile.name} uploaded — v${result?.file?.version ?? '?'}`);
       setUploadModal(false);
       setUploadPlanName('');
       setUploadProjectName('');
