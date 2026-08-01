@@ -62,6 +62,7 @@ export default function FilesPage() {
   const [uploadProjectName, setUploadProjectName] = useState('');
   const [uploadContactName, setUploadContactName] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [frankChannels, setFrankChannels] = useState<{ id: string; display_name: string; project_name: string | null }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // QA modal
@@ -108,6 +109,18 @@ export default function FilesPage() {
   }, [orgId, currentUser]);
 
   useEffect(() => { loadFiles(); }, [loadFiles]);
+
+  // Load Frank's channels for project dropdown
+  useEffect(() => {
+    if (!orgId) return;
+    supabase
+      .from('portal_channels')
+      .select('id, display_name, project_name')
+      .eq('agent_id', '73a73a44-347f-4817-8f43-3b14ef7c8c2e')
+      .eq('active', true)
+      .order('display_name')
+      .then(({ data }) => setFrankChannels(data ?? []));
+  }, [orgId]);
 
   // Upload flow
   const handleUpload = async () => {
@@ -426,7 +439,19 @@ export default function FilesPage() {
             <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Project</label>
-                <input value={uploadProjectName} onChange={e => setUploadProjectName(e.target.value)} placeholder="e.g. Deer Valley Pass" disabled={uploading} style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box' }} />
+                <select
+                  value={uploadProjectName}
+                  onChange={e => setUploadProjectName(e.target.value)}
+                  disabled={uploading}
+                  style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: uploadProjectName ? 'var(--text)' : 'var(--muted)', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box' }}
+                >
+                  <option value=''>None</option>
+                  {frankChannels.map(ch => (
+                    <option key={ch.id} value={ch.project_name || ch.display_name}>
+                      {ch.display_name}{ch.project_name ? ` — ${ch.project_name}` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Contact</label>
