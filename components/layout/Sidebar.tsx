@@ -677,7 +677,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             <Link href="/" onClick={onClose} title="Switch workspace" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </Link>
-            {['studio', 'design'].includes(activeGroup?.slug ?? '') && (
+            {['studio', 'design', 'operations'].includes(activeGroup?.slug ?? '') && (
               <>
                 <Link href={`/${orgSlug}/render`} onClick={onClose} title="Render Studio" style={{ color: pathname.startsWith(`/${orgSlug}/render`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={16} /></Link>
                 <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={16} /></Link>
