@@ -32,6 +32,40 @@ interface AddChannelModalProps {
   currentUserId: string;
 }
 
+function SyncChannelsButton({ agentId, orgSlug }: { agentId: string; orgSlug: string }) {
+  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+
+  async function handleSync() {
+    setState('loading');
+    try {
+      const res = await fetch(`/api/agents/${agentId}/sync-channels`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Sync failed');
+      setState('done');
+      setTimeout(() => setState('idle'), 3000);
+    } catch {
+      setState('error');
+      setTimeout(() => setState('idle'), 3000);
+    }
+  }
+
+  const label = state === 'loading' ? '…' : state === 'done' ? '✓' : state === 'error' ? '!' : '⟳';
+  const title = state === 'loading' ? 'Syncing…' : state === 'done' ? 'Synced & restarted' : state === 'error' ? 'Sync failed' : 'Sync channels to agent';
+
+  return (
+    <button
+      onClick={handleSync}
+      disabled={state === 'loading'}
+      title={title}
+      style={{
+        background: 'none', border: 'none', cursor: state === 'loading' ? 'default' : 'pointer',
+        color: state === 'done' ? 'var(--accent)' : state === 'error' ? '#f87171' : 'var(--muted)',
+        fontSize: '13px', padding: '0 2px', lineHeight: 1, opacity: state === 'loading' ? 0.4 : 0.6,
+      }}
+    >{label}</button>
+  );
+}
+
 function AddChannelModal({ agentId, orgId, onClose, onCreated, agent, currentUserId }: AddChannelModalProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'chat' | 'feed' | 'approval'>('chat');
@@ -535,10 +569,13 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                   <StatusDot status={agent?.container_status ?? 'stopped'} />
                 </div>
                 {(currentUser.role === 'owner' || currentUser.role === 'admin') && (
-                  <button onClick={() => setAddingForAgent({ agentId: agent.id, agent })} title="Add channel" style={{
-                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)',
-                    fontSize: '16px', padding: '0 4px', lineHeight: 1, opacity: 0.6,
-                  }}>+</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                    <button onClick={() => setAddingForAgent({ agentId: agent.id, agent })} title="Add channel" style={{
+                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)',
+                      fontSize: '16px', padding: '0 4px', lineHeight: 1, opacity: 0.6,
+                    }}>+</button>
+                    <SyncChannelsButton agentId={agent.id} orgSlug={orgSlug} />
+                  </div>
                 )}
               </div>
 
