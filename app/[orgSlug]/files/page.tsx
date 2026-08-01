@@ -116,9 +116,9 @@ export default function FilesPage() {
     supabase
       .from('portal_channels')
       .select('id, display_name, project_name')
-      .eq('agent_id', '73a73a44-347f-4817-8f43-3b14ef7c8c2e')
       .eq('active', true)
-      .order('display_name')
+      .not('project_name', 'is', null)
+      .order('project_name')
       .then(({ data }) => setFrankChannels(data ?? []));
   }, [orgId]);
 
@@ -426,8 +426,8 @@ export default function FilesPage() {
                 >
                   <option value=''>None</option>
                   {frankChannels.map(ch => (
-                    <option key={ch.id} value={ch.project_name || ch.display_name}>
-                      {ch.display_name}{ch.project_name ? ` — ${ch.project_name}` : ''}
+                    <option key={ch.id} value={ch.project_name!}>
+                      {ch.project_name}
                     </option>
                   ))}
                 </select>
