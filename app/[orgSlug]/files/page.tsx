@@ -267,27 +267,29 @@ export default function FilesPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ padding: '12px 20px', display: 'flex', gap: 10, flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
+      <div style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search plan or filename…"
           style={{
-            flex: 1, background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: 6, color: 'var(--text)', padding: '7px 12px', fontSize: 13,
+            width: '100%', boxSizing: 'border-box',
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13,
           }}
         />
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {(['all', 'pending', 'approved', 'revision', 'rejected'] as const).map(s => (
             <button
               key={s}
               onClick={() => setQaFilter(s)}
               style={{
-                padding: '6px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+                padding: '5px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer',
                 border: qaFilter === s ? '1px solid var(--accent)' : '1px solid var(--border)',
                 background: qaFilter === s ? 'rgba(76,139,240,0.15)' : 'var(--surface)',
                 color: qaFilter === s ? 'var(--accent)' : 'var(--muted)',
                 fontWeight: qaFilter === s ? 600 : 400,
+                flexShrink: 0,
               }}
             >
               {s === 'all' ? 'All' : QA_COLORS[s as QAStatus].label}
@@ -313,49 +315,52 @@ export default function FilesPage() {
                   key={file.id}
                   style={{
                     background: 'var(--surface)', border: '1px solid var(--border)',
-                    borderRadius: 10, padding: '14px 16px',
-                    display: 'flex', alignItems: 'center', gap: 14,
+                    borderRadius: 10, padding: '12px 14px',
+                    display: 'flex', flexDirection: 'column', gap: 10,
                   }}
                 >
-                  {/* File icon */}
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 8, background: 'rgba(76,139,240,0.12)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18, flexShrink: 0,
-                  }}>
-                    📐
+                  {/* Top row: icon + info */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 8, background: 'rgba(76,139,240,0.12)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 16, flexShrink: 0,
+                    }}>
+                      📐
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 14 }}>{file.plan_name}</span>
+                        <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--sidebar-bg)', padding: '1px 7px', borderRadius: 10 }}>v{file.version}</span>
+                        <span style={{
+                          fontSize: 11, padding: '2px 8px', borderRadius: 10,
+                          background: qa.bg, color: qa.color, fontWeight: 500,
+                        }}>{qa.label}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>
+                        {file.filename} · {formatBytes(file.file_size)}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                        {file.uploaded_by} · {formatDate(file.created_at)}
+                      </div>
+                      {file.qa_notes && (
+                        <div style={{ fontSize: 12, color: '#f97316', marginTop: 4 }}>💬 {file.qa_notes}</div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                      <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 14 }}>{file.plan_name}</span>
-                      <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--sidebar-bg)', padding: '1px 7px', borderRadius: 10 }}>v{file.version}</span>
-                      <span style={{
-                        fontSize: 11, padding: '2px 8px', borderRadius: 10,
-                        background: qa.bg, color: qa.color, fontWeight: 500,
-                      }}>{qa.label}</span>
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {file.filename} · {formatBytes(file.file_size)} · Uploaded by {file.uploaded_by} on {formatDate(file.created_at)}
-                    </div>
-                    {file.qa_notes && (
-                      <div style={{ fontSize: 12, color: '#f97316', marginTop: 4 }}>💬 {file.qa_notes}</div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  {/* Actions row — full width on mobile */}
+                  <div style={{ display: 'flex', gap: 6 }}>
                     <button
                       onClick={() => showHistory(file)}
                       title="Version history"
                       style={{
                         background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
-                        color: 'var(--muted)', padding: '6px 10px', borderRadius: 6,
+                        color: 'var(--muted)', padding: '7px 12px', borderRadius: 6,
                         fontSize: 12, cursor: 'pointer',
                       }}
                     >
-                      🕒
+                      🕒 History
                     </button>
                     {canQA && (
                       <button
@@ -363,18 +368,18 @@ export default function FilesPage() {
                         title="Update QA status"
                         style={{
                           background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
-                          color: 'var(--muted)', padding: '6px 10px', borderRadius: 6,
+                          color: 'var(--muted)', padding: '7px 12px', borderRadius: 6,
                           fontSize: 12, cursor: 'pointer',
                         }}
                       >
-                        ✅
+                        ✅ QA
                       </button>
                     )}
                     <button
                       onClick={() => handleDownload(file)}
                       style={{
-                        background: 'var(--accent)', border: 'none', color: '#fff',
-                        padding: '6px 14px', borderRadius: 6, fontSize: 12,
+                        flex: 1, background: 'var(--accent)', border: 'none', color: '#fff',
+                        padding: '7px 14px', borderRadius: 6, fontSize: 12,
                         fontWeight: 600, cursor: 'pointer',
                       }}
                     >
@@ -390,8 +395,8 @@ export default function FilesPage() {
 
       {/* Upload Modal */}
       {uploadModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => !uploading && setUploadModal(false)}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 28, width: 420, maxWidth: '92vw' }} onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => !uploading && setUploadModal(false)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px 12px 0 0', padding: '20px 16px', width: '100%', maxWidth: 480, boxSizing: 'border-box' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 18 }}>Upload Revit File</div>
 
             <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Plan Name *</label>
@@ -461,8 +466,8 @@ export default function FilesPage() {
 
       {/* QA Modal */}
       {qaModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setQaModal(null)}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 28, width: 380, maxWidth: '92vw' }} onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => setQaModal(null)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px 12px 0 0', padding: '20px 16px', width: '100%', maxWidth: 480, boxSizing: 'border-box' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 6 }}>QA Status</div>
             <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 18 }}>{qaModal.plan_name} — v{qaModal.version}</div>
 
