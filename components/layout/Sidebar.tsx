@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconGear, IconClock, IconDatabase, IconRender, IconFolder } from '@/components/ui/Icons';
+import { IconGear, IconClock, IconDatabase, IconRender, IconFolder, IconGallery } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -638,6 +638,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
               <>
                 <Link href={`/${orgSlug}/render`} onClick={onClose} title="Render Studio" style={{ color: pathname.startsWith(`/${orgSlug}/render`) ? 'var(--accent)' : 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={15} /></Link>
                 <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={15} /></Link>
+                <Link href={`/${orgSlug}/gallery`} onClick={onClose} title="Render Gallery" style={{ color: pathname.startsWith(`/${orgSlug}/gallery`) ? 'var(--accent)' : 'var(--muted)', padding: '4px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGallery size={15} /></Link>
               </>
             )}
             {currentUser.role !== 'contractor' && (
