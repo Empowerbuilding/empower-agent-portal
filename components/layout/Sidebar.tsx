@@ -29,9 +29,10 @@ interface AddChannelModalProps {
   onClose: () => void;
   onCreated: (ch: PortalChannel & { agents: Agent }) => void;
   agent: Agent;
+  currentUserId: string;
 }
 
-function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChannelModalProps) {
+function AddChannelModal({ agentId, orgId, onClose, onCreated, agent, currentUserId }: AddChannelModalProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'chat' | 'feed' | 'approval'>('chat');
   const [saving, setSaving] = useState(false);
@@ -53,11 +54,13 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent }: AddChann
       position: 99,
       active: true,
     }).select().single();
-    setSaving(false);
     if (!error && data) {
+      // Add the current user as a channel member so they can navigate to it
+      await supabase.from('portal_channel_members').insert({ channel_id: data.id, user_id: currentUserId });
       onCreated({ ...data, agents: agent });
       onClose();
     }
+    setSaving(false);
   }
 
   return (
@@ -393,6 +396,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
           agentId={addingForAgent.agentId}
           orgId={org.id}
           agent={addingForAgent.agent}
+          currentUserId={currentUser.id}
           onClose={() => setAddingForAgent(null)}
           onCreated={(ch) => setChannels(prev => [...prev, ch])}
         />
@@ -530,7 +534,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                   <span>{agentName}</span>
                   <StatusDot status={agent?.container_status ?? 'stopped'} />
                 </div>
-                {currentUser.role === 'owner' && (
+                {(currentUser.role === 'owner' || currentUser.role === 'admin') && (
                   <button onClick={() => setAddingForAgent({ agentId: agent.id, agent })} title="Add channel" style={{
                     background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)',
                     fontSize: '16px', padding: '0 4px', lineHeight: 1, opacity: 0.6,
