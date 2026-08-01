@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     const contactName = (formData.get('contactName') as string) || null;
     const orgId = formData.get('orgId') as string;
     const uploadedBy = formData.get('uploadedBy') as string;
+    const category = (formData.get('category') as string) || 'project';
 
     if (!file || !planName || !orgId) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
         project_name: projectName || null,
         contact_name: contactName || null,
         file_url: fileUrl,
+        category,
       })
       .select()
       .single();

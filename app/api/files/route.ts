@@ -24,6 +24,11 @@ export async function GET(req: NextRequest) {
     .eq('archived', false)
     .order('created_at', { ascending: false });
 
+  // Reps only see design files
+  if (role === 'rep') {
+    query = query.eq('category', 'design');
+  }
+
   // Contractors only see files tied to their tasks
   if (role === 'contractor' && userId) {
     const { data: tasks } = await supabase

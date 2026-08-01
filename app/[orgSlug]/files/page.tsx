@@ -23,6 +23,7 @@ interface ProjectFile {
   archived: boolean;
   project_name?: string | null;
   contact_name?: string | null;
+  category?: string;
 }
 
 const QA_COLORS: Record<QAStatus, { bg: string; color: string; label: string }> = {
@@ -62,7 +63,8 @@ export default function FilesPage() {
   const [uploadProjectName, setUploadProjectName] = useState('');
   const [uploadContactName, setUploadContactName] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [frankChannels, setFrankChannels] = useState<{ id: string; display_name: string; project_name: string | null }[]>([]);
+  const [frankChannels, setFrankChannels] = useState<{ id: string; display_name: string; project_name: string | null; agent_id: string }[]>([]);
+  const [activeTab, setActiveTab] = useState<'design' | 'project'>('design');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // QA modal
@@ -115,7 +117,7 @@ export default function FilesPage() {
     if (!orgId) return;
     supabase
       .from('portal_channels')
-      .select('id, display_name, project_name')
+      .select('id, display_name, project_name, agent_id')
       .eq('active', true)
       .not('project_name', 'is', null)
       .order('project_name')
@@ -132,12 +134,16 @@ export default function FilesPage() {
     try {
       // Single-step proxy upload — file goes through API route, no CORS issues
       const formData = new FormData();
+      const FRANK_AGENT_ID = '73a73a44-347f-4817-8f43-3b14ef7c8c2e';
+      const selectedChannel = frankChannels.find(ch => ch.project_name === uploadProjectName);
+      const uploadCategory = selectedChannel?.agent_id === FRANK_AGENT_ID ? 'project' : 'design';
       formData.append('file', uploadFile);
       formData.append('planName', effectiveName);
       formData.append('projectName', uploadProjectName.trim() || '');
       formData.append('contactName', uploadContactName.trim() || '');
       formData.append('orgId', orgId);
       formData.append('uploadedBy', currentUser.name);
+      formData.append('category', uploadCategory);
 
       const xhr = new XMLHttpRequest();
       await new Promise<void>((resolve, reject) => {
@@ -221,10 +227,15 @@ export default function FilesPage() {
   };
 
   // Filter
+  const canSeeProjects = currentUser?.role !== 'rep';
+  // rep role defaults to design tab and can't switch
+  const effectiveTab: 'design' | 'project' = canSeeProjects ? activeTab : 'design';
+
   const filtered = files.filter(f => {
+    const matchTab = (f.category ?? 'project') === effectiveTab;
     const matchSearch = !search || f.plan_name.toLowerCase().includes(search.toLowerCase()) || f.filename.toLowerCase().includes(search.toLowerCase()) || (f.project_name ?? '').toLowerCase().includes(search.toLowerCase()) || (f.contact_name ?? '').toLowerCase().includes(search.toLowerCase());
     const matchQa = qaFilter === 'all' || f.qa_status === qaFilter;
-    return matchSearch && matchQa;
+    return matchTab && matchSearch && matchQa;
   });
 
   const isContractor = currentUser?.role === 'contractor';
@@ -266,6 +277,21 @@ export default function FilesPage() {
           </button>
         )}
       </div>
+
+      {/* Tabs */}
+      {canSeeProjects && (
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          {(['design', 'project'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)} style={{
+              flex: 1, padding: '10px 0', border: 'none', borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
+              background: 'none', color: activeTab === tab ? 'var(--accent)' : 'var(--muted)',
+              fontWeight: activeTab === tab ? 700 : 400, fontSize: 13, cursor: 'pointer',
+            }}>
+              {tab === 'design' ? '🏠 Designs' : '📋 Project Files'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <div style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
