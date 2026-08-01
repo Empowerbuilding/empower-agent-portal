@@ -512,7 +512,7 @@ export default function SettingsPage() {
                             onChange={() => toggleChannelMembership(u.id, ch.id, inChannel)}
                             style={{ accentColor: 'var(--accent)', width: 14, height: 14, cursor: 'pointer' }}
                           />
-                          <span style={{ opacity: toggling ? 0.5 : 1 }}>{ch.icon} {ch.display_name}</span>
+                          <span style={{ opacity: toggling ? 0.5 : 1 }}>{ch.display_name}</span>
                         </label>
                       );
                     })}
