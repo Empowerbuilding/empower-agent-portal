@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { spacesClient, BUCKET } from '@/lib/spaces';
+import { getSpacesClientDirect, BUCKET } from '@/lib/spaces';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
 
     // Upload to Spaces server-side — no CORS needed
     const buffer = Buffer.from(await file.arrayBuffer());
+    const spacesClient = getSpacesClientDirect();
     await spacesClient.send(new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
