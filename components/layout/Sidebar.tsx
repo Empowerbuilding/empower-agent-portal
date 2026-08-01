@@ -644,7 +644,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             {currentUser.role !== 'contractor' && (
               <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={16} /></Link>
             )}
-            {org.crm_supabase_url && currentUser.role !== 'contractor' && (
+            {org.crm_supabase_url && currentUser.role !== 'contractor' && ['sales', 'executive'].includes(activeGroup?.slug ?? '') && (
               <button
                 title="CRM"
                 onClick={() => {
