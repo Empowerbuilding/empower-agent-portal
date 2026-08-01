@@ -1,5 +1,4 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { RequestChecksumCalculation, ResponseChecksumValidation } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export const spacesClient = new S3Client({
@@ -10,9 +9,18 @@ export const spacesClient = new S3Client({
     secretAccessKey: process.env.DO_SPACES_SECRET_KEY!,
   },
   forcePathStyle: false,
-  requestChecksumCalculation: RequestChecksumCalculation.WHEN_REQUIRED,
-  responseChecksumValidation: ResponseChecksumValidation.WHEN_REQUIRED,
-})
+});
+
+// Strip AWS SDK v3 checksum params that DO Spaces doesn't support
+function stripChecksumParams(url: string): string {
+  const u = new URL(url);
+  u.searchParams.delete('x-amz-checksum-crc32');
+  u.searchParams.delete('x-amz-sdk-checksum-algorithm');
+  u.searchParams.delete('x-amz-checksum-crc32c');
+  u.searchParams.delete('x-amz-checksum-sha1');
+  u.searchParams.delete('x-amz-checksum-sha256');
+  return u.toString();
+}
 
 export const BUCKET = process.env.DO_SPACES_BUCKET!;
 
@@ -22,9 +30,9 @@ export async function getUploadUrl(key: string, contentType: string): Promise<st
     Key: key,
     ContentType: contentType,
     ACL: 'private',
-    ChecksumAlgorithm: undefined,
   });
-  return getSignedUrl(spacesClient, cmd, { expiresIn: 900 }); // 15 min
+  const url = await getSignedUrl(spacesClient, cmd, { expiresIn: 900 });
+  return stripChecksumParams(url);
 }
 
 export async function getDownloadUrl(key: string, filename: string): Promise<string> {
