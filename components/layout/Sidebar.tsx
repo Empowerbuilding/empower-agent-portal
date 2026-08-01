@@ -90,12 +90,10 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent, currentUse
     }).select().single();
     setSaving(false);
     if (!error && data) {
-      // Add the current user as a channel member so they can navigate to it
-      // Fire-and-forget — don't let this block the UI
-      supabase.from('portal_channel_members')
-        .insert({ channel_id: data.id, user_id: currentUserId })
-        .then(() => {})
-        .catch(() => {});
+      // Add the current user as a channel member so they can navigate to it — fire-and-forget
+      void Promise.resolve(
+        supabase.from('portal_channel_members').insert({ channel_id: data.id, user_id: currentUserId })
+      ).catch(() => {});
       onCreated({ ...data, agents: agent });
       onClose();
     }
