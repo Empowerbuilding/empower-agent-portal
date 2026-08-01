@@ -68,6 +68,7 @@ function SyncChannelsButton({ agentId, orgSlug }: { agentId: string; orgSlug: st
 
 function AddChannelModal({ agentId, orgId, onClose, onCreated, agent, currentUserId }: AddChannelModalProps) {
   const [name, setName] = useState('');
+  const [projectName, setProjectName] = useState('');
   const [type, setType] = useState<'chat' | 'feed' | 'approval'>('chat');
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
@@ -87,6 +88,7 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent, currentUse
       icon: null,
       position: 99,
       active: true,
+      project_name: projectName.trim() || null,
     }).select().single();
     setSaving(false);
     if (!error && data) {
@@ -112,9 +114,20 @@ function AddChannelModal({ agentId, orgId, onClose, onCreated, agent, currentUse
 
         <input
           autoFocus
-          placeholder="Channel name"
+          placeholder="Channel name (e.g. Deer Valley Pass)"
           value={name}
           onChange={e => setName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleCreate()}
+          style={{
+            background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
+            borderRadius: '6px', color: 'var(--text)', padding: '10px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box',
+          }}
+        />
+
+        <input
+          placeholder="Project name (links files → Frank)"
+          value={projectName}
+          onChange={e => setProjectName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleCreate()}
           style={{
             background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
@@ -629,8 +642,13 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                       onClick={onClose}
                       style={{ flex: 1 }}
                     >
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {ch.display_name}
+                      <span style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
+                        <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.display_name}</span>
+                        {ch.project_name && (
+                          <span style={{ display: 'block', fontSize: 10, color: 'var(--muted)', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+                            📁 {ch.project_name}
+                          </span>
+                        )}
                       </span>
                       {unread && (
                         <span style={{

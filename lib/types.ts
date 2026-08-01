@@ -54,6 +54,8 @@ export interface PortalChannel {
   description: string | null;
   position: number;
   active: boolean;
+  project_name?: string | null;
+  group_id?: string | null;
 }
 
 export interface PortalMessage {
