@@ -29,7 +29,6 @@ export async function getUploadUrl(key: string, contentType: string): Promise<st
     Bucket: BUCKET,
     Key: key,
     ContentType: contentType,
-    ACL: 'private',
   });
   const url = await getSignedUrl(spacesClient, cmd, { expiresIn: 900 });
   return stripChecksumParams(url);
