@@ -76,6 +76,10 @@ export async function POST(req: NextRequest) {
   // ── Confirm upload (save metadata) ─────────────────────────────────────────
   if (action === 'confirm-upload') {
     const { key, planName, planSlug, filename, version, contentType, orgId, uploadedBy, fileSize, projectName, contactName } = body;
+    const _region = process.env.DO_SPACES_REGION || 'sfo3';
+    const _endpoint = process.env.DO_SPACES_ENDPOINT || `https://${_region}.digitaloceanspaces.com`;
+    const _bucket = process.env.DO_SPACES_BUCKET || 'barnhaus-project-files';
+    const fileUrl = `${_endpoint}/${_bucket}/${key}`;
 
     // Archive previous version
     await supabase
@@ -101,6 +105,7 @@ export async function POST(req: NextRequest) {
         archived: false,
         project_name: projectName ?? null,
         contact_name: contactName ?? null,
+        file_url: fileUrl,
       })
       .select()
       .single();

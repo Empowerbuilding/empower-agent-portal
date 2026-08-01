@@ -40,6 +40,9 @@ export async function POST(req: NextRequest) {
 
     const nextVersion = existing && existing.length > 0 ? existing[0].version + 1 : 1;
     const key = `${orgId}/${slug}/v${nextVersion}/${file.name}`;
+    const region = process.env.DO_SPACES_REGION || 'sfo3';
+    const endpoint = process.env.DO_SPACES_ENDPOINT || `https://${region}.digitaloceanspaces.com`;
+    const fileUrl = `${endpoint}/${BUCKET}/${key}`;
 
     // Upload to Spaces server-side — no CORS needed
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -76,6 +79,7 @@ export async function POST(req: NextRequest) {
         archived: false,
         project_name: projectName || null,
         contact_name: contactName || null,
+        file_url: fileUrl,
       })
       .select()
       .single();
