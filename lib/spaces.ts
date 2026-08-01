@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { RequestChecksumCalculation, ResponseChecksumValidation } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export const spacesClient = new S3Client({
@@ -9,7 +10,9 @@ export const spacesClient = new S3Client({
     secretAccessKey: process.env.DO_SPACES_SECRET_KEY!,
   },
   forcePathStyle: false,
-});
+  requestChecksumCalculation: RequestChecksumCalculation.WHEN_REQUIRED,
+  responseChecksumValidation: ResponseChecksumValidation.WHEN_REQUIRED,
+})
 
 export const BUCKET = process.env.DO_SPACES_BUCKET!;
 
@@ -19,6 +22,7 @@ export async function getUploadUrl(key: string, contentType: string): Promise<st
     Key: key,
     ContentType: contentType,
     ACL: 'private',
+    ChecksumAlgorithm: undefined,
   });
   return getSignedUrl(spacesClient, cmd, { expiresIn: 900 }); // 15 min
 }
