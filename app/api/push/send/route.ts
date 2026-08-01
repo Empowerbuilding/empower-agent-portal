@@ -134,4 +134,3 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, sent: results.length });
 }
 
-export const dynamic = 'force-dynamic';
