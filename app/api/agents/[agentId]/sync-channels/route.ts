@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { getAgent, agentReadFile, agentWriteFile, agentRestart } from '@/lib/agent-router';
+import { getAgent, agentRestart } from '@/lib/agent-router';
+import { sshReadFile, sshWriteFile, buildSSHConfig } from '@/lib/ssh';
 
 export const runtime = 'nodejs';
 
@@ -35,6 +36,10 @@ export async function POST(
 
   const { agent } = auth;
 
+  if (!agent.server_host) {
+    return NextResponse.json({ error: 'Local agents cannot be synced remotely' }, { status: 400 });
+  }
+
   try {
     // 1. Get all active channel IDs for this agent from Supabase
     const service = createServiceClient(
@@ -55,17 +60,17 @@ export async function POST(
       return NextResponse.json({ error: 'No active channels found for this agent' }, { status: 400 });
     }
 
-    // 2. Read current openclaw.json — local agent (Tony) has no server_host
-    if (!agent.server_host) {
-      return NextResponse.json({ error: 'Local agents cannot be synced remotely' }, { status: 400 });
-    }
+    // 2. Read openclaw.json — it lives at the .openclaw root, one level above workspace_path
+    const sshCfg = buildSSHConfig(agent.server_host, agent.ssh_key_secret);
+    const openclawDir = agent.workspace_path.replace(/\/workspace$/, '');
+    const openclawPath = `${openclawDir}/openclaw.json`;
 
-    const raw = await agentReadFile(agentId, 'openclaw.json');
+    const raw = await sshReadFile(sshCfg, openclawPath);
     let config: any;
     try {
       config = JSON.parse(raw);
     } catch {
-      // openclaw.json uses relaxed JSON in some versions — use eval-safe parse
+      // Some openclaw.json use relaxed JSON — wrap in parens for eval-safe parse
       // eslint-disable-next-line no-new-func
       config = new Function('return (' + raw + ')')();
     }
@@ -73,13 +78,13 @@ export async function POST(
     // 3. Update channelIds
     if (!config.channels) config.channels = {};
     if (!config.channels.portal) config.channels.portal = {};
-    const previous = config.channels.portal.channelIds ?? [];
+    const previous: string[] = config.channels.portal.channelIds ?? [];
     config.channels.portal.channelIds = channelIds;
 
     // 4. Write back
-    await agentWriteFile(agentId, 'openclaw.json', JSON.stringify(config, null, 2));
+    await sshWriteFile(sshCfg, openclawPath, JSON.stringify(config, null, 2));
 
-    // 5. Restart
+    // 5. Restart container
     await agentRestart(agentId);
 
     return NextResponse.json({
