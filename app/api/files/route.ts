@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
   // ── Confirm upload (save metadata) ─────────────────────────────────────────
   if (action === 'confirm-upload') {
-    const { key, planName, planSlug, filename, version, contentType, orgId, uploadedBy, fileSize } = body;
+    const { key, planName, planSlug, filename, version, contentType, orgId, uploadedBy, fileSize, projectName, contactName } = body;
 
     // Archive previous version
     await supabase
@@ -99,6 +99,8 @@ export async function POST(req: NextRequest) {
         uploaded_by: uploadedBy,
         qa_status: 'pending',
         archived: false,
+        project_name: projectName ?? null,
+        contact_name: contactName ?? null,
       })
       .select()
       .single();

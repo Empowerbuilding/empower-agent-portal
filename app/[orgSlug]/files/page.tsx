@@ -21,6 +21,8 @@ interface ProjectFile {
   qa_notes: string | null;
   created_at: string;
   archived: boolean;
+  project_name?: string | null;
+  contact_name?: string | null;
 }
 
 const QA_COLORS: Record<QAStatus, { bg: string; color: string; label: string }> = {
@@ -57,6 +59,8 @@ export default function FilesPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadModal, setUploadModal] = useState(false);
   const [uploadPlanName, setUploadPlanName] = useState('');
+  const [uploadProjectName, setUploadProjectName] = useState('');
+  const [uploadContactName, setUploadContactName] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -107,7 +111,8 @@ export default function FilesPage() {
 
   // Upload flow
   const handleUpload = async () => {
-    if (!uploadFile || !uploadPlanName.trim() || !orgId || !currentUser) return;
+    if (!uploadFile || !orgId || !currentUser) return;
+    const effectiveName = uploadPlanName.trim() || uploadFile.name.replace(/\.[^.]+$/, '');
     setUploading(true);
     setUploadProgress(0);
 
@@ -118,7 +123,7 @@ export default function FilesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'presign-upload',
-          planName: uploadPlanName.trim(),
+          planName: effectiveName,
           filename: uploadFile.name,
           contentType: uploadFile.type || 'application/octet-stream',
           orgId,
@@ -147,8 +152,10 @@ export default function FilesPage() {
         body: JSON.stringify({
           action: 'confirm-upload',
           key,
-          planName: uploadPlanName.trim(),
+          planName: effectiveName,
           planSlug,
+          projectName: uploadProjectName.trim() || null,
+          contactName: uploadContactName.trim() || null,
           filename: uploadFile.name,
           version,
           contentType: uploadFile.type || 'application/octet-stream',
@@ -163,6 +170,8 @@ export default function FilesPage() {
       showToast(`✅ ${uploadFile.name} uploaded — v${version}`);
       setUploadModal(false);
       setUploadPlanName('');
+      setUploadProjectName('');
+      setUploadContactName('');
       setUploadFile(null);
       loadFiles();
     } catch (err: any) {
@@ -221,7 +230,7 @@ export default function FilesPage() {
 
   // Filter
   const filtered = files.filter(f => {
-    const matchSearch = !search || f.plan_name.toLowerCase().includes(search.toLowerCase()) || f.filename.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || f.plan_name.toLowerCase().includes(search.toLowerCase()) || f.filename.toLowerCase().includes(search.toLowerCase()) || (f.project_name ?? '').toLowerCase().includes(search.toLowerCase()) || (f.contact_name ?? '').toLowerCase().includes(search.toLowerCase());
     const matchQa = qaFilter === 'all' || f.qa_status === qaFilter;
     return matchSearch && matchQa;
   });
@@ -326,7 +335,7 @@ export default function FilesPage() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 16, flexShrink: 0,
                     }}>
-                      📐
+                      {file.content_type?.includes('pdf') ? '📄' : file.content_type?.includes('image') ? '🖼️' : file.filename?.match(/\.(rvt|dwg|dxf)$/i) ? '📐' : '📎'}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
@@ -340,6 +349,12 @@ export default function FilesPage() {
                       <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>
                         {file.filename} · {formatBytes(file.file_size)}
                       </div>
+                      {(file.project_name || file.contact_name) && (
+                        <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                          {file.project_name && <span style={{ fontSize: 11, background: 'rgba(76,139,240,0.12)', color: 'var(--accent)', padding: '1px 7px', borderRadius: 10 }}>📁 {file.project_name}</span>}
+                          {file.contact_name && <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', padding: '1px 7px', borderRadius: 10 }}>👤 {file.contact_name}</span>}
+                        </div>
+                      )}
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                         {file.uploaded_by} · {formatDate(file.created_at)}
                       </div>
@@ -397,16 +412,27 @@ export default function FilesPage() {
       {uploadModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => !uploading && setUploadModal(false)}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px 12px 0 0', padding: '20px 16px', width: '100%', maxWidth: 480, boxSizing: 'border-box' }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 18 }}>Upload Revit File</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 18 }}>Upload File</div>
 
-            <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Plan Name *</label>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Name <span style={{ fontWeight: 400 }}>(optional)</span></label>
             <input
               value={uploadPlanName}
               onChange={e => setUploadPlanName(e.target.value)}
-              placeholder="e.g. Spring Mountain"
+              placeholder="e.g. Spring Mountain Structural Plans"
               disabled={uploading}
-              style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, marginBottom: 16, boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
             />
+
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Project</label>
+                <input value={uploadProjectName} onChange={e => setUploadProjectName(e.target.value)} placeholder="e.g. Deer Valley Pass" disabled={uploading} style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Contact</label>
+                <input value={uploadContactName} onChange={e => setUploadContactName(e.target.value)} placeholder="e.g. John Smith" disabled={uploading} style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+            </div>
 
             <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>File *</label>
             <div
@@ -423,7 +449,7 @@ export default function FilesPage() {
                   <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 4 }}>{formatBytes(uploadFile.size)}</div>
                 </div>
               ) : (
-                <div style={{ color: 'var(--muted)', fontSize: 14 }}>Click to select file (.rvt, .pdf, .dwg, etc.)</div>
+                <div style={{ color: 'var(--muted)', fontSize: 14 }}>Click to select any file</div>
               )}
             </div>
             <input
@@ -431,7 +457,7 @@ export default function FilesPage() {
               type="file"
               style={{ display: 'none' }}
               onChange={e => setUploadFile(e.target.files?.[0] ?? null)}
-              accept=".rvt,.pdf,.dwg,.dxf,.zip"
+              accept="*"
             />
 
             {uploading && (
@@ -449,11 +475,11 @@ export default function FilesPage() {
               <button onClick={() => setUploadModal(false)} disabled={uploading} style={{ flex: 1, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', color: 'var(--muted)', padding: '9px 0', borderRadius: 7, cursor: 'pointer', fontSize: 14 }}>Cancel</button>
               <button
                 onClick={handleUpload}
-                disabled={uploading || !uploadFile || !uploadPlanName.trim()}
+                disabled={uploading || !uploadFile}
                 style={{
-                  flex: 2, background: uploading || !uploadFile || !uploadPlanName.trim() ? '#2a5299' : 'var(--accent)',
+                  flex: 2, background: uploading || !uploadFile ? '#2a5299' : 'var(--accent)',
                   border: 'none', color: '#fff', padding: '9px 0', borderRadius: 7,
-                  cursor: uploading || !uploadFile || !uploadPlanName.trim() ? 'not-allowed' : 'pointer',
+                  cursor: uploading || !uploadFile ? 'not-allowed' : 'pointer',
                   fontSize: 14, fontWeight: 600,
                 }}
               >
