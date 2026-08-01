@@ -103,6 +103,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   // Summon-only channels: only show typing indicator if agent is explicitly mentioned
   const SUMMON_ONLY_CHANNELS: Record<string, RegExp> = {
     'juanito-production': /@juanito|hey juanito/i,
+    'studio-general': /@juanito|hey juanito/i,
   };
   const shouldShowTyping = (channelId: string, content: string) => {
     const pattern = SUMMON_ONLY_CHANNELS[channelId];
