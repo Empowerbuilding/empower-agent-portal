@@ -31,3 +31,5 @@ export async function DELETE(req: NextRequest) {
   await supabase.from('push_subscriptions').delete().eq('user_id', userId).eq('endpoint', endpoint);
   return NextResponse.json({ ok: true });
 }
+
+export const dynamic = 'force-dynamic';
