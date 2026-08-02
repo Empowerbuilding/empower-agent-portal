@@ -54,7 +54,12 @@ export default function RenderStudioPage() {
         .eq('user_id', portalUser.id);
 
       const channelIds = (memberChannels ?? []).map((m: any) => m.channel_id as string);
-      const sc = channelIds.find((id) => id.startsWith('studio-zunaria') || id.startsWith('studio-arooba'));
+      const sc = channelIds.find((id) =>
+        id.startsWith('studio-zunaria') ||
+        id.startsWith('studio-arooba') ||
+        id.endsWith('-render') ||
+        id.includes('-render-tool')
+      );
       setStudioChannel(sc ?? null);
     };
     init();
