@@ -644,7 +644,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                     >
                       <span style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
                         <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.display_name}</span>
-                        {ch.project_name && (
+                        {ch.project_name && ch.project_name !== ch.display_name && (
                           <span style={{ display: 'block', fontSize: 10, color: 'var(--muted)', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
                             📁 {ch.project_name}
                           </span>
