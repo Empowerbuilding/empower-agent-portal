@@ -181,6 +181,14 @@ export default function FilesPage() {
   };
 
   // Download
+  const handleRecategorize = async (file: ProjectFile) => {
+    const newCat = file.category === 'design' ? 'project' : 'design';
+    const supabaseAdmin = createClient();
+    await supabaseAdmin.from('project_files').update({ category: newCat }).eq('id', file.id);
+    setFiles(prev => prev.map(f => f.id === file.id ? { ...f, category: newCat } : f));
+    showToast(`Moved to ${newCat === 'design' ? '🏠 Designs' : '📋 Project Files'}`);
+  };
+
   const handleDownload = async (file: ProjectFile) => {
     try {
       const res = await fetch('/api/files', {
@@ -408,12 +416,25 @@ export default function FilesPage() {
                         ✅ QA
                       </button>
                     )}
+                    {canQA && (
+                      <button
+                        onClick={() => handleRecategorize(file)}
+                        title={`Move to ${file.category === 'design' ? 'Project Files' : 'Designs'}`}
+                        style={{
+                          background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
+                          color: 'var(--muted)', padding: '7px 10px', borderRadius: 6,
+                          fontSize: 12, cursor: 'pointer', flexShrink: 0,
+                        }}
+                      >
+                        {file.category === 'design' ? '📋' : '🏠'}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDownload(file)}
                       style={{
-                        flex: 1, background: 'var(--accent)', border: 'none', color: '#fff',
-                        padding: '7px 14px', borderRadius: 6, fontSize: 12,
-                        fontWeight: 600, cursor: 'pointer',
+                        background: 'var(--accent)', border: 'none', color: '#fff',
+                        padding: '7px 16px', borderRadius: 6, fontSize: 12,
+                        fontWeight: 600, cursor: 'pointer', flexShrink: 0,
                       }}
                     >
                       ↓ Download
