@@ -24,6 +24,7 @@ function stripChecksumParams(url: string): string {
   u.searchParams.delete('x-amz-checksum-crc32c');
   u.searchParams.delete('x-amz-checksum-sha1');
   u.searchParams.delete('x-amz-checksum-sha256');
+  u.searchParams.delete('x-amz-checksum-mode');
   return u.toString();
 }
 
@@ -45,7 +46,8 @@ export async function getDownloadUrl(key: string, filename: string): Promise<str
     Key: key,
     ResponseContentDisposition: `attachment; filename="${filename}"`,
   });
-  return getSignedUrl(client, cmd, { expiresIn: 3600 }); // 1 hour
+  const url = await getSignedUrl(client, cmd, { expiresIn: 3600 }); // 1 hour
+  return stripChecksumParams(url);
 }
 
 export function getSpacesClientDirect() {
