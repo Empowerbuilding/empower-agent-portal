@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { email, role, orgId } = await req.json();
+    const { email, role, orgId, channelIds } = await req.json();
     if (!email || !orgId) return NextResponse.json({ error: 'Missing email or orgId' }, { status: 400 });
 
     const validRoles = ['owner', 'admin', 'rep', 'contractor'];
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
         email: email.toLowerCase().trim(),
         role: role || 'rep',
         invited_by: portalUser.id,
+        channel_ids: channelIds && channelIds.length > 0 ? channelIds : null,
       })
       .select()
       .single();

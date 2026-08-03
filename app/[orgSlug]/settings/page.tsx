@@ -57,6 +57,7 @@ export default function SettingsPage() {
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
+  const [inviteChannels, setInviteChannels] = useState<string[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [userChannelMap, setUserChannelMap] = useState<Record<string, string[]>>({});
@@ -208,7 +209,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole, orgId }),
+        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole, orgId, channelIds: inviteChannels }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -217,6 +218,7 @@ export default function SettingsPage() {
         setInviteSuccess(`Invite sent to ${inviteEmail.trim()}`);
         setInviteEmail('');
         setInviteRole('rep');
+        setInviteChannels([]);
         // Refresh invites list
         const invRes = await fetch(`/api/invite?orgId=${orgId}`);
         if (invRes.ok) setInvites(await invRes.json());
@@ -434,6 +436,26 @@ export default function SettingsPage() {
                 {inviteRole === 'rep' ? 'Can chat with agents, cannot manage settings or invite others.' : inviteRole === 'admin' ? 'Can manage channels and invite reps. Cannot manage billing or owners.' : 'Access limited to their assigned channel + Render Studio only.'}
               </div>
             </div>
+
+            {/* Channel pre-assignment */}
+            {channels.length > 0 && (
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: 'var(--muted)', marginBottom: '6px', fontWeight: 500 }}>Channels (optional — assign on accept)</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', background: 'var(--sidebar-bg)' }}>
+                  {channels.map(ch => (
+                    <label key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text)', padding: '2px 0' }}>
+                      <input
+                        type="checkbox"
+                        checked={inviteChannels.includes(ch.id)}
+                        onChange={e => setInviteChannels(prev => e.target.checked ? [...prev, ch.id] : prev.filter(id => id !== ch.id))}
+                        style={{ accentColor: 'var(--accent)', width: 14, height: 14, flexShrink: 0 }}
+                      />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.display_name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {inviteError && <div style={{ fontSize: '13px', color: '#da3633', background: 'rgba(218,54,51,0.1)', borderRadius: '6px', padding: '8px 10px' }}>{inviteError}</div>}
             {inviteSuccess && <div style={{ fontSize: '13px', color: '#22c55e', background: 'rgba(34,197,94,0.1)', borderRadius: '6px', padding: '8px 10px' }}>✓ {inviteSuccess}</div>}
