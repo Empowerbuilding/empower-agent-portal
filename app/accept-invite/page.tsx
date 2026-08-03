@@ -12,6 +12,7 @@ interface InviteData {
   role: string;
   expires_at: string;
   accepted_at: string | null;
+  token: string;
   channel_ids: string[] | null;
   organizations: { name: string; slug: string; logo_url: string | null };
 }
@@ -36,7 +37,7 @@ function AcceptInviteContent() {
     async function loadInvite() {
       const { data, error } = await supabase
         .from('portal_invites')
-        .select('*, organizations(name, slug, logo_url)')
+        .select('*, organizations(name, slug, logo_url), token, channel_ids')
         .eq('token', token as string)
         .single();
 
@@ -100,28 +101,12 @@ function AcceptInviteContent() {
         return;
       }
 
-      // 3. Get the new portal_users id
-      const { data: newUser } = await supabase
-        .from('portal_users')
-        .select('id')
-        .eq('supabase_auth_id', authId)
-        .eq('org_id', invite.org_id)
-        .single();
-
-      // 4. Auto-assign pre-selected channels
-      if (newUser && invite.channel_ids && invite.channel_ids.length > 0) {
-        const memberRows = invite.channel_ids.map((chId: string) => ({
-          channel_id: chId,
-          user_id: newUser.id,
-        }));
-        await supabase.from('portal_channel_members').insert(memberRows).select();
-      }
-
-      // 5. Mark invite as accepted
-      await supabase
-        .from('portal_invites')
-        .update({ accepted_at: new Date().toISOString() })
-        .eq('id', invite.id);
+      // 3. Assign channels + delete invite via server-side API (uses service role — bypasses RLS)
+      await fetch('/api/accept-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: invite.token, authId }),
+      });
 
       setStatus('success');
       // Redirect to their org after a moment
