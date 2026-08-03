@@ -11,19 +11,20 @@ function getSpacesClient() {
       secretAccessKey: process['env']['DO_SPACES_SECRET_KEY'] || '',
     },
     forcePathStyle: false,
+    // Prevent SDK v3 from injecting checksum params DO Spaces doesn't support
+    requestChecksumCalculation: 'when_required' as any,
+    responseChecksumValidation: 'when_required' as any,
   });
 }
 
 export const BUCKET = process['env']['DO_SPACES_BUCKET'] || 'barnhaus-project-files';
 
-// Strip AWS SDK v3 checksum params that DO Spaces doesn't support
-function stripChecksumParams(url: string): string {
+// Strip any residual AWS SDK v3 checksum params that DO Spaces doesn't support.
+// NOTE: only safe to strip params that were NOT included in the signature.
+// For presigned URLs, strip only unsigned extras added after signing.
+function stripUnsignedChecksumParams(url: string): string {
   const u = new URL(url);
-  u.searchParams.delete('x-amz-checksum-crc32');
-  u.searchParams.delete('x-amz-sdk-checksum-algorithm');
-  u.searchParams.delete('x-amz-checksum-crc32c');
-  u.searchParams.delete('x-amz-checksum-sha1');
-  u.searchParams.delete('x-amz-checksum-sha256');
+  // These are added outside the signature scope — safe to remove
   u.searchParams.delete('x-amz-checksum-mode');
   return u.toString();
 }
@@ -35,8 +36,7 @@ export async function getUploadUrl(key: string, contentType: string): Promise<st
     Key: key,
     ContentType: contentType,
   });
-  const url = await getSignedUrl(client, cmd, { expiresIn: 900 });
-  return stripChecksumParams(url);
+  return getSignedUrl(client, cmd, { expiresIn: 900 });
 }
 
 export async function getDownloadUrl(key: string, filename: string): Promise<string> {
@@ -46,8 +46,7 @@ export async function getDownloadUrl(key: string, filename: string): Promise<str
     Key: key,
     ResponseContentDisposition: `attachment; filename="${filename}"`,
   });
-  const url = await getSignedUrl(client, cmd, { expiresIn: 3600 }); // 1 hour
-  return stripChecksumParams(url);
+  return getSignedUrl(client, cmd, { expiresIn: 3600 }); // 1 hour
 }
 
 export function getSpacesClientDirect() {
