@@ -100,6 +100,21 @@ export default function GalleryPage() {
   const canQA = isInternal;
   const canToggleMarketing = currentUser?.role === 'owner' || currentUser?.role === 'admin' || currentUser?.name === 'Esry';
 
+  const handleSubmitForApproval = async (render: RenderItem) => {
+    try {
+      const { error } = await supabase
+        .from('render_gallery')
+        .update({ status: 'pending_review' })
+        .eq('id', render.id)
+        .eq('org_id', orgId!);
+      if (error) throw error;
+      showToast('Submitted for review ✅');
+      loadRenders();
+    } catch (e: any) {
+      showToast(e.message, false);
+    }
+  };
+
   const filtered = renders.filter(r => {
     if (statusFilter !== 'all' && r.status !== statusFilter) return false;
     if (marketingOnly && !r.marketing_approved) return false;
@@ -233,7 +248,17 @@ export default function GalleryPage() {
                   </div>
 
                   {/* Actions */}
-                  <div style={{ padding: '0 10px 10px', display: 'flex', gap: 6 }}>
+                  <div style={{ padding: '0 10px 10px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {/* Submit for Approval — shown to everyone when render is not already pending/approved */}
+                    {(r.status === 'revision' || r.status === 'in_use') && (
+                      <button
+                        onClick={() => handleSubmitForApproval(r)}
+                        style={{ flex: 1, background: 'rgba(234,179,8,0.15)', border: '1px solid #eab308', color: '#eab308', padding: '6px 0', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+                        title="Re-submit this render for approval review"
+                      >
+                        ✅ Submit for Approval
+                      </button>
+                    )}
                     {canQA && (
                       <button onClick={() => { setQaTarget(r); setQaStatus(r.status); }} style={{ flex: 1, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', color: 'var(--muted)', padding: '6px 0', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
                         Review
