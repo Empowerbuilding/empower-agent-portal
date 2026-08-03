@@ -47,20 +47,8 @@ export default function RenderStudioPage() {
       if (!portalUser) return;
       setCurrentUser(portalUser);
 
-      // Find their studio channel (contractors have exactly one)
-      const { data: memberChannels } = await supabase
-        .from('portal_channel_members')
-        .select('channel_id')
-        .eq('user_id', portalUser.id);
-
-      const channelIds = (memberChannels ?? []).map((m: any) => m.channel_id as string);
-      const sc = channelIds.find((id) =>
-        id.startsWith('studio-zunaria') ||
-        id.startsWith('studio-arooba') ||
-        id.endsWith('-render') ||
-        id.includes('-render-tool')
-      );
-      setStudioChannel(sc ?? null);
+      // Always post render submissions to the shared reviews channel
+      setStudioChannel('studio-reviews');
     };
     init();
   }, [orgSlug]);
