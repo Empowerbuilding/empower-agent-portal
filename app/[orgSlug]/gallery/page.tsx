@@ -46,6 +46,12 @@ export default function GalleryPage() {
   const [marketingOnly, setMarketingOnly] = useState(false);
   const [search, setSearch] = useState('');
 
+  // All renders tab (Mitchell + Michael only)
+  const [activeTab, setActiveTab] = useState<'submitted' | 'all'>('submitted');
+  const [allRenders, setAllRenders] = useState<any[]>([]);
+  const [allRendersLoading, setAllRendersLoading] = useState(false);
+  const canSeeAllRenders = currentUser?.name === 'Mitchell' || currentUser?.name === 'Michael';
+
   // Lightbox
   const [lightbox, setLightbox] = useState<string | null>(null);
 
@@ -95,6 +101,17 @@ export default function GalleryPage() {
   }, [orgId, currentUser]);
 
   useEffect(() => { loadRenders(); }, [loadRenders]);
+
+  // Load all renders when tab switches
+  useEffect(() => {
+    if (activeTab !== 'all' || !orgId || allRenders.length > 0) return;
+    setAllRendersLoading(true);
+    fetch(`/api/renders/all?orgId=${orgId}`)
+      .then(r => r.json())
+      .then(d => setAllRenders(d.renders ?? []))
+      .catch(() => {})
+      .finally(() => setAllRendersLoading(false));
+  }, [activeTab, orgId]);
 
   const isInternal = currentUser && currentUser.role !== 'contractor';
   const canQA = isInternal;
@@ -173,9 +190,19 @@ export default function GalleryPage() {
 
       {/* Header */}
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>🖼️ Render Gallery</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-          {isInternal ? 'All submitted renders' : 'Your submitted renders'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>🖼️ Render Gallery</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+              {isInternal ? 'All submitted renders' : 'Your submitted renders'}
+            </div>
+          </div>
+          {canSeeAllRenders && (
+            <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', borderRadius: 7, overflow: 'hidden' }}>
+              <button onClick={() => setActiveTab('submitted')} style={{ padding: '6px 12px', fontSize: 12, fontWeight: activeTab === 'submitted' ? 700 : 400, background: activeTab === 'submitted' ? 'var(--accent)' : 'var(--surface)', color: activeTab === 'submitted' ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer' }}>Submitted</button>
+              <button onClick={() => setActiveTab('all')} style={{ padding: '6px 12px', fontSize: 12, fontWeight: activeTab === 'all' ? 700 : 400, background: activeTab === 'all' ? 'var(--accent)' : 'var(--surface)', color: activeTab === 'all' ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer' }}>All Renders</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -213,7 +240,55 @@ export default function GalleryPage() {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* All Renders grid — raw library view for Mitchell + Michael */}
+      {activeTab === 'all' && canSeeAllRenders && (
+        <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+          {allRendersLoading ? (
+            <div style={{ color: 'var(--muted)', textAlign: 'center', marginTop: 60, fontSize: 14 }}>Loading…</div>
+          ) : allRenders.length === 0 ? (
+            <div style={{ color: 'var(--muted)', textAlign: 'center', marginTop: 60, fontSize: 14 }}>No renders found.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+              {allRenders.map(r => {
+                const url = r.enhanced_image_url || r.original_image_url;
+                return (
+                  <div key={r.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ position: 'relative', aspectRatio: '4/3', overflow: 'hidden', cursor: 'zoom-in', background: '#111' }} onClick={() => setLightbox(url)}>
+                      <img src={url} alt="render" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      {r.is_favorited && <div style={{ position: 'absolute', top: 5, right: 5, fontSize: 14 }}>⭐</div>}
+                      <div style={{ position: 'absolute', bottom: 5, left: 5, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 6 }}>{r.render_type}</div>
+                    </div>
+                    <div style={{ padding: '8px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.profile_id ?? 'unknown'} · {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                      {r.prompt && <div style={{ fontSize: 10, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.7 }}>{r.prompt}</div>}
+                    </div>
+                    <div style={{ padding: '0 8px 8px', display: 'flex', gap: 5 }}>
+                      <button onClick={async () => {
+                        try {
+                          await supabase.from('render_gallery').upsert({
+                            image_url: url,
+                            created_by: r.profile_id ?? 'unknown',
+                            org_id: orgId,
+                            plan_name: null,
+                            client_name: null,
+                            status: 'pending_review',
+                            marketing_approved: false,
+                          }, { onConflict: 'image_url' });
+                          showToast('Submitted for review ✅');
+                        } catch (e: any) { showToast(e.message, false); }
+                      }} style={{ flex: 1, background: 'rgba(234,179,8,0.15)', border: '1px solid #eab308', color: '#eab308', padding: '5px 0', borderRadius: 5, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>✅ Submit</button>
+                      <button onClick={() => window.open(url, '_blank')} style={{ background: 'var(--accent)', border: 'none', color: '#fff', padding: '5px 10px', borderRadius: 5, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>↓</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Submitted renders grid */}
+      {activeTab === 'submitted' && (
       <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
         {loading ? (
           <div style={{ color: 'var(--muted)', textAlign: 'center', marginTop: 60, fontSize: 14 }}>Loading…</div>
@@ -284,6 +359,7 @@ export default function GalleryPage() {
           </div>
         )}
       </div>
+      )}{/* end submitted tab */}
 
       {/* QA Modal */}
       {qaTarget && (
