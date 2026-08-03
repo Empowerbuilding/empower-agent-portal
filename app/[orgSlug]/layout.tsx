@@ -40,11 +40,21 @@ export default async function OrgLayout({
     .eq('org_id', org.id)
     .order('sort_order');
 
+  // Restrict group rail to only groups the user has channel memberships in.
+  // Owners and admins see all groups; reps/contractors only see their assigned ones.
+  const isFullAccess = portalUser.role === 'owner' || portalUser.role === 'admin';
+  const accessibleGroupIds = new Set(
+    (channels ?? []).map(ch => (ch as any).group_id ?? (ch as any).agents?.group_id).filter(Boolean)
+  );
+  const visibleGroups = isFullAccess
+    ? (groups ?? [])
+    : (groups ?? []).filter(g => accessibleGroupIds.has(g.id));
+
   return (
     <OrgShell
       org={org as Organization}
       channels={(channels ?? []) as (PortalChannel & { agents: Agent })[]}
-      groups={(groups ?? []) as AgentGroup[]}
+      groups={visibleGroups as AgentGroup[]}
       currentUser={portalUser}
       orgSlug={orgSlug}
     >
