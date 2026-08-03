@@ -148,7 +148,7 @@ export default function Markdown({ content, className }: Props) {
 
       blocks.push(
         <div key={lineKey++} style={{ overflowX: 'auto', margin: '8px 0' }}>
-          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '13px' }}>
+          <table style={{ borderCollapse: 'collapse', width: 'auto', minWidth: '100%', fontSize: '13px' }}>
             {headers.some(h => h) && (
               <thead>
                 <tr>
@@ -164,7 +164,7 @@ export default function Markdown({ content, className }: Props) {
               {bodyRows.map((row, ri) => (
                 <tr key={ri} style={{ borderBottom: '1px solid var(--border)' }}>
                   {parseTableRow(row).map((cell, ci) => (
-                    <td key={ci} style={{ padding: '6px 10px', color: 'var(--text)', verticalAlign: 'top' }}>
+                    <td key={ci} style={{ padding: '6px 10px', color: 'var(--text)', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                       {renderInline(cell, setLightboxSrc)}
                     </td>
                   ))}
