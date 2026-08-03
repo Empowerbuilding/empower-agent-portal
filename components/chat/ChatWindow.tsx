@@ -23,19 +23,28 @@ const SUPABASE_URL = 'https://xqvnpcxyyxxxydescfzw.supabase.co';
 
 // Derive agent name + short channel name from channel ID
 // e.g. "barnhaus-atlas-lead-alerts" → { agent: "Atlas", channelLabel: "Lead Alerts" }
-function parseChannelId(id: string): { agent: string; channelLabel: string } {
-  const KNOWN_AGENTS = ['vanessa', 'atlas', 'relay', 'ceo', 'esry', 'finley', 'claw', 'blueprint', 'codie', 'juanito', 'frank'];
+const KNOWN_ORG_PREFIXES = ['barnhaus', 'showcase', 'its-training', 'cw', 'moderndwellings', 'relay', 'modern'];
+const KNOWN_AGENTS = ['vanessa', 'atlas', 'relay', 'ceo', 'esry', 'finley', 'claw', 'blueprint', 'codie', 'juanito', 'frank', 'tony'];
+
+function parseChannelId(id: string, agentDisplayName?: string): { agent: string; channelLabel: string } {
   // Strip known org prefixes
-  const stripped = id.replace(/^barnhaus-/, '').replace(/^its-training-/, '');
+  let stripped = id;
+  for (const prefix of KNOWN_ORG_PREFIXES) {
+    stripped = stripped.replace(new RegExp(`^${prefix}-`), '');
+  }
   const parts = stripped.split('-');
   const agentIdx = parts.findIndex(p => KNOWN_AGENTS.includes(p.toLowerCase()));
+  let agent: string;
+  let rest: string;
   if (agentIdx === -1) {
-    // No known agent — treat first part as agent
-    return { agent: parts[0].charAt(0).toUpperCase() + parts[0].slice(1), channelLabel: parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ') || 'General' };
+    agent = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    rest = parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+  } else {
+    agent = parts[agentIdx].charAt(0).toUpperCase() + parts[agentIdx].slice(1);
+    rest = parts.slice(agentIdx + 1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
   }
-  const agent = parts[agentIdx].charAt(0).toUpperCase() + parts[agentIdx].slice(1);
-  const rest = parts.slice(agentIdx + 1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-  return { agent, channelLabel: rest || 'General' };
+  // Prefer the agent's actual display_name from the DB over the parsed channel ID segment
+  return { agent: agentDisplayName ?? agent, channelLabel: rest || 'General' };
 }
 
 export default function ChatWindow({ channel, initialMessages, currentUser, orgId }: Props) {
@@ -655,7 +664,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              {(() => { const { agent, channelLabel } = parseChannelId(channel.id); return (
+              {(() => { const { agent, channelLabel } = parseChannelId(channel.id, (channel as any).agents?.display_name); return (
                 <>
                   <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>
                     <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: 13 }}>{agent}</span>
