@@ -44,10 +44,10 @@ export default async function ChannelPage({
     .single();
   if (!membership) redirect(`/${orgSlug}`);
 
-  // Get channel details
+  // Get channel details (include agents join so components can show agent display_name)
   const { data: channel } = await supabase
     .from('portal_channels')
-    .select('*')
+    .select('*, agents(id, name, display_name)')
     .eq('id', channelId)
     .single();
   if (!channel) redirect(`/${orgSlug}`);
