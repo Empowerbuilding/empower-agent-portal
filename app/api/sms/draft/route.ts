@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 
 const PORTAL_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PORTAL_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const OPENAI_KEY = process.env.OPENAI_API_KEY!;
+const GEMINI_KEY = process.env.GOOGLE_AI_STUDIO_KEY!;
 
 export async function POST(req: NextRequest) {
   try {
@@ -96,32 +96,28 @@ Rules:
       `\nDraft a reply for ${repName || 'the rep'} to send.`,
     ].filter(Boolean).join('\n\n');
 
-    // Call OpenAI
-    const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        max_tokens: 200,
-        temperature: 0.7,
-      }),
-    });
+    // Call Gemini Flash — same model Vanessa runs on
+    const aiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+          generationConfig: { maxOutputTokens: 200, temperature: 0.7 },
+        }),
+      }
+    );
 
     if (!aiRes.ok) {
       const err = await aiRes.text();
-      console.error('[sms/draft] OpenAI error:', aiRes.status, err);
+      console.error('[sms/draft] Gemini error:', aiRes.status, err);
       return NextResponse.json({ error: 'Draft generation failed' }, { status: 502 });
     }
 
     const aiData = await aiRes.json();
-    const draft = aiData.choices?.[0]?.message?.content?.trim() || '';
+    const draft = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
 
     return NextResponse.json({ draft });
   } catch (err: any) {
