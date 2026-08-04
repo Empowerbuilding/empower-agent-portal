@@ -90,6 +90,8 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const [listening, setListening] = useState(false);
   const [askingVanessa, setAskingVanessa] = useState<string | null>(null);
   const [stagedDraftId, setStagedDraftId] = useState<string | null>(null);
+  // When a draft is staged, track the original text so Enter-to-send is blocked until the user edits it
+  const [stagedDraftOriginalText, setStagedDraftOriginalText] = useState<string | null>(null);
   // phone number Vanessa is currently drafting for (shows indicator in thread)
   const [vanessaDrafting, setVanessaDrafting] = useState<string | null>(null);
   const vanessaDraftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -251,7 +253,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
       const phone = activeConv.contact_phone;
       // Derive user flag and action channel from channel ID
       let senderUser = 'larry';
-      let smsActionsChannel = 'barnhaus-vanessa-sms-actions';
+      let smsActionsChannel: string;
       if (channel.id.includes('its-training')) {
         smsActionsChannel = 'its-training-vanessa-sms-actions';
         if (channel.id.includes('ryan')) senderUser = 'ryan';
@@ -260,7 +262,13 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
         else if (channel.id.includes('rep3')) senderUser = 'rep3';
         else senderUser = 'ryan';
       } else {
-        senderUser = channel.id.includes('larry') ? 'larry' : 'shannon';
+        // Route to the rep's chat channel (strip -sms suffix) — works for any org.
+        // e.g. barnhaus-vanessa-larry-sms → barnhaus-vanessa-larry
+        //      showcase-vanessa-ryan-sms  → showcase-vanessa-ryan
+        smsActionsChannel = channel.id.replace(/-sms$/, '');
+        // Derive rep slug from second-to-last segment: barnhaus-vanessa-[larry]-sms
+        const idParts = channel.id.split('-');
+        senderUser = idParts[idParts.length - 2] || 'larry';
       }
       const mediaNote = mediaUrls.length > 0 ? ` They also sent ${mediaUrls.length} image(s): ${mediaUrls.join(', ')}.` : '';
       const bodyNote = body ? `"${body}"` : '(no text — image/media only)';
@@ -299,6 +307,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     try {
       const draftId = stagedDraftId;
       setStagedDraftId(null);
+      setStagedDraftOriginalText(null);
       await fetch('/api/sms/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -505,6 +514,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                           // Mark draft as staged (not deleted) so thread stays visible
                           // Rep can still edit in the reply box, then send
                           setStagedDraftId(msg.id);
+                          setStagedDraftOriginalText(body);
                           setMessages(prev => prev.map(m => m.id === msg.id
                             ? { ...m, metadata: { ...(m.metadata ?? {}), approval_state: 'staged' } }
                             : m
@@ -624,7 +634,14 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
               e.target.style.height = 'auto';
               e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px';
             }}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                // Block Enter-to-send while a draft is staged but unedited — prevents accidental auto-send on mobile keyboard focus
+                if (stagedDraftId && replyText === stagedDraftOriginalText) return;
+                sendReply();
+              }
+            }}
             placeholder={`Reply to ${activeConv.contact_name}…`}
             rows={1}
           />
@@ -635,8 +652,9 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
           <button
             className="send-btn"
             onClick={sendReply}
-            disabled={!replyText.trim() || sending}
-            title={`Send to ${activeConv.contact_name}`}
+            disabled={!replyText.trim() || sending || (stagedDraftId !== null && replyText === stagedDraftOriginalText)}
+            title={stagedDraftId && replyText === stagedDraftOriginalText ? 'Edit the draft before sending' : `Send to ${activeConv.contact_name}`}
+            style={stagedDraftId && replyText === stagedDraftOriginalText ? { opacity: 0.35 } : undefined}
           >
             {sending ? '…' : <IconSend size={16} />}
           </button>
