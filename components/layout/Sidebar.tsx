@@ -300,7 +300,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
           .from('portal_messages')
           .select('channel_id, created_at')
           .eq('channel_id', chId)
-          .neq('sender_id', currentUser.id)
+          .or(`sender_id.is.null,sender_id.neq.${currentUser.id}`)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
@@ -495,7 +495,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             {groups.map(g => {
               const isActive = g.id === activeGroupId;
               const groupChannels = channels.filter(ch => ((ch as any).group_id ?? ch.agents?.group_id) === g.id);
-              const groupHasUnread = !isActive && groupChannels.some(ch => hasUnread(ch.id));
+              const groupHasUnread = groupChannels.some(ch => hasUnread(ch.id) && pathname !== `/${orgSlug}/${ch.id}`);
               return (
                 <button
                   key={g.id}
