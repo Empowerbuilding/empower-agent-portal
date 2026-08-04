@@ -115,6 +115,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     'studio-general': /@juanito|hey juanito/i,
     'studio-zunaria': /@juanito|hey juanito/i,
     'studio-arooba': /@juanito|hey juanito/i,
+    'studio-reviews': /@juanito|hey juanito/i,
   };
   const shouldShowTyping = (channelId: string, content: string) => {
     const pattern = SUMMON_ONLY_CHANNELS[channelId];
