@@ -132,19 +132,29 @@ export default function FilesPage() {
     setUploadProgress(0);
 
     try {
-      // Single-step proxy upload — file goes through API route, no CORS issues
-      const formData = new FormData();
       const FRANK_AGENT_ID = '73a73a44-347f-4817-8f43-3b14ef7c8c2e';
       const selectedChannel = frankChannels.find(ch => ch.project_name === uploadProjectName);
       const uploadCategory = selectedChannel?.agent_id === FRANK_AGENT_ID ? 'project' : 'design';
-      formData.append('file', uploadFile);
-      formData.append('planName', effectiveName);
-      formData.append('projectName', uploadProjectName.trim() || '');
-      formData.append('contactName', uploadContactName.trim() || '');
-      formData.append('orgId', orgId);
-      formData.append('uploadedBy', currentUser.name);
-      formData.append('category', uploadCategory);
 
+      // Step 1: Get presigned URL from server (fast, no file transfer)
+      const presignRes = await fetch('/api/files/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: uploadFile.name,
+          contentType: uploadFile.type || 'application/octet-stream',
+          planName: effectiveName,
+          orgId,
+          uploadedBy: currentUser.name,
+          projectName: uploadProjectName.trim() || '',
+          contactName: uploadContactName.trim() || '',
+          category: uploadCategory,
+        }),
+      });
+      const presign = await presignRes.json();
+      if (!presignRes.ok) throw new Error(presign.error || 'Presign failed');
+
+      // Step 2: Upload directly to DO Spaces — bypasses Next.js/Traefik entirely, real progress
       const xhr = new XMLHttpRequest();
       await new Promise<void>((resolve, reject) => {
         xhr.upload.addEventListener('progress', (e) => {
@@ -152,18 +162,36 @@ export default function FilesPage() {
         });
         xhr.onload = () => {
           if (xhr.status < 400) resolve();
-          else {
-            try { const r = JSON.parse(xhr.responseText); reject(new Error(r.error || `Upload failed: ${xhr.status}`)); }
-            catch { reject(new Error(`Upload failed: ${xhr.status}`)); }
-          }
+          else reject(new Error(`Upload failed: ${xhr.status}`));
         };
         xhr.onerror = () => reject(new Error('Network error'));
-        xhr.open('POST', '/api/files/upload');
-        xhr.send(formData);
+        xhr.open('PUT', presign.uploadUrl);
+        xhr.setRequestHeader('Content-Type', uploadFile.type || 'application/octet-stream');
+        xhr.send(uploadFile);
       });
 
-      const result = JSON.parse(xhr.responseText);
-      if (result.error) throw new Error(result.error);
+      // Step 3: Confirm — save metadata to Supabase
+      const confirmRes = await fetch('/api/files/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgId,
+          planName: effectiveName,
+          planSlug: presign.slug,
+          filename: uploadFile.name,
+          fileKey: presign.key,
+          fileUrl: presign.fileUrl,
+          version: presign.nextVersion,
+          contentType: uploadFile.type || 'application/octet-stream',
+          fileSize: uploadFile.size,
+          uploadedBy: currentUser.name,
+          projectName: uploadProjectName.trim() || '',
+          contactName: uploadContactName.trim() || '',
+          category: uploadCategory,
+        }),
+      });
+      const result = await confirmRes.json();
+      if (!confirmRes.ok) throw new Error(result.error || 'Confirm failed');
 
       showToast(`✅ ${uploadFile.name} uploaded — v${result?.file?.version ?? '?'}`);
       setUploadModal(false);
