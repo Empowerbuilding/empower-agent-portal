@@ -249,46 +249,42 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
     try {
       const body = extractSmsBody(msg.content);
       const mediaUrls = extractMediaUrls(msg.content);
-      // Route to background channel — Vanessa monitors it, reps never see it
-      const phone = activeConv.contact_phone;
-      // Derive user flag and action channel from channel ID
-      let senderUser = 'larry';
-      let smsActionsChannel: string;
-      if (channel.id.includes('its-training')) {
-        smsActionsChannel = 'its-training-vanessa-sms-actions';
-        if (channel.id.includes('ryan')) senderUser = 'ryan';
-        else if (channel.id.includes('rep1')) senderUser = 'rep1';
-        else if (channel.id.includes('rep2')) senderUser = 'rep2';
-        else if (channel.id.includes('rep3')) senderUser = 'rep3';
-        else senderUser = 'ryan';
-      } else {
-        // Route to the rep's chat channel (strip -sms suffix) — works for any org.
-        // e.g. barnhaus-vanessa-larry-sms → barnhaus-vanessa-larry
-        //      showcase-vanessa-ryan-sms  → showcase-vanessa-ryan
-        smsActionsChannel = channel.id.replace(/-sms$/, '');
-        // Derive rep slug from second-to-last segment: barnhaus-vanessa-[larry]-sms
-        const idParts = channel.id.split('-');
-        senderUser = idParts[idParts.length - 2] || 'larry';
-      }
-      const mediaNote = mediaUrls.length > 0 ? ` They also sent ${mediaUrls.length} image(s): ${mediaUrls.join(', ')}.` : '';
-      const bodyNote = body ? `"${body}"` : '(no text — image/media only)';
-      const prompt = `SMS action from ${currentUser.name}: Draft a reply to this inbound text from ${activeConv.contact_name} (${phone}): ${bodyNote}.${mediaNote} Run send_sms.py --draft --to "${phone}" --user ${senderUser} and post it to the SMS inbox. No reply needed here.`;
-      await supabase.from('portal_messages').insert({
-        channel_id: smsActionsChannel,
-        org_id: orgId,
-        sender_type: 'user',
-        sender_id: currentUser.id,
-        sender_name: currentUser.name,
-        content: prompt,
-        processed: false,
+      const mediaNote = mediaUrls.length > 0 ? ` [${mediaUrls.length} image(s) attached]` : '';
+      const inboundText = body ? `${body}${mediaNote}` : `(media only${mediaNote})`;
+
+      // Call the draft API directly — no channel posting, draft populates textarea
+      const res = await fetch('/api/sms/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelId: channel.id,
+          inboundText,
+          contactName: activeConv.contact_name,
+          contactPhone: activeConv.contact_phone,
+          repName: currentUser.name,
+          conversationHistory: activeConv.messages,
+        }),
       });
-      // Show drafting indicator in the thread
-      setVanessaDrafting(phone);
-      if (vanessaDraftTimerRef.current) clearTimeout(vanessaDraftTimerRef.current);
-      // Auto-clear after 45s if draft never arrives
-      vanessaDraftTimerRef.current = setTimeout(() => setVanessaDrafting(null), 45000);
+
+      if (res.ok) {
+        const { draft } = await res.json();
+        if (draft) {
+          setReplyText(draft);
+          setStagedDraftOriginalText(draft);
+          // Resize textarea to fit
+          setTimeout(() => {
+            if (textareaRef.current) {
+              textareaRef.current.style.height = 'auto';
+              textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 100) + 'px';
+              textareaRef.current.focus();
+            }
+          }, 50);
+        }
+      } else {
+        console.error('[askVanessa] draft API error', res.status);
+      }
     } finally {
-      setTimeout(() => setAskingVanessa(null), 2000);
+      setAskingVanessa(null);
     }
   }
 
