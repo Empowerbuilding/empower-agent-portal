@@ -648,7 +648,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
           <button
             className="send-btn"
             onClick={sendReply}
-            disabled={!replyText.trim() || sending || (stagedDraftId !== null && replyText === stagedDraftOriginalText)}
+            disabled={!replyText.trim() || sending}
             title={stagedDraftId && replyText === stagedDraftOriginalText ? 'Edit the draft before sending' : `Send to ${activeConv.contact_name}`}
             style={stagedDraftId && replyText === stagedDraftOriginalText ? { opacity: 0.35 } : undefined}
           >
