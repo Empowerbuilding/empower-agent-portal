@@ -500,7 +500,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                 <div key={msg.id} style={{ alignSelf: 'flex-end', maxWidth: '85%', width: '100%' }}>
                   <div style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--accent)', borderRadius: '12px', padding: '12px 14px' }}>
                     <div style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <img src="/logo.png" alt="Tony" style={{ width: 16, height: 16, objectFit: 'contain', verticalAlign: 'middle', marginRight: 4 }} /> {((channel as any).agents?.display_name ?? 'Tony')}'s Draft
+                      <img src="/logo.png" alt={(channel as any).agents?.display_name ?? 'Vanessa'} style={{ width: 16, height: 16, objectFit: 'contain', verticalAlign: 'middle', marginRight: 4 }} /> {((channel as any).agents?.display_name ?? 'Vanessa')}'s Draft
                     </div>
                     <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
@@ -572,10 +572,10 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                     <button
                       onClick={() => askVanessa(msg)}
                       disabled={askingVanessa === msg.id}
-                      title={`Ask ${(channel as any).agents?.display_name ?? 'Tony'} to draft a reply`}
+                      title={`Ask ${(channel as any).agents?.display_name ?? 'Vanessa'} to draft a reply`}
                       style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--muted)', cursor: 'pointer', fontSize: '11px', padding: '2px 7px', opacity: askingVanessa === msg.id ? 0.5 : 0.8 }}
                     >
-                      {askingVanessa === msg.id ? `✓ Sent to ${(channel as any).agents?.display_name ?? 'Tony'}` : <><img src="/logo.png" alt="" style={{ width: 13, height: 13, objectFit: 'contain', verticalAlign: 'middle', marginRight: 3 }} />Ask {(channel as any).agents?.display_name ?? 'Tony'}</>}
+                      {askingVanessa === msg.id ? `✓ Generating…` : <><img src="/logo.png" alt="" style={{ width: 13, height: 13, objectFit: 'contain', verticalAlign: 'middle', marginRight: 3 }} />Ask {(channel as any).agents?.display_name ?? 'Vanessa'}</>}
                     </button>
                   </div>
                 </div>
