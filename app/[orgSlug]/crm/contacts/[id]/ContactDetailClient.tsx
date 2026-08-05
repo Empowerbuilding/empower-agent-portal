@@ -140,6 +140,21 @@ export default function ContactDetailClient({
   // Quick task from contact
   const [showQuickTask, setShowQuickTask] = useState(false);
 
+  // Client type editing
+  const CLIENT_TYPES = [
+    { value: 'builder', label: 'Builder' },
+    { value: 'consumer', label: 'Consumer' },
+    { value: 'subcontractor', label: 'Subcontractor' },
+    { value: 'engineer', label: 'Engineer' },
+    { value: 'architect', label: 'Architect' },
+    { value: 'realtor', label: 'Realtor' },
+    { value: 'roofing', label: 'Roofing' },
+    { value: 'o&g', label: 'O&G' },
+    { value: 'pool_builder', label: 'Pool Builder' },
+  ];
+  const [clientType, setClientType] = useState<string>(contactData.client_type ?? '');
+  const [savingClientType, setSavingClientType] = useState(false);
+
   // Lead source editing
   const LEAD_SOURCES = ['facebook_lead_ad','referral','cost_calc','shopify_cost_calc','guide_download','empower_website','barnhaus_contact','barnhaus_store_contact','shopify_order','calendar_booking','shopify_calendar_booking','direct_phone_call','floor_plan_archive','design_concierge','trade_show','other'];
   const [editLeadSource, setEditLeadSource] = useState(false);
@@ -261,6 +276,14 @@ export default function ContactDetailClient({
     setLifecycle(newStage);
     await crm.from('contacts').update({ lifecycle_stage: newStage || null }).eq('id', contactData.id);
     setSavingLifecycle(false);
+  }
+
+  async function changeClientType(val: string) {
+    setSavingClientType(true);
+    setClientType(val);
+    await crm.from('contacts').update({ client_type: val || null }).eq('id', contactData.id);
+    setContactData((prev: any) => ({ ...prev, client_type: val || null }));
+    setSavingClientType(false);
   }
 
   async function submitNote() {
@@ -501,7 +524,7 @@ export default function ContactDetailClient({
             )}
           </div>
 
-          {/* Owner + Lifecycle selects */}
+          {/* Owner + Lifecycle + Client Type selects */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Owner:</span>
@@ -530,6 +553,18 @@ export default function ContactDetailClient({
               >
                 <option value="">— None —</option>
                 {LIFECYCLE_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Type:</span>
+              <select
+                value={clientType}
+                onChange={e => changeClientType(e.target.value)}
+                disabled={savingClientType}
+                style={{ ...selectStyle, opacity: savingClientType ? 0.6 : 1 }}
+              >
+                <option value="">— None —</option>
+                {CLIENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
           </div>
