@@ -45,13 +45,23 @@ export default async function ChannelPage({
     .single();
   if (!membership) redirect(`/${orgSlug}`);
 
-  // Get channel details — use admin client for agents join (RLS blocks anon/user reads on agents table)
-  const adminSupabase = createAdminClient();
-  const { data: channel } = await adminSupabase
+  // Get channel details
+  const { data: channel } = await supabase
     .from('portal_channels')
-    .select('*, agents(id, name, display_name)')
+    .select('*')
     .eq('id', channelId)
     .single();
+
+  // Fetch agent separately using admin client (bypasses RLS, no FK join needed)
+  const adminSupabase = createAdminClient();
+  if (channel?.agent_id) {
+    const { data: agent } = await adminSupabase
+      .from('agents')
+      .select('id, name, display_name')
+      .eq('id', channel.agent_id)
+      .single();
+    if (agent) (channel as any).agents = agent;
+  }
   if (!channel) redirect(`/${orgSlug}`);
 
   // Load last 100 messages (fetch newest-first, then reverse for chronological display)
