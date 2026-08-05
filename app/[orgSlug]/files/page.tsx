@@ -127,6 +127,7 @@ export default function FilesPage() {
     supabase
       .from('portal_channels')
       .select('id, display_name, project_name, agent_id')
+      .eq('org_id', orgId)
       .eq('active', true)
       .not('project_name', 'is', null)
       .order('project_name')
