@@ -714,7 +714,8 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                   let dest = `/${orgSlug}/crm`;
                   try {
                     const last = localStorage.getItem(`claw_crm_last_${orgSlug}`);
-                    if (last) dest = last;
+                    // Only use cached path if it starts with the org's crm root — prevents stale 404 paths
+                    if (last && last.startsWith(`/${orgSlug}/crm/contacts`)) dest = last;
                   } catch {}
                   onClose();
                   router.push(dest);
