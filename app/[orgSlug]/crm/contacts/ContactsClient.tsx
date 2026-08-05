@@ -108,6 +108,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
   const [sortField, setSortField] = useState<'first_name' | 'created_at' | 'lead_score' | 'whale_score' | ''>('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [showCreate, setShowCreate] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newContact, setNewContact] = useState({ first_name: '', last_name: '', phone: '', email: '' });
 
@@ -229,6 +230,8 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
   const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
 
+  const activeFilterCount = [lifecycleFilter, scoreFilter, ownerFilter, sortField].filter(Boolean).length;
+
   const pillBtn = (active: boolean): React.CSSProperties => ({
     padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400,
     background: active ? 'var(--accent)' : 'var(--sidebar-bg)',
@@ -239,79 +242,197 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
 
   return (
     <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Sticky header: search + filters */}
+      {/* Sticky header: search + filter button + new contact */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)', paddingBottom: 8, marginBottom: -4, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Search */}
-      <div style={{ position: 'relative' }}>
-        <input
-          placeholder="Search name, phone, email…"
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(0); }}
-          style={{
-            width: '100%', boxSizing: 'border-box',
-            background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
-            borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13,
-          }}
-        />
-        {searching && (
-          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--muted)' }}>
-            searching…
-          </span>
+
+        {/* Row 1: search + filters + new */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <input
+              placeholder="Search name, phone, email…"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(0); }}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
+                borderRadius: 6, color: 'var(--text)', padding: '8px 12px', fontSize: 13,
+              }}
+            />
+            {searching && (
+              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--muted)' }}>
+                …
+              </span>
+            )}
+          </div>
+
+          {/* Filters button */}
+          <button
+            onClick={() => setShowFilters(true)}
+            style={{
+              position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
+              padding: '8px 12px', borderRadius: 6, fontSize: 13, fontWeight: activeFilterCount ? 600 : 400,
+              background: activeFilterCount ? 'var(--accent)' : 'var(--sidebar-bg)',
+              color: activeFilterCount ? '#fff' : 'var(--muted)',
+              border: activeFilterCount ? '1px solid var(--accent)' : '1px solid var(--border)',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            ⚙ Filters{activeFilterCount > 0 && (
+              <span style={{ background: '#fff', color: 'var(--accent)', borderRadius: 10, fontSize: 10, fontWeight: 700, padding: '0px 5px', lineHeight: '16px' }}>
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
+          {/* New Contact */}
+          <button onClick={() => setShowCreate(true)}
+            style={{ padding: '8px 12px', background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            + New
+          </button>
+        </div>
+
+        {/* Active filter chips — shown when filters are set */}
+        {activeFilterCount > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            {lifecycleFilter && (
+              <button onClick={() => { setLifecycleFilter(''); setPage(0); }}
+                style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {lifecycleFilter.replace('_',' ').replace(/\b\w/g, c => c.toUpperCase())} ×
+              </button>
+            )}
+            {scoreFilter && (
+              <button onClick={() => { setScoreFilter(''); setPage(0); }}
+                style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {scoreFilter.charAt(0).toUpperCase() + scoreFilter.slice(1)} ×
+              </button>
+            )}
+            {ownerFilter && (
+              <button onClick={() => { setOwnerFilter(''); setPage(0); }}
+                style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {users.find(u => u.id === ownerFilter)?.name.split(' ')[0] ?? 'Rep'} ×
+              </button>
+            )}
+            {sortField && (
+              <button onClick={() => { setSortField(''); setPage(0); }}
+                style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                Sort: {sortField === 'first_name' ? 'Name' : sortField === 'created_at' ? 'Date' : sortField === 'lead_score' ? 'Score' : 'Whale'} {sortDir === 'asc' ? '↑' : '↓'} ×
+              </button>
+            )}
+            <button onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSortField(''); setPage(0); }}
+              style={{ padding: '3px 8px', borderRadius: 12, fontSize: 11, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', cursor: 'pointer' }}>
+              Clear all
+            </button>
+          </div>
         )}
-      </div>
 
-      {/* Filter pills — Lifecycle */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stage:</span>
-        <button style={pillBtn(!lifecycleFilter)} onClick={() => { setLifecycleFilter(''); setPage(0); }}>All</button>
-        {['subscriber','lead','mql','sql','customer','former_client','dead'].map(s => (
-          <button key={s} style={pillBtn(lifecycleFilter === s)} onClick={() => { setLifecycleFilter(lifecycleFilter === s ? '' : s); setPage(0); }}>
-            {s.replace('_',' ').replace(/\b\w/g, c => c.toUpperCase())}
-          </button>
-        ))}
-      </div>
-
-      {/* Filter pills — Lead Score */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Score:</span>
-        <button style={pillBtn(!scoreFilter)} onClick={() => { setScoreFilter(''); setPage(0); }}>All</button>
-        {['hot','medium','cold'].map(s => (
-          <button key={s} style={pillBtn(scoreFilter === s)} onClick={() => { setScoreFilter(s); setPage(0); }}>
-            {s.charAt(0).toUpperCase() + s.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Owner filter + Sort + Create */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        {users.length > 0 && (
-          <select value={ownerFilter} onChange={e => { setOwnerFilter(e.target.value); setPage(0); }}
-            style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: ownerFilter ? 'var(--text)' : 'var(--muted)', padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}>
-            <option value="">All reps</option>
-            {users.map(u => <option key={u.id} value={u.id}>{u.name.split(' ')[0]}</option>)}
-          </select>
-        )}
-        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>SORT:</span>
-        {([['first_name','Name'],['created_at','Date'],['lead_score','Score'],['whale_score','Whale']] as [typeof sortField, string][]).map(([f,l]) => (
-          <button key={f} onClick={() => { toggleSort(f); setPage(0); }}
-            style={{ padding: '4px 10px', fontSize: 11, fontWeight: sortField === f ? 600 : 400, background: sortField === f ? 'var(--accent)' : 'var(--sidebar-bg)', color: sortField === f ? '#fff' : 'var(--muted)', border: `1px solid ${sortField === f ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 5, cursor: 'pointer' }}>
-            {l}{sIcon(String(f))}
-          </button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <button onClick={() => setShowCreate(true)}
-          style={{ padding: '6px 12px', background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-          + New Contact
-        </button>
-      </div>
-
-      {/* Count */}
-      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-        {search
-          ? `${sorted.length} result${sorted.length !== 1 ? 's' : ''} for "${search}"`
-          : `Showing ${allContacts.length.toLocaleString()} of ${totalCount.toLocaleString()} contacts`}
-      </div>
+        {/* Count */}
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          {search
+            ? `${sorted.length} result${sorted.length !== 1 ? 's' : ''} for "${search}"`
+            : `Showing ${allContacts.length.toLocaleString()} of ${totalCount.toLocaleString()} contacts`}
+        </div>
       </div>{/* end sticky header */}
+
+      {/* Filter Drawer */}
+      {showFilters && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setShowFilters(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200 }}
+          />
+          {/* Sheet */}
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201,
+            background: 'var(--surface)', borderTop: '1px solid var(--border)',
+            borderRadius: '16px 16px 0 0',
+            padding: '0 20px 32px',
+            maxHeight: '80vh', overflowY: 'auto',
+          }}>
+            {/* Handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 8px' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)' }} />
+            </div>
+
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>Filters</span>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSortField(''); setPage(0); }}
+                    style={{ fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    Clear all
+                  </button>
+                )}
+                <button onClick={() => setShowFilters(false)}
+                  style={{ fontSize: 18, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}>×</button>
+              </div>
+            </div>
+
+            {/* Stage */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Stage</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button style={pillBtn(!lifecycleFilter)} onClick={() => { setLifecycleFilter(''); setPage(0); }}>All</button>
+                {['subscriber','lead','mql','sql','customer','former_client','dead'].map(s => (
+                  <button key={s} style={pillBtn(lifecycleFilter === s)} onClick={() => { setLifecycleFilter(lifecycleFilter === s ? '' : s); setPage(0); }}>
+                    {s.replace('_',' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Lead Score */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Lead Score</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button style={pillBtn(!scoreFilter)} onClick={() => { setScoreFilter(''); setPage(0); }}>All</button>
+                {['hot','medium','cold'].map(s => (
+                  <button key={s} style={pillBtn(scoreFilter === s)} onClick={() => { setScoreFilter(s); setPage(0); }}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Owner */}
+            {users.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Rep</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button style={pillBtn(!ownerFilter)} onClick={() => { setOwnerFilter(''); setPage(0); }}>All</button>
+                  {users.map(u => (
+                    <button key={u.id} style={pillBtn(ownerFilter === u.id)} onClick={() => { setOwnerFilter(ownerFilter === u.id ? '' : u.id); setPage(0); }}>
+                      {u.name.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sort */}
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Sort</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {([['first_name','Name'],['created_at','Date'],['lead_score','Score'],['whale_score','Whale']] as [typeof sortField, string][]).map(([f,l]) => (
+                  <button key={f} onClick={() => { toggleSort(f as typeof sortField); setPage(0); }}
+                    style={{ ...pillBtn(sortField === f), display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {l} {sortField === f ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Apply button */}
+            <button
+              onClick={() => setShowFilters(false)}
+              style={{ marginTop: 16, width: '100%', padding: '12px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              Apply Filters
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Create Contact Modal */}
       {showCreate && (
