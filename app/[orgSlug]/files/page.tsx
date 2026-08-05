@@ -64,7 +64,12 @@ export default function FilesPage() {
   const [uploadContactName, setUploadContactName] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [frankChannels, setFrankChannels] = useState<{ id: string; display_name: string; project_name: string | null; agent_id: string }[]>([]);
-  const [activeTab, setActiveTab] = useState<'design' | 'project'>('design');
+  const [activeTab, setActiveTab] = useState<'design' | 'project'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('files-tab') as 'design' | 'project') || 'project';
+    }
+    return 'project';
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete state
@@ -322,7 +327,7 @@ export default function FilesPage() {
       {canSeeProjects && (
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           {(['design', 'project'] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            <button key={tab} onClick={() => { setActiveTab(tab); localStorage.setItem('files-tab', tab); }} style={{
               flex: 1, padding: '10px 0', border: 'none', borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
               background: 'none', color: activeTab === tab ? 'var(--accent)' : 'var(--muted)',
               fontWeight: activeTab === tab ? 700 : 400, fontSize: 13, cursor: 'pointer',
