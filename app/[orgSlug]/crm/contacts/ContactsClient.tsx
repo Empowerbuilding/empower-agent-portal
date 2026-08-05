@@ -105,6 +105,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
   const [scoreFilter, setScoreFilter] = useState('');
   const [ownerFilter, setOwnerFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
+  const [clientTypeFilter, setClientTypeFilter] = useState('');
   const [page, setPage] = useState(0);
   const [sortField, setSortField] = useState<'first_name' | 'created_at' | 'lead_score' | 'whale_score' | ''>('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -212,11 +213,23 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
 
   // Client-side filters
   const uniqueSources = Array.from(new Set(allContacts.map(c => c.lead_source).filter(Boolean))) as string[];
+  const CLIENT_TYPE_OPTIONS = [
+    { value: 'builder', label: 'Builder' },
+    { value: 'consumer', label: 'Consumer' },
+    { value: 'subcontractor', label: 'Subcontractor' },
+    { value: 'engineer', label: 'Engineer' },
+    { value: 'architect', label: 'Architect' },
+    { value: 'realtor', label: 'Realtor' },
+    { value: 'roofing', label: 'Roofing' },
+    { value: 'o&g', label: 'O&G' },
+    { value: 'pool_builder', label: 'Pool Builder' },
+  ];
 
   const filtered = base.filter(c => {
     if (scoreFilter && c.lead_score?.toLowerCase() !== scoreFilter) return false;
     if (ownerFilter && c.owner_id !== ownerFilter) return false;
     if (sourceFilter && c.lead_source !== sourceFilter) return false;
+    if (clientTypeFilter && c.client_type !== clientTypeFilter) return false;
     return true;
   });
 
@@ -234,7 +247,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
   const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
 
-  const activeFilterCount = [lifecycleFilter, scoreFilter, ownerFilter, sourceFilter, sortField].filter(Boolean).length;
+  const activeFilterCount = [lifecycleFilter, scoreFilter, ownerFilter, sourceFilter, clientTypeFilter, sortField].filter(Boolean).length;
 
   const pillBtn = (active: boolean): React.CSSProperties => ({
     padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400,
@@ -322,7 +335,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
                 Sort: {sortField === 'first_name' ? 'Name' : sortField === 'created_at' ? 'Date' : sortField === 'lead_score' ? 'Score' : 'Whale'} {sortDir === 'asc' ? '↑' : '↓'} ×
               </button>
             )}
-            <button onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSourceFilter(''); setSortField(''); setPage(0); }}
+            <button onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSourceFilter(''); setClientTypeFilter(''); setSortField(''); setPage(0); }}
               style={{ padding: '3px 8px', borderRadius: 12, fontSize: 11, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', cursor: 'pointer' }}>
               Clear all
             </button>
@@ -364,7 +377,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 {activeFilterCount > 0 && (
                   <button
-                    onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSourceFilter(''); setSortField(''); setPage(0); }}
+                    onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSourceFilter(''); setClientTypeFilter(''); setSortField(''); setPage(0); }}
                     style={{ fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
                     Clear all
                   </button>

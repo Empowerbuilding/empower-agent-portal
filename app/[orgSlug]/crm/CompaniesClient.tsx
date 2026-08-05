@@ -36,6 +36,7 @@ const CLIENT_TYPES = [
   { value: 'consumer',      label: 'Consumer' },
   { value: 'roofing',       label: 'Roofing' },
   { value: 'o&g',           label: 'O&G' },
+  { value: 'pool_builder',  label: 'Pool Builder' },
 ];
 
 const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
@@ -47,6 +48,7 @@ const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   consumer:      { bg: 'rgba(34,197,94,0.15)',   color: '#4ade80' },
   roofing:       { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
   'o&g':         { bg: 'rgba(234,179,8,0.15)',   color: '#facc15' },
+  'pool_builder': { bg: 'rgba(6,182,212,0.15)',   color: '#22d3ee' },
 };
 
 function TypeBadge({ type }: { type: string | null }) {
