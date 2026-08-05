@@ -318,7 +318,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
                 Sort: {sortField === 'first_name' ? 'Name' : sortField === 'created_at' ? 'Date' : sortField === 'lead_score' ? 'Score' : 'Whale'} {sortDir === 'asc' ? '↑' : '↓'} ×
               </button>
             )}
-            <button onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSortField(''); setPage(0); }}
+            <button onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSourceFilter(''); setSortField(''); setPage(0); }}
               style={{ padding: '3px 8px', borderRadius: 12, fontSize: 11, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', cursor: 'pointer' }}>
               Clear all
             </button>
@@ -360,7 +360,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 {activeFilterCount > 0 && (
                   <button
-                    onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSortField(''); setPage(0); }}
+                    onClick={() => { setLifecycleFilter(''); setScoreFilter(''); setOwnerFilter(''); setSourceFilter(''); setSortField(''); setPage(0); }}
                     style={{ fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
                     Clear all
                   </button>
