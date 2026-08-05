@@ -149,6 +149,7 @@ export default function ContactDetailClient({
   const [enrichOpen, setEnrichOpen] = useState(false);
   const [trestleOpen, setTrestleOpen] = useState(false);
   const [attomOpen, setAttomOpen] = useState(false);
+  const [pdlOpen, setPdlOpen] = useState(false);
   const [meetingsOpen, setMeetingsOpen] = useState(true);
 
   const fullName = `${contactData.first_name} ${contactData.last_name}`;
@@ -604,6 +605,37 @@ export default function ContactDetailClient({
                 </div>
               )}
             </div>
+
+            {/* PDL */}
+            {(contactData.job_title || contactData.employer || contactData.pdl_location || contactData.linkedin_url) && (
+            <div>
+              <button onClick={() => setPdlOpen(v => !v)}
+                style={{ padding: '8px 14px', fontWeight: 600, fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between' } as React.CSSProperties}>
+                <span>💼 Professional (PDL)</span>
+                <span>{pdlOpen ? '▲' : '▼'}</span>
+              </button>
+              {pdlOpen && (
+                <div style={{ padding: '8px 14px 12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                  {[
+                    ['Job Title', contactData.job_title],
+                    ['Employer', contactData.employer],
+                    ['Location', contactData.pdl_location],
+                    ['Birth Year', contactData.pdl_birth_year],
+                    ['LinkedIn', contactData.linkedin_url ? 'View Profile' : null],
+                  ].map(([label, val]) => val ? (
+                    <div key={String(label)}>
+                      <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+                      {label === 'LinkedIn' ? (
+                        <a href={String(contactData.linkedin_url)} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: 'var(--accent)', marginTop: 1, display: 'block' }}>View Profile</a>
+                      ) : (
+                        <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 1 }}>{String(val)}</div>
+                      )}
+                    </div>
+                  ) : null)}
+                </div>
+              )}
+            </div>
+            )}
           </div>
         )}
       </div>
