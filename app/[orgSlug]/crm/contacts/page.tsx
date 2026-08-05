@@ -10,7 +10,8 @@ export default async function ContactsPage({ params }: { params: Promise<{ orgSl
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: org } = await supabase.from('organizations').select('*').eq('slug', orgSlug).single();
+  const { data: org, error: orgErr } = await supabase.from('organizations').select('*').eq('slug', orgSlug).single();
+  console.log('[CONTACTS PAGE] orgSlug:', orgSlug, '| org:', org?.slug, '| crm_mode:', org?.crm_mode, '| url:', !!org?.crm_supabase_url, '| key:', !!org?.crm_supabase_key, '| err:', orgErr?.message);
   if (!org?.crm_supabase_url || !org?.crm_supabase_key || org?.crm_mode !== 'b2c') {
     return notFound();
   }

@@ -10,7 +10,8 @@ export default async function CrmPage({ params }: { params: Promise<{ orgSlug: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: org } = await supabase.from('organizations').select('*').eq('slug', orgSlug).single();
+  const { data: org, error: orgErr } = await supabase.from('organizations').select('*').eq('slug', orgSlug).single();
+  console.log('[CRM PAGE] orgSlug:', orgSlug, '| org:', org?.slug, '| crm_mode:', org?.crm_mode, '| err:', orgErr?.message);
 
   // B2C orgs (Barnhaus): redirect to contacts list
   if (org?.crm_mode === 'b2c') {
