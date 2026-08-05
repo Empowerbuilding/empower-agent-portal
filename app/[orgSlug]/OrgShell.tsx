@@ -148,7 +148,7 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
                 <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: 12 }}>{agentLabel}</span>
                   <span style={{ color: 'var(--muted)', margin: '0 4px', fontSize: 12 }}>/</span>
-                  # {channelLabel}
+                  # {activeChannel.display_name || channelLabel}
                 </div>
               );
             })() : (
