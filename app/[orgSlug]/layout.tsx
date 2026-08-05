@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { PortalChannel, Agent, Organization, AgentGroup } from '@/lib/types';
 import OrgShell from './OrgShell';
 
@@ -29,7 +30,9 @@ export default async function OrgLayout({
     .from('portal_channel_members').select('channel_id').eq('user_id', portalUser.id);
   const channelIds = (memberChannels ?? []).map(m => m.channel_id);
 
-  const { data: channels } = await supabase
+  // Use admin client for agents join — RLS blocks the join for normal session users
+  const adminSupabase = createAdminClient();
+  const { data: channels } = await adminSupabase
     .from('portal_channels')
     .select('*, agents(id, name, display_name, container_status, active, group_id), group_id')
     .in('id', channelIds).eq('active', true).order('position');

@@ -130,13 +130,19 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
           </button>
           <div style={{ flex: 1, minWidth: 0, paddingLeft: '4px' }}>
             {activeChannel ? (() => {
-              const KNOWN_AGENTS = ['vanessa','atlas','relay','ceo','esry','finley','claw','blueprint','codie','juanito','frank'];
-              const stripped = activeChannel.id.replace(/^barnhaus-/,'').replace(/^its-training-/,'');
+              // Use agent display_name from DB; fall back to parsing channel ID
+              const KNOWN_ORG_PREFIXES = ['barnhaus', 'showcase', 'its-training', 'cw', 'moderndwellings', 'relay', 'modern'];
+              const KNOWN_AGENTS = ['vanessa','atlas','relay','ceo','esry','finley','claw','blueprint','codie','juanito','frank','tony'];
+              let stripped = activeChannel.id;
+              for (const prefix of KNOWN_ORG_PREFIXES) {
+                stripped = stripped.replace(new RegExp(`^${prefix}-`), '');
+              }
               const parts = stripped.split('-');
               const agentIdx = parts.findIndex((p: string) => KNOWN_AGENTS.includes(p.toLowerCase()));
               const agent = agentIdx >= 0 ? parts[agentIdx] : parts[0];
               const rest = agentIdx >= 0 ? parts.slice(agentIdx + 1) : parts.slice(1);
-              const agentLabel = agent.charAt(0).toUpperCase() + agent.slice(1);
+              const parsedAgentLabel = agent.charAt(0).toUpperCase() + agent.slice(1);
+              const agentLabel = (activeChannel as any).agents?.display_name ?? parsedAgentLabel;
               const channelLabel = rest.map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ') || 'General';
               return (
                 <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
