@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import ChatWindow from '@/components/chat/ChatWindow';
 import FeedWindow from '@/components/feed/FeedWindow';
 import ApprovalWindow from '@/components/approval/ApprovalWindow';
@@ -44,8 +45,9 @@ export default async function ChannelPage({
     .single();
   if (!membership) redirect(`/${orgSlug}`);
 
-  // Get channel details (include agents join so components can show agent display_name)
-  const { data: channel } = await supabase
+  // Get channel details — use admin client for agents join (RLS blocks anon/user reads on agents table)
+  const adminSupabase = createAdminClient();
+  const { data: channel } = await adminSupabase
     .from('portal_channels')
     .select('*, agents(id, name, display_name)')
     .eq('id', channelId)
