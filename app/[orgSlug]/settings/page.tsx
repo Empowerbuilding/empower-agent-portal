@@ -492,7 +492,7 @@ export default function SettingsPage() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{u.name}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{u.email}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
                 </div>
                 <span style={{
                   fontSize: '11px', padding: '2px 8px', borderRadius: '12px',
