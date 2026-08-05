@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Use bracket notation to prevent Next.js from statically inlining env vars at build time
@@ -47,6 +47,11 @@ export async function getDownloadUrl(key: string, filename: string): Promise<str
     ResponseContentDisposition: `attachment; filename="${filename}"`,
   });
   return getSignedUrl(client, cmd, { expiresIn: 3600 }); // 1 hour
+}
+
+export async function deleteObject(key: string): Promise<void> {
+  const client = getSpacesClient();
+  await client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
 }
 
 export function getSpacesClientDirect() {

@@ -67,6 +67,10 @@ export default function FilesPage() {
   const [activeTab, setActiveTab] = useState<'design' | 'project'>('design');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<ProjectFile | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // QA modal
   const [qaModal, setQaModal] = useState<ProjectFile | null>(null);
   const [qaStatus, setQaStatus] = useState<QAStatus>('pending');
@@ -467,6 +471,19 @@ export default function FilesPage() {
                     >
                       ↓ Download
                     </button>
+                    {canQA && (
+                      <button
+                        onClick={() => setDeleteTarget(file)}
+                        title="Delete file"
+                        style={{
+                          background: 'none', border: '1px solid #ef444455',
+                          color: '#ef4444', padding: '7px 10px', borderRadius: 6,
+                          fontSize: 12, cursor: 'pointer', flexShrink: 0,
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -603,6 +620,45 @@ export default function FilesPage() {
               <button onClick={() => setQaModal(null)} style={{ flex: 1, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', color: 'var(--muted)', padding: '9px 0', borderRadius: 7, cursor: 'pointer', fontSize: 14 }}>Cancel</button>
               <button onClick={handleQaSave} disabled={savingQa} style={{ flex: 2, background: 'var(--accent)', border: 'none', color: '#fff', padding: '9px 0', borderRadius: 7, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
                 {savingQa ? 'Saving…' : 'Save QA Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => !deleting && setDeleteTarget(null)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 360, maxWidth: '92vw', display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: '#ef4444' }}>Delete File</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
+              Permanently delete <strong style={{ color: 'var(--text)' }}>{deleteTarget.plan_name}</strong> v{deleteTarget.version} ({deleteTarget.filename})? This also removes the file from storage and cannot be undone.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeleteTarget(null)} disabled={deleting} style={{ padding: '8px 14px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  try {
+                    const res = await fetch('/api/files', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'delete', fileId: deleteTarget.id, fileKey: deleteTarget.file_key, orgId }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Delete failed');
+                    showToast(`🗑️ ${deleteTarget.plan_name} deleted`);
+                    setDeleteTarget(null);
+                    loadFiles();
+                  } catch (e: any) {
+                    showToast(`❌ ${e.message}`, false);
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                style={{ padding: '8px 16px', background: '#ef4444', border: 'none', borderRadius: 6, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}>
+                {deleting ? 'Deleting…' : 'Delete Permanently'}
               </button>
             </div>
           </div>

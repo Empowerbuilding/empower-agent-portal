@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getUploadUrl, getDownloadUrl } from '@/lib/spaces';
+import { getUploadUrl, getDownloadUrl, deleteObject } from '@/lib/spaces';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -132,6 +132,19 @@ export async function POST(req: NextRequest) {
   if (action === 'archive') {
     const { fileId, orgId } = body;
     await supabase.from('project_files').update({ archived: true }).eq('id', fileId).eq('org_id', orgId);
+    return NextResponse.json({ ok: true });
+  }
+
+  // ── Delete file (removes from DO Spaces + Supabase) ─────────────────────────
+  if (action === 'delete') {
+    const { fileId, fileKey, orgId } = body;
+    if (!fileId || !orgId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    // Delete from DO Spaces (best-effort — don't block on failure)
+    if (fileKey) {
+      try { await deleteObject(fileKey); } catch (e) { console.error('[files/delete] spaces error:', e); }
+    }
+    const { error } = await supabase.from('project_files').delete().eq('id', fileId).eq('org_id', orgId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   }
 
