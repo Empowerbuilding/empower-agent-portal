@@ -344,8 +344,8 @@ export default function CrossSellClient({ rows: initial, builders, orgSlug, crmU
       </div>
 
       {/* Table */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', padding: '0 20px 20px' }}>
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', minWidth: 700 }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', padding: '0 0 20px' }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 8, minWidth: 700, margin: '0 20px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
