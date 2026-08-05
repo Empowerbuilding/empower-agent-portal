@@ -4,22 +4,37 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
-// ── Stage definitions matching original CRM ──────────────────────────────────
+// ── Stage definitions ──────────────────────────────────────────────────────
+// Barnhaus B2C pipeline
 const B2C_STAGES = [
-  { key: 'qualified',   label: 'Qualified',   color: '#4c8bf0' },
-  { key: 'design',            label: 'Design',           color: '#6366f1' },
+  { key: 'qualified',        label: 'Qualified',        color: '#4c8bf0' },
+  { key: 'design',           label: 'Design',           color: '#6366f1' },
   { key: 'engineering',      label: 'Engineering',      color: '#8b5cf6' },
   { key: 'builder_referral', label: 'Builder Referral', color: '#f97316' },
   { key: 'complete',         label: 'Complete',         color: '#22c55e' },
-  { key: 'lost',        label: 'Lost',        color: '#ef4444' },
+  { key: 'lost',             label: 'Lost',             color: '#ef4444' },
 ];
 
+// Barnhaus B2B pipeline
 const B2B_STAGES = [
   { key: 'qualified', label: 'Qualified', color: '#4c8bf0' },
   { key: 'proposal',  label: 'Proposal',  color: '#f59e0b' },
   { key: 'active',    label: 'Active',    color: '#10b981' },
   { key: 'complete',  label: 'Complete',  color: '#22c55e' },
   { key: 'lost',      label: 'Lost',      color: '#ef4444' },
+];
+
+// Showcase single pipeline
+const SHOWCASE_STAGES = [
+  { key: 'new_lead',                label: 'New Lead',                color: '#6b7280' },
+  { key: 'contacted',               label: 'Contacted',               color: '#4c8bf0' },
+  { key: 'consultation_scheduled',  label: 'Consultation Scheduled',  color: '#6366f1' },
+  { key: 'consultation_complete',   label: 'Consultation Complete',   color: '#8b5cf6' },
+  { key: 'proposal_sent',           label: 'Proposal Sent',           color: '#f59e0b' },
+  { key: 'contract_signed',         label: 'Contract Signed',         color: '#10b981' },
+  { key: 'in_construction',         label: 'In Construction',         color: '#f97316' },
+  { key: 'completed',               label: 'Completed',               color: '#22c55e' },
+  { key: 'lost',                    label: 'Lost',                    color: '#ef4444' },
 ];
 
 interface Deal {
@@ -49,17 +64,18 @@ export default function PipelineClient({ deals: initialDeals, users, orgSlug, cr
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
   const [deals, setDeals] = useState(initialDeals);
+  const isShowcase = orgSlug === 'showcase';
   const [salesType, setSalesType] = useState<'b2c' | 'b2b'>('b2c');
   const [ownerFilter, setOwnerFilter] = useState('');
   const [moving, setMoving] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
 
-  const stages = salesType === 'b2c' ? B2C_STAGES : B2B_STAGES;
+  const stages = isShowcase ? SHOWCASE_STAGES : (salesType === 'b2c' ? B2C_STAGES : B2B_STAGES);
 
-  // Filter by sales_type AND owner
+  // Filter by sales_type AND owner (Showcase has no sales_type split)
   const filtered = deals.filter(d => {
-    const matchType = !d.sales_type ? salesType === 'b2c' : d.sales_type === salesType;
+    const matchType = isShowcase ? true : (!d.sales_type ? salesType === 'b2c' : d.sales_type === salesType);
     const matchOwner = !ownerFilter || d.owner_id === ownerFilter;
     return matchType && matchOwner;
   });
@@ -78,8 +94,9 @@ export default function PipelineClient({ deals: initialDeals, users, orgSlug, cr
     return v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`;
   }
 
+  const closedStages = isShowcase ? ['completed', 'lost'] : ['complete', 'lost'];
   const totalValue = filtered
-    .filter(d => d.stage !== 'complete' && d.stage !== 'lost')
+    .filter(d => !closedStages.includes(d.stage))
     .reduce((s, d) => s + (d.value ?? 0), 0);
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
@@ -100,11 +117,13 @@ export default function PipelineClient({ deals: initialDeals, users, orgSlug, cr
 
       {/* Header bar */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)', padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
-        {/* B2C / B2B toggle */}
-        <div style={{ display: 'flex', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 3, gap: 2 }}>
-          <button style={tabStyle(salesType === 'b2c')} onClick={() => setSalesType('b2c')}>🏠 Consumer</button>
-          <button style={tabStyle(salesType === 'b2b')} onClick={() => setSalesType('b2b')}>🏗 Builder</button>
-        </div>
+        {/* B2C / B2B toggle — Barnhaus only */}
+        {!isShowcase && (
+          <div style={{ display: 'flex', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 3, gap: 2 }}>
+            <button style={tabStyle(salesType === 'b2c')} onClick={() => setSalesType('b2c')}>🏠 Consumer</button>
+            <button style={tabStyle(salesType === 'b2b')} onClick={() => setSalesType('b2b')}>🏗 Builder</button>
+          </div>
+        )}
 
         {users.length > 0 && (
           <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)} style={selectStyle}>

@@ -27,6 +27,19 @@ const B2C_STAGES = [
   { key: 'lost',             label: 'Lost',             color: '#ef4444' },
 ];
 
+// Showcase single pipeline
+const SHOWCASE_STAGES = [
+  { key: 'new_lead',               label: 'New Lead',               color: '#6b7280' },
+  { key: 'contacted',              label: 'Contacted',              color: '#4c8bf0' },
+  { key: 'consultation_scheduled', label: 'Consultation Scheduled', color: '#6366f1' },
+  { key: 'consultation_complete',  label: 'Consultation Complete',  color: '#8b5cf6' },
+  { key: 'proposal_sent',          label: 'Proposal Sent',          color: '#f59e0b' },
+  { key: 'contract_signed',        label: 'Contract Signed',        color: '#10b981' },
+  { key: 'in_construction',        label: 'In Construction',        color: '#f97316' },
+  { key: 'completed',              label: 'Completed',              color: '#22c55e' },
+  { key: 'lost',                   label: 'Lost',                   color: '#ef4444' },
+];
+
 // B2C consumer deal types (homeowners)
 const CONSUMER_DEAL_TYPES = ['custom_design', 'builder_referral', 'engineering', 'budget_builder'];
 // B2C builder/partner deal types
@@ -42,8 +55,10 @@ const DEAL_TYPE_LABELS: Record<string, string> = {
   marketing:      'Marketing',
 };
 
-function StageBadge({ stage, crmMode }: { stage: string; crmMode: string }) {
-  const stages = crmMode === 'b2c' ? B2C_STAGES : B2B_STAGES;
+function StageBadge({ stage, crmMode, orgSlug }: { stage: string; crmMode: string; orgSlug?: string }) {
+  const allStages = [...B2C_STAGES, ...B2B_STAGES, ...SHOWCASE_STAGES];
+  const stages = orgSlug === 'showcase' ? SHOWCASE_STAGES : (crmMode === 'b2c' ? B2C_STAGES : B2B_STAGES);
+  void allStages;
   const s = stages.find(x => x.key === stage) ?? { label: stage, color: '#6b7280' };
   return (
     <span style={{
@@ -184,16 +199,17 @@ export default function DealsClient({ deals: initial, companies, contacts, users
   const [sortField, setSortField] = useState<'value' | 'created_at' | ''>('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const stages = crmMode === 'b2c' ? B2C_STAGES : B2B_STAGES;
+  const isShowcase = orgSlug === 'showcase';
+  const stages = isShowcase ? SHOWCASE_STAGES : (crmMode === 'b2c' ? B2C_STAGES : B2B_STAGES);
   const companyMap = Object.fromEntries(companies.map(c => [c.id, c.name]));
   const contactMap = Object.fromEntries(contacts.map(c => [c.id, `${c.first_name} ${c.last_name}`]));
 
-  // For b2c: split by deal type category
-  const tabFiltered = crmMode === 'b2c'
+  // For b2c (Barnhaus): split by deal type category. Showcase: no split.
+  const tabFiltered = (!isShowcase && crmMode === 'b2c')
     ? deals.filter(d => {
         const dt = d.deal_type ?? '';
         return salesTab === 'consumer'
-          ? CONSUMER_DEAL_TYPES.includes(dt) || (!BUILDER_DEAL_TYPES.includes(dt) && !CONSUMER_DEAL_TYPES.includes(dt)) // include untyped in consumer
+          ? CONSUMER_DEAL_TYPES.includes(dt) || (!BUILDER_DEAL_TYPES.includes(dt) && !CONSUMER_DEAL_TYPES.includes(dt))
           : BUILDER_DEAL_TYPES.includes(dt);
       })
     : deals;
@@ -241,8 +257,8 @@ export default function DealsClient({ deals: initial, companies, contacts, users
 
       {/* Sticky header */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)', paddingBottom: 8, marginBottom: -4, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* B2C: Consumer / Builder toggle */}
-      {crmMode === 'b2c' && (
+      {/* B2C: Consumer / Builder toggle — Barnhaus only */}
+      {!isShowcase && crmMode === 'b2c' && (
         <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 7, overflow: 'hidden', alignSelf: 'flex-start' }}>
           <button style={tabBtn(salesTab === 'consumer')} onClick={() => { setSalesTab('consumer'); setStageFilter('all'); }}>
             🏠 Consumer

@@ -9,9 +9,10 @@ interface Props {
 export default async function CrmLayout({ children, params }: Props) {
   const { orgSlug } = await params;
   const supabase = await createClient();
-  const { data: org } = await supabase.from('organizations').select('slug, crm_mode').eq('slug', orgSlug).single();
+  const { data: org } = await supabase.from('organizations').select('slug, crm_mode, cross_sell_enabled').eq('slug', orgSlug).single();
 
   const crmMode = org?.crm_mode ?? 'b2b';
+  const crossSellEnabled = org?.cross_sell_enabled ?? false;
 
   const b2cTabs = [
     { label: 'Contacts', href: `/${orgSlug}/crm/contacts` },
@@ -19,7 +20,7 @@ export default async function CrmLayout({ children, params }: Props) {
     { label: 'Deals', href: `/${orgSlug}/crm/deals` },
     { label: 'Tasks', href: `/${orgSlug}/crm/tasks` },
     { label: 'Companies', href: `/${orgSlug}/crm/companies` },
-    { label: 'Cross-sell', href: `/${orgSlug}/crm/cross-sell` },
+    ...(crossSellEnabled ? [{ label: 'Cross-sell', href: `/${orgSlug}/crm/cross-sell` }] : []),
   ];
 
   const b2bTabs = [
