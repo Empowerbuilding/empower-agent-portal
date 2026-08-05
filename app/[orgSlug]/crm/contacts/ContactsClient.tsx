@@ -104,6 +104,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
   const [lifecycleFilter, setLifecycleFilter] = useState('');
   const [scoreFilter, setScoreFilter] = useState('');
   const [ownerFilter, setOwnerFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
   const [page, setPage] = useState(0);
   const [sortField, setSortField] = useState<'first_name' | 'created_at' | 'lead_score' | 'whale_score' | ''>('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -210,9 +211,12 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
   const base = serverResults ?? allContacts;
 
   // Client-side filters
+  const uniqueSources = Array.from(new Set(allContacts.map(c => c.lead_source).filter(Boolean))) as string[];
+
   const filtered = base.filter(c => {
     if (scoreFilter && c.lead_score?.toLowerCase() !== scoreFilter) return false;
     if (ownerFilter && c.owner_id !== ownerFilter) return false;
+    if (sourceFilter && c.lead_source !== sourceFilter) return false;
     return true;
   });
 
@@ -230,7 +234,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
   const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
 
-  const activeFilterCount = [lifecycleFilter, scoreFilter, ownerFilter, sortField].filter(Boolean).length;
+  const activeFilterCount = [lifecycleFilter, scoreFilter, ownerFilter, sourceFilter, sortField].filter(Boolean).length;
 
   const pillBtn = (active: boolean): React.CSSProperties => ({
     padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400,
@@ -405,6 +409,21 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
                   {users.map(u => (
                     <button key={u.id} style={pillBtn(ownerFilter === u.id)} onClick={() => { setOwnerFilter(ownerFilter === u.id ? '' : u.id); setPage(0); }}>
                       {u.name.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Lead Source */}
+            {uniqueSources.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Lead Source</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button style={pillBtn(!sourceFilter)} onClick={() => { setSourceFilter(''); setPage(0); }}>All</button>
+                  {uniqueSources.map(s => (
+                    <button key={s} style={pillBtn(sourceFilter === s)} onClick={() => { setSourceFilter(sourceFilter === s ? '' : s); setPage(0); }}>
+                      {s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                     </button>
                   ))}
                 </div>
