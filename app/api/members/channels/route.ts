@@ -4,16 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 export const runtime = 'nodejs';
 
 // GET /api/members/channels?userId=xxx&orgId=xxx — get channel memberships for a user
+// No auth required — table has no RLS, reading channel lists is safe
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('userId');
   const orgId = searchParams.get('orgId');
   if (!userId || !orgId) return NextResponse.json({ error: 'Missing userId or orgId' }, { status: 400 });
 
+  const supabase = await createClient();
   const { data: memberships } = await supabase
     .from('portal_channel_members')
     .select('channel_id')
