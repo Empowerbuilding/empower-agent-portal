@@ -131,6 +131,9 @@ export default function ContactDetailClient({
 
   // Add to Pipeline modal
   const [showAddDeal, setShowAddDeal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [newDeal, setNewDeal] = useState({ title: '', stage: 'qualified', value: '', deal_type: 'custom_design' });
   const [savingDeal, setSavingDeal] = useState(false);
 
@@ -441,6 +444,10 @@ export default function ContactDetailClient({
                   <button onClick={() => { setEditMode(true); setEditFields({ first_name: contactData.first_name ?? '', last_name: contactData.last_name ?? '', phone: contactData.phone ?? '', email: contactData.email ?? '' }); }}
                     style={actionBtnStyle({ background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 })}>
                     ✏️ Edit
+                  </button>
+                  <button onClick={() => setShowDeleteConfirm(true)}
+                    style={actionBtnStyle({ background: 'none', border: '1px solid #ef444455', borderRadius: 6, color: '#ef4444', cursor: 'pointer', fontSize: 12 })}>
+                    🗑️ Delete
                   </button>
                   <button onClick={() => router.push(`/${orgSlug}/crm/contacts`)}
                     style={actionBtnStyle({ background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', cursor: 'pointer', fontSize: 12 })}>
@@ -879,6 +886,48 @@ export default function ContactDetailClient({
 
     </div>
     <>
+      {/* ── Delete Contact Confirmation ── */}
+      {showDeleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 360, display: 'flex', flexDirection: 'column', gap: 14 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: '#ef4444' }}>Delete Contact</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
+              This will permanently delete <strong style={{ color: 'var(--text)' }}>{contactData.first_name} {contactData.last_name}</strong> and all associated activities, notes, deals, and tasks. This cannot be undone.
+            </div>
+            {deleteError && (
+              <div style={{ fontSize: 12, color: '#ef4444', padding: '6px 10px', background: '#ef444415', border: '1px solid #ef444433', borderRadius: 5 }}>
+                ⚠️ {deleteError}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
+                style={{ padding: '8px 14px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--muted)', fontSize: 13, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setDeleting(true);
+                  setDeleteError(null);
+                  try {
+                    const { error } = await crm.from('contacts').delete().eq('id', contactData.id);
+                    if (error) { setDeleteError(error.message || 'Failed to delete contact. Please try again.'); setDeleting(false); return; }
+                    router.push(`/${orgSlug}/crm/contacts`);
+                  } catch (e: any) {
+                    setDeleteError(e?.message || 'Failed to delete contact. Please try again.');
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+                style={{ padding: '8px 16px', background: '#ef4444', border: 'none', borderRadius: 6, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}>
+                {deleting ? 'Deleting…' : 'Delete Permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Add to Pipeline Modal ── */}
       {showAddDeal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
