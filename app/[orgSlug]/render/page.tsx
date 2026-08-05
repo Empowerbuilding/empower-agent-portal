@@ -47,8 +47,12 @@ export default function RenderStudioPage() {
       if (!portalUser) return;
       setCurrentUser(portalUser);
 
-      // Always post render submissions to the shared reviews channel
-      setStudioChannel('studio-reviews');
+      // Route review submissions to the org's render/review channel
+      const reviewChannelMap: Record<string, string> = {
+        barnhaus: 'studio-reviews',
+        showcase: 'showcase-render',
+      };
+      setStudioChannel(reviewChannelMap[orgSlug] ?? 'studio-reviews');
     };
     init();
   }, [orgSlug]);
