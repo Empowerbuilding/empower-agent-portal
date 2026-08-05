@@ -670,7 +670,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                   <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>
                     <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: 13 }}>{agent}</span>
                     <span style={{ color: 'var(--muted)', margin: '0 5px', fontSize: 13 }}>/</span>
-                    # {channelLabel}
+                    # {channel.display_name || channelLabel}
                   </span>
                 </>
               ); })()}
