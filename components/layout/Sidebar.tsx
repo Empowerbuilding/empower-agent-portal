@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery } from '@/components/ui/Icons';
+import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconGear } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
