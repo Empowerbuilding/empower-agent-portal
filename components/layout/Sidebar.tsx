@@ -750,9 +750,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
               <>
                 <Link href={`/${orgSlug}/render`} onClick={onClose} title="Render Studio" style={{ color: pathname.startsWith(`/${orgSlug}/render`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGallery size={16} /></Link>
                 <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={16} /></Link>
-                {org.slug !== 'showcase' && (
-                  <Link href={`/${orgSlug}/gallery`} onClick={onClose} title="Render Gallery" style={{ color: pathname.startsWith(`/${orgSlug}/gallery`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={16} /></Link>
-                )}
+                <Link href={`/${orgSlug}/gallery`} onClick={onClose} title="Render Gallery" style={{ color: pathname.startsWith(`/${orgSlug}/gallery`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={16} /></Link>
               </>
             )}
             {currentUser.role !== 'contractor' && (
