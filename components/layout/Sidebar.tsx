@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconGear, IconClock, IconDatabase, IconRender, IconFolder, IconGallery } from '@/components/ui/Icons';
+import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -253,6 +253,18 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
   const [renamingChannel, setRenamingChannel] = useState<(PortalChannel & { agents: Agent }) | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const draggedIdRef = useRef<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
 
   // Active group — default to first group, persist in localStorage
   const [activeGroupId, setActiveGroupId] = useState<string | null>(() => {
@@ -544,15 +556,56 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                 </button>
               );
             })}
-          {/* M avatar pinned to bottom of group rail */}
-            <div style={{ marginTop: 'auto', paddingBottom: 8, paddingTop: 4 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '13px', fontWeight: 700,
-              }}>
+          {/* M avatar — opens profile popover */}
+            <div ref={profileMenuRef} style={{ marginTop: 'auto', paddingBottom: 8, paddingTop: 4, position: 'relative' }}>
+              <button
+                onClick={() => setProfileOpen(o => !o)}
+                title="Profile & settings"
+                style={{
+                  width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
+                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '13px', fontWeight: 700, cursor: 'pointer', border: 'none',
+                  outline: profileOpen ? '2px solid rgba(255,255,255,0.6)' : 'none',
+                  outlineOffset: '2px', flexShrink: 0,
+                }}
+              >
                 {currentUser.name.charAt(0)}
-              </div>
+              </button>
+              {profileOpen && (
+                <div
+                  style={{
+                    position: 'fixed', left: '58px', bottom: '12px', zIndex: 500,
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: '10px', padding: '6px', minWidth: '170px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--border)', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{currentUser.name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'capitalize' }}>{currentUser.role ?? 'member'}</div>
+                  </div>
+                  <Link
+                    href={`/${orgSlug}/settings`}
+                    onClick={() => { setProfileOpen(false); onClose(); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', fontSize: '13px', color: 'var(--text)', textDecoration: 'none', borderRadius: '6px' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Settings
+                  </Link>
+                  <Link
+                    href="/"
+                    onClick={() => { setProfileOpen(false); onClose(); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', fontSize: '13px', color: 'var(--text)', textDecoration: 'none', borderRadius: '6px' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Switch workspace
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}

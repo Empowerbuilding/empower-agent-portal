@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { useMobileToolbar } from '@/context/MobileToolbar';
 import { IconMic, IconMicOff, IconPaperclip, IconSend, IconSearch, IconBarChart } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
@@ -48,6 +49,8 @@ function parseChannelId(id: string, agentDisplayName?: string): { agent: string;
 }
 
 export default function ChatWindow({ channel, initialMessages, currentUser, orgId }: Props) {
+  const pathname = usePathname();
+  const orgSlug = pathname.split('/')[1] ?? '';
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
   const draftKey = `portal-draft-${channel.id}`;
   const [input, setInput] = useState(() => {
@@ -396,6 +399,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             resetting={resetting}
             onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
             onDeleteMode={() => setDeleteMode(true)}
+            roadmapHref={`/${orgSlug}/roadmap`}
             size={17}
           />
         </>
@@ -686,6 +690,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                 resetting={resetting}
                 onResetContext={async () => { if (!window.confirm('Clear agent context? Past messages stay visible but the agent starts fresh.')) return; await handleResetContext(); }}
                 onDeleteMode={() => setDeleteMode(true)}
+                roadmapHref={`/${orgSlug}/roadmap`}
                 size={16}
               />
             </div>
