@@ -13,22 +13,26 @@ export async function POST(req: NextRequest) {
     const { channelId } = await req.json();
     if (!channelId) return NextResponse.json({ error: 'Missing channelId' }, { status: 400 });
 
-    // Verify user has access to this channel
+    // Find the portal_user that has access to this specific channel
+    // (user may belong to multiple orgs — pick the one with channel membership)
     const { data: portalUsers } = await supabase
       .from('portal_users')
       .select('id, org_id, role')
-      .eq('supabase_auth_id', user.id)
-      .order('created_at', { ascending: true });
-    const portalUser = portalUsers?.[0] ?? null;
-    if (!portalUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      .eq('supabase_auth_id', user.id);
+    if (!portalUsers?.length) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
-    const { data: membership } = await supabase
-      .from('portal_channel_members')
-      .select('channel_id')
-      .eq('channel_id', channelId)
-      .eq('user_id', portalUser.id)
-      .single();
-    if (!membership) return NextResponse.json({ error: 'No access to channel' }, { status: 403 });
+    let portalUser = null;
+    let membership = null;
+    for (const pu of portalUsers) {
+      const { data: m } = await supabase
+        .from('portal_channel_members')
+        .select('channel_id')
+        .eq('channel_id', channelId)
+        .eq('user_id', pu.id)
+        .single();
+      if (m) { portalUser = pu; membership = m; break; }
+    }
+    if (!portalUser || !membership) return NextResponse.json({ error: 'No access to channel' }, { status: 403 });
 
     // Look up the agent for this channel
     const agent = await getAgentByChannel(channelId);

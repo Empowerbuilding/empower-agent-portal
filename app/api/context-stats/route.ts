@@ -13,15 +13,15 @@ export async function GET() {
     const { data: portalUsers } = await supabase
       .from('portal_users')
       .select('id, org_id')
-      .eq('supabase_auth_id', user.id)
-      .order('created_at', { ascending: true });
-    const portalUser = portalUsers?.[0] ?? null;
-    if (!portalUser) return NextResponse.json({});
+      .eq('supabase_auth_id', user.id);
+    if (!portalUsers?.length) return NextResponse.json({});
 
+    // Fetch channels across ALL orgs the user belongs to
+    const orgIds = [...new Set(portalUsers.map(u => u.org_id))];
     const { data: channels } = await supabase
       .from('portal_channels')
       .select('id, agent_id')
-      .eq('org_id', portalUser.org_id)
+      .in('org_id', orgIds)
       .eq('active', true);
     if (!channels?.length) return NextResponse.json({});
 
