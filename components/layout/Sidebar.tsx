@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconGear, IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconLightbulb } from '@/components/ui/Icons';
+import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconLightbulb } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -544,15 +544,19 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                 </button>
               );
             })}
-          {/* M avatar pinned to bottom of group rail */}
+          {/* M avatar pinned to bottom of group rail — links to settings */}
             <div style={{ marginTop: 'auto', paddingBottom: 8, paddingTop: 4 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '13px', fontWeight: 700,
-              }}>
-                {currentUser.name.charAt(0)}
-              </div>
+              <Link href={`/${orgSlug}/settings`} onClick={onClose} title="Settings" style={{ textDecoration: 'none', display: 'block' }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
+                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                  outline: pathname.startsWith(`/${orgSlug}/settings`) ? '2px solid #fff' : 'none',
+                  outlineOffset: '2px',
+                }}>
+                  {currentUser.name.charAt(0)}
+                </div>
+              </Link>
             </div>
           </div>
         )}
@@ -724,7 +728,6 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
               ><IconDatabase size={16} /></button>
             )}
             <Link href={`/${orgSlug}/roadmap`} onClick={onClose} title="Feature Requests" style={{ color: pathname.startsWith(`/${orgSlug}/roadmap`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconLightbulb size={16} /></Link>
-            <Link href={`/${orgSlug}/settings`} onClick={onClose} title="Settings" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGear size={16} /></Link>
           </div>
         </div>{/* end sidebar-footer */}
         </div>{/* end right panel */}
