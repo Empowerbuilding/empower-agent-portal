@@ -695,18 +695,6 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             <Link href="/" onClick={onClose} title="Switch workspace" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </Link>
-            {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && (
-              <>
-                <Link href={`/${orgSlug}/render`} onClick={onClose} title="Render Studio" style={{ color: pathname.startsWith(`/${orgSlug}/render`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={16} /></Link>
-                <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={16} /></Link>
-                {org.slug !== 'showcase' && (
-                  <Link href={`/${orgSlug}/gallery`} onClick={onClose} title="Render Gallery" style={{ color: pathname.startsWith(`/${orgSlug}/gallery`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGallery size={16} /></Link>
-                )}
-              </>
-            )}
-            {currentUser.role !== 'contractor' && (
-              <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={16} /></Link>
-            )}
             {org.crm_supabase_url && currentUser.role !== 'contractor' && ['sales', 'executive'].includes(activeGroup?.slug ?? '') && (
               <button
                 title="CRM"
@@ -722,6 +710,20 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                 }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: pathname.startsWith(`/${orgSlug}/crm`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', display: 'flex', alignItems: 'center' }}
               ><IconDatabase size={16} /></button>
+            )}
+            {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && (
+              <>
+                <Link href={`/${orgSlug}/render`} onClick={onClose} title="Render Studio" style={{ color: pathname.startsWith(`/${orgSlug}/render`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={16} /></Link>
+                {org.slug !== 'showcase' && (
+                  <Link href={`/${orgSlug}/gallery`} onClick={onClose} title="Render Gallery" style={{ color: pathname.startsWith(`/${orgSlug}/gallery`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGallery size={16} /></Link>
+                )}
+              </>
+            )}
+            {currentUser.role !== 'contractor' && (
+              <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={16} /></Link>
+            )}
+            {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && (
+              <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={16} /></Link>
             )}
             <Link href={`/${orgSlug}/settings`} onClick={onClose} title="Settings" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGear size={16} /></Link>
           </div>
