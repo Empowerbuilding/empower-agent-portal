@@ -557,7 +557,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
               );
             })}
           {/* M avatar — opens profile popover */}
-            <div style={{ marginTop: 'auto', paddingBottom: 8, paddingTop: 4, position: 'relative' }}>
+            <div ref={profileMenuRef} style={{ marginTop: 'auto', paddingBottom: 8, paddingTop: 4, position: 'relative' }}>
               <button
                 onClick={() => setProfileOpen(o => !o)}
                 title="Profile & settings"
@@ -573,7 +573,6 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
               </button>
               {profileOpen && (
                 <div
-                  ref={profileMenuRef}
                   style={{
                     position: 'absolute', left: '42px', bottom: 0, zIndex: 200,
                     background: 'var(--surface)', border: '1px solid var(--border)',
