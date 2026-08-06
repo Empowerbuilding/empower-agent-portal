@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { IconMore, IconRefresh, IconTrash, IconSearch, IconGear } from '@/components/ui/Icons';
+import { IconMore, IconRefresh, IconTrash, IconSearch, IconGear, IconLightbulb } from '@/components/ui/Icons';
 
 interface Props {
   contextPct: number | null;
@@ -10,10 +10,11 @@ interface Props {
   onDeleteMode: () => void;
   onSearch?: () => void;
   settingsHref?: string;
+  roadmapHref?: string;
   size?: number;
 }
 
-export default function ChatOverflowMenu({ contextPct, resetting, onResetContext, onDeleteMode, onSearch, settingsHref, size = 16 }: Props) {
+export default function ChatOverflowMenu({ contextPct, resetting, onResetContext, onDeleteMode, onSearch, settingsHref, roadmapHref, size = 16 }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -95,6 +96,17 @@ export default function ChatOverflowMenu({ contextPct, resetting, onResetContext
               onMouseLeave={e => (e.currentTarget.style.background = 'none')}
             >
               <IconGear size={14} /> Agent settings
+            </a>
+          )}
+          {roadmapHref && (
+            <a
+              href={roadmapHref}
+              onClick={() => setOpen(false)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '8px 10px', fontSize: '13px', borderRadius: '4px', textDecoration: 'none' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <IconLightbulb size={14} /> Feature requests
             </a>
           )}
         </div>
