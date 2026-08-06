@@ -746,16 +746,6 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
         <div className="sidebar-footer">
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0, flexShrink: 0 }}>
 
-            {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && (
-              <>
-                <Link href={`/${orgSlug}/render`} onClick={onClose} title="Render Studio" style={{ color: pathname.startsWith(`/${orgSlug}/render`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGallery size={16} /></Link>
-                <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={16} /></Link>
-                <Link href={`/${orgSlug}/gallery`} onClick={onClose} title="Render Gallery" style={{ color: pathname.startsWith(`/${orgSlug}/gallery`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={16} /></Link>
-              </>
-            )}
-            {currentUser.role !== 'contractor' && (
-              <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={16} /></Link>
-            )}
             {org.crm_supabase_url && currentUser.role !== 'contractor' && ['sales', 'executive'].includes(activeGroup?.slug ?? '') && (
               <button
                 title="CRM"
@@ -771,6 +761,18 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                 }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: pathname.startsWith(`/${orgSlug}/crm`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', display: 'flex', alignItems: 'center' }}
               ><IconDatabase size={16} /></button>
+            )}
+            {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && (
+              <Link href={`/${orgSlug}/render`} onClick={onClose} title="Render Studio" style={{ color: pathname.startsWith(`/${orgSlug}/render`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconGallery size={16} /></Link>
+            )}
+            {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && (
+              <Link href={`/${orgSlug}/gallery`} onClick={onClose} title="Render Gallery" style={{ color: pathname.startsWith(`/${orgSlug}/gallery`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={16} /></Link>
+            )}
+            {currentUser.role !== 'contractor' && (
+              <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={16} /></Link>
+            )}
+            {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && (
+              <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={16} /></Link>
             )}
                       </div>
         </div>{/* end sidebar-footer */}
