@@ -5,10 +5,10 @@ const DESIGN_OS_ORIGIN = 'https://os.empowerbuilding.ai';
 
 export default function DesignOSPage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <iframe
         src={DESIGN_OS_ORIGIN}
-        style={{ flex: 1, border: 'none', width: '100%', display: 'block' }}
+        style={{ flex: 1, border: 'none', width: '100%', display: 'block', minHeight: 0 }}
         allow="clipboard-read; clipboard-write; fullscreen"
         title="Design OS"
       />
