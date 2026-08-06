@@ -165,3 +165,11 @@ export function IconGallery({ size = 15 }: { size?: number }) {
     </svg>
   );
 }
+
+export function IconLightbulb({ size = 15 }: { size?: number }) {
+  return (
+    <svg style={s} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21h6M12 3a6 6 0 0 1 6 6c0 2.22-1.2 4.16-3 5.2V17a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1v-2.8C7.2 13.16 6 11.22 6 9a6 6 0 0 1 6-6z"/>
+    </svg>
+  );
+}
