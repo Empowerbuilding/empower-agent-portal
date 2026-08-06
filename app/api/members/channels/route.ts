@@ -49,10 +49,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
+  const admin = adminClient();
+  let writeError: any = null;
   if (add) {
-    await supabase.from('portal_channel_members').upsert({ user_id: userId, channel_id: channelId }, { onConflict: 'user_id,channel_id', ignoreDuplicates: true });
+    const { error } = await admin.from('portal_channel_members').upsert({ user_id: userId, channel_id: channelId }, { onConflict: 'user_id,channel_id', ignoreDuplicates: true });
+    writeError = error;
   } else {
-    await supabase.from('portal_channel_members').delete().eq('user_id', userId).eq('channel_id', channelId);
+    const { error } = await admin.from('portal_channel_members').delete().eq('user_id', userId).eq('channel_id', channelId);
+    writeError = error;
+  }
+
+  if (writeError) {
+    console.error('[members/channels] write error:', writeError);
+    return NextResponse.json({ error: writeError.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
