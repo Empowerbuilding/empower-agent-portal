@@ -37,9 +37,11 @@ interface Props {
   openDirection?: 'up' | 'down';
   /** Which edge of the button the panel's edge aligns to, to avoid clipping off-screen. */
   align?: 'left' | 'right';
+  /** Color of the online count badge. Defaults to var(--accent). Pass '#22c55e' to match text channel green. */
+  badgeColor?: string;
 }
 
-export default function PresenceButton({ orgId, size = 15, openDirection = 'up', align = 'right' }: Props) {
+export default function PresenceButton({ orgId, size = 15, openDirection = 'up', align = 'right', badgeColor = 'var(--accent)' }: Props) {
   const [users, setUsers] = useState<PresenceUser[]>([]);
   const [open, setOpen] = useState(false);
   const [panelPos, setPanelPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
@@ -129,7 +131,7 @@ export default function PresenceButton({ orgId, size = 15, openDirection = 'up',
         {onlineCount > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -6, minWidth: 15, height: 15, borderRadius: '8px',
-            background: 'var(--accent)', color: '#fff', fontSize: '10px', fontWeight: 700,
+            background: badgeColor, color: '#fff', fontSize: '10px', fontWeight: 700,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
             border: '2px solid var(--sidebar-bg)', boxSizing: 'content-box', lineHeight: 1,
           }}>
