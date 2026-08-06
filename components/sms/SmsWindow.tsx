@@ -65,6 +65,13 @@ function extractSmsBody(content: string): string {
   return m ? m[1].trim() : content;
 }
 
+function extractInboundBody(content: string): string {
+  // Strip "Reply from Name\n" prefix and "\n_timestamp_" suffix
+  let text = content.replace(/^Reply from [^\n]+\n/, '');
+  text = text.replace(/\n_[^_\n]+_\s*$/, '');
+  return text.trim();
+}
+
 function extractMediaUrls(content: string): string[] {
   // n8n appends media URLs as plain lines after the code fence block
   const urls: string[] = [];
@@ -82,6 +89,7 @@ function extractMediaUrls(content: string): string[] {
 export default function SmsWindow({ channel, initialMessages, currentUser, orgId, orgSlug }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [confirmDeletePhone, setConfirmDeletePhone] = useState<string | null>(null);
   const [smsSearchOpen, setSmsSearchOpen] = useState(false);
   // mobile view: 'list' shows contact list, 'thread' shows conversation
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list');
@@ -479,10 +487,36 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
           {activeConv.contact_name.charAt(0).toUpperCase()}
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>{activeConv.contact_name}</div>
           <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{activeConv.contact_phone}</div>
         </div>
+        {confirmDeletePhone === activeConv.contact_phone ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Delete thread?</span>
+            <button
+              onClick={async () => {
+                const phone = activeConv.contact_phone;
+                const ids = activeConv.messages.map(m => m.id);
+                setMessages(prev => prev.filter(m => !ids.includes(m.id)));
+                setSelectedPhone(null);
+                setConfirmDeletePhone(null);
+                await supabase.from('portal_messages').delete().in('id', ids);
+              }}
+              style={{ background: '#da3633', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '12px', padding: '4px 10px', fontWeight: 600 }}
+            >Delete</button>
+            <button
+              onClick={() => setConfirmDeletePhone(null)}
+              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', padding: '4px 10px' }}
+            >Cancel</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDeletePhone(activeConv.contact_phone)}
+            title="Delete thread"
+            style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', opacity: 0.5, lineHeight: 1 }}
+          >🗑</button>
+        )}
       </div>
 
       {/* Messages */}
@@ -549,10 +583,11 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             if (isInbound) {
               const attachments = (msg.attachments ?? []) as Array<{ url: string; type?: string; name?: string }>;
               const imageAttachments = attachments.filter(a => a.type?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(a.url));
+              const inboundBody = extractInboundBody(body);
               return (
                 <div key={msg.id} style={{ alignSelf: 'flex-start', maxWidth: '80%' }}>
                   <div style={{ background: 'var(--surface)', borderRadius: '18px 18px 18px 4px', padding: '10px 14px' }}>
-                    {body ? <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div> : null}
+                    {inboundBody ? <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{inboundBody}</div> : null}
                     {imageAttachments.length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: body ? '8px' : '0' }}>
                         {imageAttachments.map((a, i) => (
