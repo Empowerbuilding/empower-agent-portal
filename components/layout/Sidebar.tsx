@@ -574,7 +574,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
               {profileOpen && (
                 <div
                   style={{
-                    position: 'absolute', left: '42px', bottom: 0, zIndex: 200,
+                    position: 'fixed', left: '58px', bottom: '12px', zIndex: 500,
                     background: 'var(--surface)', border: '1px solid var(--border)',
                     borderRadius: '10px', padding: '6px', minWidth: '170px',
                     boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
