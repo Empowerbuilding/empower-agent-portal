@@ -144,11 +144,88 @@ CREATE TRIGGER update_tasks_updated_at
   BEFORE UPDATE ON public.tasks
   FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
+-- ── deals ───────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.deals (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  contact_id        uuid        REFERENCES public.contacts(id) ON DELETE CASCADE,
+  owner_id          uuid        REFERENCES public.users(id),
+  title             text        NOT NULL,
+  value             numeric(12,2),
+  stage             text        NOT NULL DEFAULT 'discovery',
+  actual_close_date date,
+  notes             text,
+  created_at        timestamptz DEFAULT now(),
+  updated_at        timestamptz DEFAULT now(),
+  CONSTRAINT deals_stage_check CHECK (
+    stage = ANY (ARRAY['discovery','qualified','proposal_sent','negotiation','won','lost'])
+  )
+);
+
+-- ── notes ────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.notes (
+  id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  contact_id uuid        REFERENCES public.contacts(id) ON DELETE CASCADE,
+  author_id  uuid        REFERENCES public.users(id),
+  body       text        NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+-- ── call_transcripts ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.call_transcripts (
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  contact_id      uuid        REFERENCES public.contacts(id) ON DELETE SET NULL,
+  owner_id        uuid        REFERENCES public.users(id),
+  transcript_text text,
+  summary         text,
+  duration_secs   integer,
+  recording_url   text,
+  total_words     integer,
+  client_words    integer,
+  created_at      timestamptz DEFAULT now()
+);
+
+-- ── transcription_jobs ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.transcription_jobs (
+  id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  assembly_ai_id      text        UNIQUE,
+  contact_id          uuid        REFERENCES public.contacts(id) ON DELETE SET NULL,
+  status              text        NOT NULL DEFAULT 'queued',
+  recording_url       text,
+  crm_supabase_url    text,
+  crm_supabase_key    text,
+  created_at          timestamptz DEFAULT now()
+);
+
+-- ── agent_tokens (QB + long-lived OAuth) ─────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.agent_tokens (
+  key        text        PRIMARY KEY,
+  value      text        NOT NULL,
+  updated_at timestamptz DEFAULT now()
+);
+
+-- ── additional indexes ───────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS deals_contact_idx      ON public.deals(contact_id);
+CREATE INDEX IF NOT EXISTS deals_owner_idx        ON public.deals(owner_id);
+CREATE INDEX IF NOT EXISTS notes_contact_idx      ON public.notes(contact_id);
+CREATE INDEX IF NOT EXISTS transcripts_contact_idx ON public.call_transcripts(contact_id);
+CREATE INDEX IF NOT EXISTS txjobs_assembly_idx    ON public.transcription_jobs(assembly_ai_id);
+
+-- ── updated_at trigger for deals ─────────────────────────────────────────────
+DROP TRIGGER IF EXISTS update_deals_updated_at ON public.deals;
+CREATE TRIGGER update_deals_updated_at
+  BEFORE UPDATE ON public.deals
+  FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
 -- ── RLS (disable for service role usage) ─────────────────────────────────────
-ALTER TABLE public.contacts   DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.activities DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tasks      DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.users      DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contacts          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activities        DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks             DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users             DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.deals             DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notes             DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.call_transcripts  DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transcription_jobs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.agent_tokens      DISABLE ROW LEVEL SECURITY;
 `;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

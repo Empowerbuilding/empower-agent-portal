@@ -234,10 +234,10 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
   const supabase = createClient(PORTAL_SUPABASE_URL, PORTAL_SUPABASE_KEY);
   const ssh = new NodeSSH();
 
-  const containerName = `portal-agent-${input.orgSlug}`;
+  const containerName = `${input.orgSlug}-openclaw`;
   const agentSlug = input.agentDisplayName.toLowerCase().replace(/\s+/g, '-');
-  const workspacePath = `/root/.portal-agent-${input.orgSlug}/workspace`;
-  const ocPath = `/root/.portal-agent-${input.orgSlug}`;
+  const workspacePath = `/root/.${input.orgSlug}-agent/workspace`;
+  const ocPath = `/root/.${input.orgSlug}-agent`;
 
   const rollback: RollbackState = {
     orgId:           null,
@@ -619,7 +619,7 @@ print('cleared')
         port: 18789,
         mode: 'local',
         bind: 'loopback',
-        auth: { mode: 'token', token: `portal-agent-${input.orgSlug}-2026` },
+        auth: { mode: 'token', token: `${input.orgSlug}-agent-2026` },
       },
       models: {
         providers: {
@@ -689,7 +689,7 @@ print('cleared')
     // Fix ownership to node user (uid 1000) before starting
     await ssh.execCommand(`chown -R 1000:1000 ${ocPath}`);
 
-    const gatewayToken = `portal-agent-${input.orgSlug}-2026`;
+    const gatewayToken = `${input.orgSlug}-agent-2026`;
     const dockerRun = `docker run -d --name ${containerName} --restart unless-stopped -e OPENCLAW_GATEWAY_TOKEN=${gatewayToken} -v ${ocPath}:/home/node/.openclaw ${AGENT_IMAGE}`;
     const { stderr: dockerErr } = await ssh.execCommand(dockerRun);
     if (dockerErr && !dockerErr.includes('already in use')) {
@@ -780,8 +780,99 @@ print('cleared')
       await supabase.from('agent_env_vars').upsert(envVarsToSeed, { onConflict: 'agent_id,key' });
     }
 
+    // ── STEP 11: Clone n8n New Lead Alert workflow ────────────────────────────
+    const n8nApiKey  = process.env.N8N_API_KEY;
+    const n8nBaseUrl = 'https://n8n.empowerbuilding.ai/api/v1';
+    const TEMPLATE_WORKFLOW_ID = 'Mfv2NTOKpqSgPAfX';
+    if (n8nApiKey) {
+      try {
+        progress('cloning_n8n_workflow', 'Cloning lead alert workflow');
+        const n8nHeaders = {
+          'X-N8N-API-KEY': n8nApiKey,
+          'Content-Type': 'application/json',
+        };
+
+        // Fetch master template
+        const tplRes = await fetch(`${n8nBaseUrl}/workflows/${TEMPLATE_WORKFLOW_ID}`, { headers: n8nHeaders });
+        if (!tplRes.ok) throw new Error(`n8n fetch template: ${tplRes.status}`);
+        const tpl = await tplRes.json() as any;
+
+        // Strip identity fields so n8n treats this as a new workflow
+        const { id: _id, createdAt: _c, updatedAt: _u, ...newWf } = tpl;
+        newWf.name = `${input.orgName} - New Lead Alert`;
+        newWf.active = false; // start inactive, activate after dedup flush
+
+        // Parameterise the Build Sequence Data node
+        const firstRep = input.reps[0];
+        const repSlug  = firstRep.name.toLowerCase().replace(/\s+/g, '-');
+        for (const node of (newWf.nodes ?? [])) {
+          if (node.name === 'Build Sequence Data') {
+            const p = node.parameters ?? {};
+            // Patch any jsCode field that contains placeholder values
+            if (p.jsCode) {
+              p.jsCode = p.jsCode
+                .replace(/DEVICE_ID_PLACEHOLDER|['"]?[A-Za-z0-9]{24,}['"]?(?=.*textbee)/g, `'${input.textbeeDeviceId}'`)
+                .replace(/REP_NAME_PLACEHOLDER/g, firstRep.name)
+                .replace(/REP_PHONE_PLACEHOLDER/g, firstRep.phone)
+                .replace(/PORTAL_CHANNEL_PLACEHOLDER/g, `${input.orgSlug}-${agentSlug}-${repSlug}`)
+                .replace(/ORG_NAME_PLACEHOLDER/g, input.orgName)
+                .replace(/ORG_ID_PLACEHOLDER/g, org.id);
+            }
+            // Also patch values array if present (Set node style)
+            if (Array.isArray(p.values?.values)) {
+              for (const v of p.values.values) {
+                if (v.name === 'deviceId')       v.value = input.textbeeDeviceId;
+                if (v.name === 'repName')        v.value = firstRep.name;
+                if (v.name === 'repPhone')       v.value = firstRep.phone;
+                if (v.name === 'portalChannel')  v.value = `${input.orgSlug}-${agentSlug}-${repSlug}`;
+                if (v.name === 'orgName')        v.value = input.orgName;
+                if (v.name === 'orgId')          v.value = org.id;
+              }
+            }
+          }
+          // Patch TextBee HTTP Request node URL
+          if (node.name === 'Send SMS via TextBee' || node.name?.includes('TextBee')) {
+            if (node.parameters?.url) {
+              node.parameters.url = node.parameters.url.replace(
+                /devices\/[^/]+\/send/,
+                `devices/${input.textbeeDeviceId}/send`
+              );
+            }
+          }
+        }
+
+        // Create the new workflow
+        const createRes = await fetch(`${n8nBaseUrl}/workflows`, {
+          method: 'POST',
+          headers: n8nHeaders,
+          body: JSON.stringify(newWf),
+        });
+        if (!createRes.ok) {
+          const body = await createRes.text();
+          throw new Error(`n8n create workflow: ${createRes.status} ${body}`);
+        }
+        const created = await createRes.json() as any;
+        const newId = created.id;
+        console.log(`[provision] n8n workflow created: ${newId} — ${newWf.name}`);
+
+        // Activate (deactivate first to flush any stale webhook_entity rows, then reactivate)
+        await fetch(`${n8nBaseUrl}/workflows/${newId}/deactivate`, { method: 'POST', headers: n8nHeaders });
+        const activateRes = await fetch(`${n8nBaseUrl}/workflows/${newId}/activate`, { method: 'POST', headers: n8nHeaders });
+        if (!activateRes.ok) {
+          console.warn('[provision] n8n workflow activate non-OK:', activateRes.status);
+        } else {
+          console.log(`[provision] n8n workflow activated: ${newId}`);
+        }
+      } catch (e) {
+        // Non-fatal — log and continue; Mitch can clone manually if needed
+        console.error('[provision] n8n workflow clone failed (non-fatal):', e);
+      }
+    } else {
+      console.warn('[provision] N8N_API_KEY not set — skipping n8n workflow clone');
+    }
+
     progress('complete', input.orgSlug);
-    // ── STEP 11: Mark agent running ───────────────────────────────────────────
+    // ── STEP 12: Mark agent running ───────────────────────────────────────────
     await supabase.from('agents').update({ container_status: 'running', deployed_at: new Date().toISOString() }).eq('id', agent.id);
 
     ssh.dispose();
