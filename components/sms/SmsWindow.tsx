@@ -57,7 +57,7 @@ function groupByContact(messages: PortalMessage[]): SmsConversation[] {
     if (msg.created_at > conv.last_at) conv.last_at = msg.created_at;
     if (meta.approval_state === 'pending') conv.has_pending = true;
   }
-  return Array.from(map.values()).sort((a, b) => b.last_at.localeCompare(a.last_at));
+  return Array.from(map.values()).filter(c => c.messages.length > 0).sort((a, b) => b.last_at.localeCompare(a.last_at));
 }
 
 function extractSmsBody(content: string): string {
@@ -497,11 +497,20 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             <button
               onClick={async () => {
                 const phone = activeConv.contact_phone;
-                const ids = activeConv.messages.map(m => m.id);
-                setMessages(prev => prev.filter(m => !ids.includes(m.id)));
+                // Delete all portal_messages for this phone (including superseded ones)
+                const allIds = messages
+                  .filter(m => {
+                    const meta = (m.metadata || {}) as Record<string, any>;
+                    const msgPhone = meta.contact_phone || extractPhone(m.content);
+                    return msgPhone === phone;
+                  })
+                  .map(m => m.id);
+                setMessages(prev => prev.filter(m => !allIds.includes(m.id)));
                 setSelectedPhone(null);
                 setConfirmDeletePhone(null);
-                await supabase.from('portal_messages').delete().in('id', ids);
+                if (allIds.length > 0) {
+                  await supabase.from('portal_messages').delete().in('id', allIds);
+                }
               }}
               style={{ background: '#da3633', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '12px', padding: '4px 10px', fontWeight: 600 }}
             >Delete</button>
