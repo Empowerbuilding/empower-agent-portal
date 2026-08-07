@@ -273,7 +273,7 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
       .insert({
         org_id: org.id,
         template_id: 'vanessa',
-        name: 'vanessa',
+        name: agentSlug,
         display_name: input.agentDisplayName,
         container_name: containerName,
         container_status: 'provisioning',
