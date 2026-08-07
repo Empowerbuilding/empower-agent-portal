@@ -929,6 +929,112 @@ print('cleared')
       console.warn('[provision] N8N_API_KEY not set — skipping n8n workflow clone');
     }
 
+    // ── STEP 11b: Clone TextBee Inbound SMS workflow ────────────────────────────
+    const TEXTBEE_INBOUND_TEMPLATE_ID = 'VbORrZEOLbSOKjYF';
+    if (n8nApiKey && crmSupabaseUrl && crmServiceRoleKey) {
+      try {
+        progress('cloning_inbound_sms_workflow', 'Cloning inbound SMS workflow');
+        const n8nHeaders = {
+          'X-N8N-API-KEY': n8nApiKey,
+          'Content-Type': 'application/json',
+        };
+
+        const inbTplRes = await fetch(`${n8nBaseUrl}/workflows/${TEXTBEE_INBOUND_TEMPLATE_ID}`, { headers: n8nHeaders });
+        if (!inbTplRes.ok) throw new Error(`n8n fetch inbound template: ${inbTplRes.status}`);
+        const inbTpl = await inbTplRes.json() as any;
+
+        const { id: _i2, createdAt: _c2, updatedAt: _u2, ...inbWf } = inbTpl;
+        inbWf.name = `${input.orgName} - TextBee Inbound SMS`;
+        inbWf.active = false;
+
+        // Build reps payload for After Contact dynamic routing
+        const repsForInbound = input.reps.map(r => ({
+          slug:          r.name.toLowerCase().replace(/\s+/g, '-'),
+          crm_user_id:   crmRepIds[r.email] || '',
+          sms_channel:   `${input.orgSlug}-${agentSlug}-${r.name.toLowerCase().replace(/\s+/g, '-')}-sms`,
+        }));
+        const defaultSmsChannel = repsForInbound[0]?.sms_channel ?? `${input.orgSlug}-${agentSlug}-general`;
+
+        for (const node of (inbWf.nodes ?? [])) {
+          // Patch webhook path
+          if (node.type === 'n8n-nodes-base.webhook') {
+            node.parameters.path = `textbee-${input.orgSlug}-inbound`;
+          }
+
+          // Patch CRM HTTP nodes (Lookup Contact, Log Activity, Patch Contact Last Contacted)
+          const crmNodes = ['Lookup Contact', 'Log Activity', 'Patch Contact Last Contacted'];
+          if (crmNodes.includes(node.name)) {
+            // Swap CRM URL
+            if (node.parameters?.url) {
+              node.parameters.url = (node.parameters.url as string).replace(
+                /https:\/\/[a-z]+\.supabase\.co/,
+                crmSupabaseUrl.replace(/\/$/, '')
+              );
+            }
+            // Swap auth headers
+            for (const h of (node.parameters?.headerParameters?.parameters ?? [])) {
+              if (h.name === 'apikey' || (h.name === 'Authorization' && String(h.value).startsWith('Bearer '))) {
+                h.value = (h.name === 'Authorization' ? 'Bearer ' : '') + crmServiceRoleKey;
+              }
+            }
+          }
+
+          // Rewrite After Contact — replace hardcoded rep UUIDs + channel names with dynamic routing
+          if (node.name === 'After Contact') {
+            node.parameters.jsCode = `
+const bare = $('Parse Input').first().json.bare;
+const contact = $input.first().json;
+const rows = Array.isArray(contact) ? contact : (contact.id ? [contact] : []);
+const c = rows.length ? rows[0] : null;
+const cn = c ? ((c.first_name || '') + ' ' + (c.last_name || '')).trim() : bare;
+
+// Reps injected by provisioner
+const reps = ${JSON.stringify(repsForInbound)};
+const matchedRep = c && reps.find(r => r.crm_user_id && r.crm_user_id === c.owner_id);
+const rep = matchedRep || reps[0];
+const smsChannel = rep ? rep.sms_channel : '${defaultSmsChannel}';
+
+return [{json: {contact: c, contactName: cn, smsChannel, bare}}];
+`;
+          }
+
+          // Patch Build Payload — swap org_id and sender_name
+          if (node.name === 'Build Payload' && node.parameters?.jsCode) {
+            node.parameters.jsCode = (node.parameters.jsCode as string)
+              .replace(/org_id:\s*'[^']*'/, `org_id: '${org.id}'`)
+              .replace(/sender_name:\s*'[^']*'/, `sender_name: '${input.agentDisplayName}'`);
+          }
+        }
+
+        // Create inbound SMS workflow
+        const inbCreateRes = await fetch(`${n8nBaseUrl}/workflows`, {
+          method: 'POST',
+          headers: n8nHeaders,
+          body: JSON.stringify(inbWf),
+        });
+        if (!inbCreateRes.ok) {
+          const body = await inbCreateRes.text();
+          throw new Error(`n8n create inbound workflow: ${inbCreateRes.status} ${body}`);
+        }
+        const inbCreated = await inbCreateRes.json() as any;
+        const inbId = inbCreated.id;
+        console.log(`[provision] TextBee inbound workflow created: ${inbId}`);
+
+        // Deactivate + reactivate to flush stale webhook_entity rows
+        await fetch(`${n8nBaseUrl}/workflows/${inbId}/deactivate`, { method: 'POST', headers: n8nHeaders });
+        const inbActivate = await fetch(`${n8nBaseUrl}/workflows/${inbId}/activate`, { method: 'POST', headers: n8nHeaders });
+        if (!inbActivate.ok) {
+          console.warn('[provision] TextBee inbound activate non-OK:', inbActivate.status);
+        } else {
+          console.log(`[provision] TextBee inbound workflow activated: ${inbId}`);
+          console.log(`[provision] Webhook path: https://n8n.empowerbuilding.ai/webhook/textbee-${input.orgSlug}-inbound`);
+          console.log(`[provision] ⚠️  Set this URL in TextBee app webhook settings for device ${input.textbeeDeviceId}`);
+        }
+      } catch (e) {
+        console.error('[provision] TextBee inbound workflow clone failed (non-fatal):', e);
+      }
+    }
+
     progress('complete', input.orgSlug);
     // ── STEP 12: Mark agent running ───────────────────────────────────────────
     await supabase.from('agents').update({ container_status: 'running', deployed_at: new Date().toISOString() }).eq('id', agent.id);
