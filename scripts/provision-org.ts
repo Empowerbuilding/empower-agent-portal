@@ -586,7 +586,7 @@ print('cleared')
         ];
       }),
       `${input.orgSlug}-${agentSlug}-lead-alerts`,
-      `${input.orgSlug}-${agentSlug}-call-recordings`,
+      // call-recordings intentionally excluded — n8n AssemblyAI callback handles scorecard posting directly
       `${input.orgSlug}-${agentSlug}-sms-actions`,
     ];
 
