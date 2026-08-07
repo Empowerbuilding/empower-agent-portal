@@ -839,6 +839,64 @@ print('cleared')
               );
             }
           }
+
+          // Patch CRM nodes — swap Showcase CRM URL + key for new org's CRM
+          const crmNodes = ['Look Up Contact', 'Assign to Ryan', 'Log SMS Activity'];
+          if (crmNodes.includes(node.name) && crmSupabaseUrl && crmServiceRoleKey) {
+            const p = node.parameters ?? {};
+            // Swap URL (may be expression or plain string)
+            if (p.url) {
+              p.url = (p.url as string).replace(
+                /https:\/\/[a-z]+\.supabase\.co/,
+                crmSupabaseUrl.replace(/\/$/, '')
+              );
+            }
+            // Swap auth headers
+            const headers = p.headerParameters?.parameters ?? [];
+            for (const h of headers) {
+              if (h.name === 'apikey' || (h.name === 'Authorization' && String(h.value).startsWith('Bearer '))) {
+                const prefix = h.name === 'Authorization' ? 'Bearer ' : '';
+                h.value = prefix + crmServiceRoleKey;
+              }
+            }
+            // Patch Assign to Ryan: swap hardcoded owner_id UUID for first rep's CRM id
+            if (node.name === 'Assign to Ryan') {
+              const firstRepCrmId = crmRepIds[firstRep.email] || '';
+              const bodyParams = p.bodyParameters?.parameters ?? [];
+              for (const b of bodyParams) {
+                if (b.name === 'owner_id') b.value = firstRepCrmId;
+              }
+              node.name = 'Assign Owner'; // rename away from rep-specific name
+            }
+            // Patch Log SMS Activity: swap hardcoded user_id UUID for first rep's CRM id
+            if (node.name === 'Log SMS Activity') {
+              const firstRepCrmId = crmRepIds[firstRep.email] || '';
+              const bodyParams = p.bodyParameters?.parameters ?? [];
+              for (const b of bodyParams) {
+                if (b.name === 'user_id') b.value = firstRepCrmId;
+              }
+            }
+          }
+
+          // Patch Post to Lead Alerts — swap channel_id, org_id, sender_name
+          if (node.name === 'Post to Lead Alerts') {
+            const bodyParams = node.parameters?.bodyParameters?.parameters ?? [];
+            for (const b of bodyParams) {
+              if (b.name === 'channel_id') b.value = `${input.orgSlug}-${agentSlug}-lead-alerts`;
+              if (b.name === 'org_id')     b.value = org.id;
+              if (b.name === 'sender_name') b.value = input.agentDisplayName;
+            }
+          }
+
+          // Patch Trigger Tony Email Draft — swap channel_id, org_id, sender_name (rep)
+          if (node.name === 'Trigger Tony Email Draft') {
+            const bodyParams = node.parameters?.bodyParameters?.parameters ?? [];
+            for (const b of bodyParams) {
+              if (b.name === 'channel_id')  b.value = `${input.orgSlug}-${agentSlug}-${repSlug}`;
+              if (b.name === 'org_id')      b.value = org.id;
+              if (b.name === 'sender_name') b.value = firstRep.name;
+            }
+          }
         }
 
         // Create the new workflow
