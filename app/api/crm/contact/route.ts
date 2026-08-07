@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const CRM_URL = process.env.CRM_SUPABASE_URL;
+const DEFAULT_CRM_URL = process.env.CRM_SUPABASE_URL;
 // Coolify has it as CRM_SUPABASE_KEY; fall back to the longer name for local dev
-const CRM_KEY = process.env.CRM_SUPABASE_KEY ?? process.env.CRM_SUPABASE_SERVICE_ROLE_KEY;
+const DEFAULT_CRM_KEY = process.env.CRM_SUPABASE_KEY ?? process.env.CRM_SUPABASE_SERVICE_ROLE_KEY;
+
+const PORTAL_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const PORTAL_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export interface CrmContactData {
   id: string;
@@ -21,13 +24,32 @@ export interface CrmContactData {
 }
 
 export async function GET(req: NextRequest) {
-  if (!CRM_URL || !CRM_KEY) {
-    return NextResponse.json({ error: 'CRM not configured' }, { status: 503 });
-  }
-
   const phone = req.nextUrl.searchParams.get('phone');
   const orgSlug = req.nextUrl.searchParams.get('orgSlug');
   if (!phone) return NextResponse.json({ error: 'phone required' }, { status: 400 });
+
+  let CRM_URL = DEFAULT_CRM_URL;
+  let CRM_KEY = DEFAULT_CRM_KEY;
+
+  // For non-default orgs, look up their CRM credentials from Portal Supabase
+  if (orgSlug && PORTAL_URL && PORTAL_SERVICE_KEY) {
+    try {
+      const portal = createClient(PORTAL_URL, PORTAL_SERVICE_KEY);
+      const { data: org } = await portal
+        .from('organizations')
+        .select('crm_supabase_url, crm_supabase_key, crm_mode')
+        .eq('slug', orgSlug)
+        .maybeSingle();
+      if (org?.crm_supabase_url && org?.crm_supabase_key && org?.crm_mode === 'b2c') {
+        CRM_URL = org.crm_supabase_url;
+        CRM_KEY = org.crm_supabase_key;
+      }
+    } catch (_) {}
+  }
+
+  if (!CRM_URL || !CRM_KEY) {
+    return NextResponse.json({ error: 'CRM not configured' }, { status: 503 });
+  }
 
   const crm = createClient(CRM_URL, CRM_KEY);
 
