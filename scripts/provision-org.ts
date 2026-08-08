@@ -300,7 +300,7 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
     await supabase.from('agents').update({ reps: repsForDb }).eq('id', agent.id);
 
     // ── Create agent_group for this agent ──────────────────────────────────────
-    const groupSlug = `${input.orgSlug}-${agentSlug}`;
+    const groupSlug = 'sales'; // Always 'sales' — sidebar CRM link requires this slug
     const { data: agentGroup } = await supabase
       .from('agent_groups')
       .insert({
@@ -318,13 +318,14 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
     // ── STEP 2b: Provision phone number (TextBee or Telnyx) ──────────────────
     let telnyxPhone: string | null = null;
     try {
-      if (input.textbeeApiKey) {
+      if (input.textbeeDeviceId || input.textbeePhoneNumber) {
         // TextBee path — store credentials, use manual Telnyx voice DID if provided
         await supabase.from('agents').update({
-          textbee_api_key: input.textbeeApiKey,
+          textbee_api_key: input.textbeeApiKey || null,
           textbee_device_id: input.textbeeDeviceId || null,
           textbee_phone_number: input.textbeePhoneNumber || null,
           textbee_sim_slot: input.textbeeSimSlot ?? 0,
+          sms_gateway: 'textbee',
           telnyx_phone_number: input.telnyxDid || null,
           telnyx_connection_id: input.telnyxDid ? '2996679323039040927' : null,
         }).eq('id', agent.id);
@@ -360,10 +361,11 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
         crmServiceRoleKey = crm.serviceRoleKey;
         crmDbPassword     = crm.dbPassword;
         rollback.crmProjectRef = crm.projectRef;
-        await supabase.from('agents').update({
+        // Update organizations table — sidebar reads crm_supabase_url from org record
+        await supabase.from('organizations').update({
           crm_supabase_url: crmSupabaseUrl,
           crm_supabase_key: crmServiceRoleKey,
-        }).eq('id', agent.id);
+        }).eq('id', org.id);
         console.log('[provision] CRM project ready:', crmSupabaseUrl);
 
         // ── Insert rep users into new CRM so crm_id is populated ──────────────
@@ -656,7 +658,7 @@ print('cleared')
       crm_supabase_url:   crmSupabaseUrl,
       crm_supabase_key:   crmServiceRoleKey,
       // SMS gateway config
-      sms_gateway:         input.textbeeApiKey ? 'textbee' : 'telnyx',
+      sms_gateway:         (input.textbeeDeviceId || input.textbeePhoneNumber) ? 'textbee' : 'telnyx',
       // TextBee (client SMS via Android SIM)
       textbee_api_key:     input.textbeeApiKey || '',
       textbee_device_id:   input.textbeeDeviceId || '',
@@ -797,10 +799,17 @@ print('cleared')
         if (!tplRes.ok) throw new Error(`n8n fetch template: ${tplRes.status}`);
         const tpl = await tplRes.json() as any;
 
-        // Strip identity fields so n8n treats this as a new workflow
-        const { id: _id, createdAt: _c, updatedAt: _u, ...newWf } = tpl;
-        newWf.name = `${input.orgName} - New Lead Alert`;
-        newWf.active = false; // start inactive, activate after dedup flush
+        // Strip to only fields POST /workflows accepts (n8n rejects extra properties)
+        const newWf: any = {
+          name:        `${input.orgName} - New Lead Alert`,
+          nodes:       tpl.nodes,
+          connections: tpl.connections,
+          settings:    tpl.settings ?? {},
+          staticData:  tpl.staticData ?? null,
+          pinData:     tpl.pinData ?? {},
+          meta:        tpl.meta ?? {},
+          tags:        tpl.tags ?? [],
+        };
 
         // Parameterise the Build Sequence Data node
         const firstRep = input.reps[0] ?? null;
@@ -943,9 +952,17 @@ print('cleared')
         if (!inbTplRes.ok) throw new Error(`n8n fetch inbound template: ${inbTplRes.status}`);
         const inbTpl = await inbTplRes.json() as any;
 
-        const { id: _i2, createdAt: _c2, updatedAt: _u2, ...inbWf } = inbTpl;
-        inbWf.name = `${input.orgName} - TextBee Inbound SMS`;
-        inbWf.active = false;
+        // Strip to only fields POST /workflows accepts
+        const inbWf: any = {
+          name:        `${input.orgName} - TextBee Inbound SMS`,
+          nodes:       inbTpl.nodes,
+          connections: inbTpl.connections,
+          settings:    inbTpl.settings ?? {},
+          staticData:  inbTpl.staticData ?? null,
+          pinData:     inbTpl.pinData ?? {},
+          meta:        inbTpl.meta ?? {},
+          tags:        inbTpl.tags ?? [],
+        };
 
         // Build reps payload for After Contact dynamic routing
         const repsForInbound = input.reps.map(r => ({
