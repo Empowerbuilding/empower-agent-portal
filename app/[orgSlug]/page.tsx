@@ -25,7 +25,18 @@ export default async function OrgHome({ params }: { params: Promise<{ orgSlug: s
 
   if (!portalUser) redirect('/login');
 
-  // Find first active-agent channel for this user
+  // Use user's default channel if set
+  const { data: fullUser } = await supabase
+    .from('portal_users')
+    .select('default_channel_id')
+    .eq('id', portalUser.id)
+    .single();
+
+  if (fullUser?.default_channel_id) {
+    redirect(`/${orgSlug}/${fullUser.default_channel_id}`);
+  }
+
+  // Fall back: find first active-agent channel by position
   const { data: memberChannels } = await supabase
     .from('portal_channel_members')
     .select('channel_id, portal_channels(id, position, agents(active))')
