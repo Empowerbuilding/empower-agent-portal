@@ -809,12 +809,22 @@ print('cleared')
         for (const node of (newWf.nodes ?? [])) {
           if (node.name === 'Build Sequence Data') {
             const p = node.parameters ?? {};
-            // Patch any jsCode field that contains placeholder values
             if (p.jsCode) {
+              // Replace hardcoded Showcase values — template uses real text, not placeholders
+              // SMS greeting: "this is Ryan with Showcase Builders!" → dynamic
+              p.jsCode = p.jsCode.replace(
+                /this is \w+ with [^!]+!/,
+                `this is ${firstRep.name} with ${input.orgName}!`
+              );
+              // Replace any hardcoded phone numbers with this org's TextBee number
+              p.jsCode = p.jsCode.replace(
+                /\(830\) 613-6909|\(713\) 431-2715|\+18306136909|\+17134312715/g,
+                input.textbeePhoneNumber ?? ''
+              );
+              // Placeholder-style replacements (future-proof)
               p.jsCode = p.jsCode
-                .replace(/DEVICE_ID_PLACEHOLDER|['"]?[A-Za-z0-9]{24,}['"]?(?=.*textbee)/g, `'${input.textbeeDeviceId}'`)
                 .replace(/REP_NAME_PLACEHOLDER/g, firstRep.name)
-                .replace(/REP_PHONE_PLACEHOLDER/g, firstRep.phone)
+                .replace(/REP_PHONE_PLACEHOLDER/g, firstRep.phone ?? '')
                 .replace(/PORTAL_CHANNEL_PLACEHOLDER/g, `${input.orgSlug}-${agentSlug}-${repSlug}`)
                 .replace(/ORG_NAME_PLACEHOLDER/g, input.orgName)
                 .replace(/ORG_ID_PLACEHOLDER/g, org.id);
@@ -838,6 +848,11 @@ print('cleared')
                 /devices\/[^/]+\/send/,
                 `devices/${input.textbeeDeviceId}/send`
               );
+            }
+            // Patch x-api-key header with this org's TextBee API key
+            const tbHeaders = node.parameters?.headerParameters?.parameters ?? [];
+            for (const h of tbHeaders) {
+              if (h.name === 'x-api-key') h.value = input.textbeeApiKey;
             }
           }
 
@@ -879,23 +894,33 @@ print('cleared')
             }
           }
 
-          // Patch Post to Lead Alerts — swap channel_id, org_id, sender_name
+          // Patch Post to Lead Alerts — swap channel_id (→ first rep), org_id, sender_name + portal key
           if (node.name === 'Post to Lead Alerts') {
             const bodyParams = node.parameters?.bodyParameters?.parameters ?? [];
             for (const b of bodyParams) {
-              if (b.name === 'channel_id') b.value = `${input.orgSlug}-${agentSlug}-lead-alerts`;
+              if (b.name === 'channel_id') b.value = `${input.orgSlug}-${agentSlug}-${repSlug}`;
               if (b.name === 'org_id')     b.value = org.id;
               if (b.name === 'sender_name') b.value = input.agentDisplayName;
             }
+            const laHeaders = node.parameters?.headerParameters?.parameters ?? [];
+            for (const h of laHeaders) {
+              if (h.name === 'apikey') h.value = PORTAL_SUPABASE_KEY;
+              if (h.name === 'Authorization' && String(h.value).startsWith('Bearer ')) h.value = 'Bearer ' + PORTAL_SUPABASE_KEY;
+            }
           }
 
-          // Patch Trigger Tony Email Draft — swap channel_id, org_id, sender_name (rep)
+          // Patch Trigger Tony Email Draft — swap channel_id, org_id, sender_name (rep) + portal key
           if (node.name === 'Trigger Tony Email Draft') {
             const bodyParams = node.parameters?.bodyParameters?.parameters ?? [];
             for (const b of bodyParams) {
               if (b.name === 'channel_id')  b.value = `${input.orgSlug}-${agentSlug}-${repSlug}`;
               if (b.name === 'org_id')      b.value = org.id;
               if (b.name === 'sender_name') b.value = firstRep.name;
+            }
+            const draftHeaders = node.parameters?.headerParameters?.parameters ?? [];
+            for (const h of draftHeaders) {
+              if (h.name === 'apikey') h.value = PORTAL_SUPABASE_KEY;
+              if (h.name === 'Authorization' && String(h.value).startsWith('Bearer ')) h.value = 'Bearer ' + PORTAL_SUPABASE_KEY;
             }
           }
         }
