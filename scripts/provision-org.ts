@@ -60,6 +60,7 @@ export interface ProvisionInput {
   textbeePhoneNumber?: string;  // E.164 Android SIM number
   textbeeSimSlot?: number;      // default 0
   telnyxDid?: string;           // Voice-only DID (provisioned manually before running wizard)
+  features?: string[];          // Portal features to enable: 'render', 'gallery', 'files', 'design_os', 'crm'. Defaults to ['crm'].
 }
 
 // ── Rollback state tracker ───────────────────────────────────────────────────
@@ -260,6 +261,7 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
         plan: 'starter',
         active: true,
         brand_color: '#4c8bf0',
+        features: input.features ?? ['crm'],
       })
       .select()
       .single();

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const {
     orgName, orgSlug, agentDisplayName, agentTone,
     industry, whatWeSell, website, reps, enabledCrons,
-    companyKnowledge, businessHours,
+    companyKnowledge, businessHours, features,
   } = body;
 
   if (!orgName || !orgSlug || !reps?.length) {
@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
     companyKnowledge: companyKnowledge || '',
     businessHours: businessHours || '',
     reps, enabledCrons,
+    features: features ?? ['crm'],
     wizard: body.wizard,
   };
 
