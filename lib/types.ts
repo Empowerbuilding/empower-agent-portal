@@ -23,6 +23,7 @@ export interface Organization {
   crm_supabase_url?: string | null;
   crm_supabase_key?: string | null;
   crm_mode?: string | null;
+  features?: string[] | null;
 }
 
 export interface Agent {
