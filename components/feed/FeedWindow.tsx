@@ -13,13 +13,14 @@ interface Props {
   channel: PortalChannel;
   initialMessages: PortalMessage[];
   orgId: string;
+  initialMemberCount?: number;
 }
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-export default function FeedWindow({ channel, initialMessages, orgId }: Props) {
+export default function FeedWindow({ channel, initialMessages, orgId, initialMemberCount }: Props) {
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -29,16 +30,7 @@ export default function FeedWindow({ channel, initialMessages, orgId }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const { setToolbar } = useMobileToolbar();
-  const [memberCount, setMemberCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/portal_channel_members?channel_id=eq.${channel.id}&select=user_id`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-    }).then(r => r.json()).then((rows: unknown[]) => {
-      if (Array.isArray(rows)) setMemberCount(rows.length);
-    }).catch(() => {});
-  }, [channel.id]);
+  const [memberCount] = useState<number | null>(initialMemberCount ?? null);
 
   useEffect(() => {
     setToolbar(

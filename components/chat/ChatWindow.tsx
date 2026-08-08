@@ -18,6 +18,7 @@ interface Props {
   initialMessages: PortalMessage[];
   currentUser: { id: string; name: string; role?: string };
   orgId: string;
+  initialMemberCount?: number;
 }
 
 const SUPABASE_URL = 'https://xqvnpcxyyxxxydescfzw.supabase.co';
@@ -48,7 +49,7 @@ function parseChannelId(id: string, agentDisplayName?: string): { agent: string;
   return { agent: agentDisplayName ?? agent, channelLabel: rest || 'General' };
 }
 
-export default function ChatWindow({ channel, initialMessages, currentUser, orgId }: Props) {
+export default function ChatWindow({ channel, initialMessages, currentUser, orgId, initialMemberCount }: Props) {
   const pathname = usePathname();
   const orgSlug = pathname.split('/')[1] ?? '';
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages);
@@ -70,19 +71,12 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [uploading, setUploading] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<{ file: File; previewUrl: string }[]>([]);
   const [dragOver, setDragOver] = useState(false);
-  const [memberCount, setMemberCount] = useState<number | null>(null);
+  const [memberCount] = useState<number | null>(initialMemberCount ?? null);
   const [showMembers, setShowMembers] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
   const [replyTo, setReplyTo] = useState<PortalMessage | null>(null);
 
-  useEffect(() => {
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    fetch(`${SUPABASE_URL}/rest/v1/portal_channel_members?channel_id=eq.${channel.id}&select=user_id`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-    }).then(r => r.json()).then((rows: unknown[]) => {
-      if (Array.isArray(rows)) setMemberCount(rows.length);
-    }).catch(() => {});
-  }, [channel.id]);
+
 
   // Fetch online count on mount using last_active_at (same source as PresenceButton, updated every 30s)
   useEffect(() => {
