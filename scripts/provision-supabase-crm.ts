@@ -29,6 +29,9 @@ const CRM_SCHEMA_SQL = `
 -- CRM Schema — based on Showcase Builders (generic, no Barnhaus-specific tables)
 -- ═══════════════════════════════════════════════════════════════
 
+-- Required for trigger functions that make HTTP calls (notify_deal_complete, etc.)
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
 -- ── Functions & Trigger Procedures ─────────────────────────────────────────────
 
 CREATE OR REPLACE FUNCTION public.contacts_normalize_phone_trigger()
