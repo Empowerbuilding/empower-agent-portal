@@ -675,6 +675,7 @@ print('cleared')
         phone:           r.phone || '',
         crm_id:          crmRepIds[r.email] || '',   // auto-populated from CRM users table
         portal_channel:  `${input.orgSlug}-${agentSlug}-${r.name.toLowerCase().replace(/\s+/g, '-')}`,
+        sms_channel:     `${input.orgSlug}-${agentSlug}-${r.name.toLowerCase().replace(/\s+/g, '-')}-sms`,
         token_file:      `${r.name.toLowerCase().replace(/\s+/g, '_')}_token.json`,
       })),
     };
