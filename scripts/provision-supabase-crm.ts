@@ -536,55 +536,55 @@ CREATE INDEX IF NOT EXISTS users_email_key ON public.users USING btree (email);
 
 -- ── Triggers ─────────────────────────────────────────────────────────────────────
 
-DROP TRIGGER IF EXISTS trg_word_count_activities AFTER INSERT OR DELETE OR UPDATE ON public.public.activities;
+DROP TRIGGER IF EXISTS trg_word_count_activities ON public.activities;
 CREATE TRIGGER trg_word_count_activities AFTER INSERT OR DELETE OR UPDATE ON public.activities FOR EACH ROW EXECUTE FUNCTION trg_fn_word_count_activity();
 
-DROP TRIGGER IF EXISTS trg_agent_tokens_updated_at BEFORE UPDATE ON public.public.agent_tokens;
+DROP TRIGGER IF EXISTS trg_agent_tokens_updated_at ON public.agent_tokens;
 CREATE TRIGGER trg_agent_tokens_updated_at BEFORE UPDATE ON public.agent_tokens FOR EACH ROW EXECUTE FUNCTION update_agent_tokens_updated_at();
 
-DROP TRIGGER IF EXISTS update_calendar_integrations_updated_at BEFORE UPDATE ON public.public.calendar_integrations;
+DROP TRIGGER IF EXISTS update_calendar_integrations_updated_at ON public.calendar_integrations;
 CREATE TRIGGER update_calendar_integrations_updated_at BEFORE UPDATE ON public.calendar_integrations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS trg_word_count_transcripts AFTER INSERT OR DELETE OR UPDATE ON public.public.call_transcripts;
+DROP TRIGGER IF EXISTS trg_word_count_transcripts ON public.call_transcripts;
 CREATE TRIGGER trg_word_count_transcripts AFTER INSERT OR DELETE OR UPDATE ON public.call_transcripts FOR EACH ROW EXECUTE FUNCTION trg_fn_word_count_transcript();
 
-DROP TRIGGER IF EXISTS update_companies_updated_at BEFORE UPDATE ON public.public.companies;
+DROP TRIGGER IF EXISTS update_companies_updated_at ON public.companies;
 CREATE TRIGGER update_companies_updated_at BEFORE UPDATE ON public.companies FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS trg_normalize_phone BEFORE INSERT OR UPDATE OF phone ON public.public.contacts;
+DROP TRIGGER IF EXISTS trg_normalize_phone ON public.contacts;
 CREATE TRIGGER trg_normalize_phone BEFORE INSERT OR UPDATE OF phone ON public.contacts FOR EACH ROW EXECUTE FUNCTION contacts_normalize_phone_trigger();
 
-DROP TRIGGER IF EXISTS update_contacts_updated_at BEFORE UPDATE ON public.public.contacts;
+DROP TRIGGER IF EXISTS update_contacts_updated_at ON public.contacts;
 CREATE TRIGGER update_contacts_updated_at BEFORE UPDATE ON public.contacts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS deal_stage_change_trigger AFTER UPDATE ON public.public.deals;
+DROP TRIGGER IF EXISTS deal_stage_change_trigger ON public.deals;
 CREATE TRIGGER deal_stage_change_trigger AFTER UPDATE ON public.deals FOR EACH ROW EXECUTE FUNCTION log_deal_stage_change();
 
-DROP TRIGGER IF EXISTS trg_deal_complete_capi AFTER UPDATE ON public.public.deals;
+DROP TRIGGER IF EXISTS trg_deal_complete_capi ON public.deals;
 CREATE TRIGGER trg_deal_complete_capi AFTER UPDATE ON public.deals FOR EACH ROW EXECUTE FUNCTION notify_deal_complete();
 
-DROP TRIGGER IF EXISTS trg_validate_won_deal BEFORE INSERT OR UPDATE ON public.public.deals;
+DROP TRIGGER IF EXISTS trg_validate_won_deal ON public.deals;
 CREATE TRIGGER trg_validate_won_deal BEFORE INSERT OR UPDATE ON public.deals FOR EACH ROW EXECUTE FUNCTION trg_fn_validate_won_deal();
 
-DROP TRIGGER IF EXISTS update_deals_updated_at BEFORE UPDATE ON public.public.deals;
+DROP TRIGGER IF EXISTS update_deals_updated_at ON public.deals;
 CREATE TRIGGER update_deals_updated_at BEFORE UPDATE ON public.deals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_meeting_types_updated_at BEFORE UPDATE ON public.public.meeting_types;
+DROP TRIGGER IF EXISTS update_meeting_types_updated_at ON public.meeting_types;
 CREATE TRIGGER update_meeting_types_updated_at BEFORE UPDATE ON public.meeting_types FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS trg_notes_update_last_contacted AFTER INSERT ON public.public.notes;
+DROP TRIGGER IF EXISTS trg_notes_update_last_contacted ON public.notes;
 CREATE TRIGGER trg_notes_update_last_contacted AFTER INSERT ON public.notes FOR EACH ROW EXECUTE FUNCTION update_last_contacted_at();
 
-DROP TRIGGER IF EXISTS update_notes_updated_at BEFORE UPDATE ON public.public.notes;
+DROP TRIGGER IF EXISTS update_notes_updated_at ON public.notes;
 CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON public.notes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS meeting_scheduled_trigger AFTER INSERT ON public.public.scheduled_meetings;
+DROP TRIGGER IF EXISTS meeting_scheduled_trigger ON public.scheduled_meetings;
 CREATE TRIGGER meeting_scheduled_trigger AFTER INSERT ON public.scheduled_meetings FOR EACH ROW EXECUTE FUNCTION log_meeting_scheduled();
 
-DROP TRIGGER IF EXISTS update_scheduled_meetings_updated_at BEFORE UPDATE ON public.public.scheduled_meetings;
+DROP TRIGGER IF EXISTS update_scheduled_meetings_updated_at ON public.scheduled_meetings;
 CREATE TRIGGER update_scheduled_meetings_updated_at BEFORE UPDATE ON public.scheduled_meetings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_tasks_updated_at BEFORE UPDATE ON public.public.tasks;
+DROP TRIGGER IF EXISTS update_tasks_updated_at ON public.tasks;
 CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON public.tasks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ── Disable RLS (service role usage) ─────────────────────────────────────────────

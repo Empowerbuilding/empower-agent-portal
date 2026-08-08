@@ -803,8 +803,8 @@ print('cleared')
         newWf.active = false; // start inactive, activate after dedup flush
 
         // Parameterise the Build Sequence Data node
-        const firstRep = input.reps[0];
-        const repSlug  = firstRep.name.toLowerCase().replace(/\s+/g, '-');
+        const firstRep = input.reps[0] ?? null;
+        const repSlug  = firstRep ? firstRep.name.toLowerCase().replace(/\s+/g, '-') : 'rep';
         for (const node of (newWf.nodes ?? [])) {
           if (node.name === 'Build Sequence Data') {
             const p = node.parameters ?? {};
