@@ -32,8 +32,28 @@ export default async function OrgHome({ params }: { params: Promise<{ orgSlug: s
     .eq('id', portalUser.id)
     .single();
 
+  // Only honor default_channel_id if the channel belongs to THIS org and the
+  // user is a member — a default pointing at another org's channel would
+  // otherwise cause an infinite redirect loop with the channel page.
   if (fullUser?.default_channel_id) {
-    redirect(`/${orgSlug}/${fullUser.default_channel_id}`);
+    const { data: defaultChannel } = await supabase
+      .from('portal_channels')
+      .select('id')
+      .eq('id', fullUser.default_channel_id)
+      .eq('org_id', org.id)
+      .single();
+
+    const { data: defaultMembership } = await supabase
+      .from('portal_channel_members')
+      .select('channel_id')
+      .eq('channel_id', fullUser.default_channel_id)
+      .eq('user_id', portalUser.id)
+      .single();
+
+    if (defaultChannel && defaultMembership) {
+      redirect(`/${orgSlug}/${fullUser.default_channel_id}`);
+    }
+    // Otherwise fall through to first-channel fallback below
   }
 
   // Fall back: find first active-agent channel by position
