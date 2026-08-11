@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
         .select('crm_supabase_url, crm_supabase_key, crm_mode')
         .eq('slug', orgSlug)
         .maybeSingle();
-      if (org?.crm_supabase_url && org?.crm_supabase_key && org?.crm_mode === 'b2c') {
+      if (org?.crm_supabase_url && org?.crm_supabase_key) {
         CRM_URL = org.crm_supabase_url;
         CRM_KEY = org.crm_supabase_key;
       }

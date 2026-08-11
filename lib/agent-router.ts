@@ -162,8 +162,14 @@ export async function agentGetContextStats(agentId: string): Promise<Record<stri
       for (const [k, v] of Object.entries(d as any)) {
         if (k.includes('portal:channel:')) {
           const channelId = k.split('portal:channel:').pop()!;
-          const tokens = (v as any).totalTokens ?? 0;
-          const ctx = (v as any).contextTokens ?? 1;
+          let tokens = (v as any).totalTokens ?? 0;
+          if (!tokens && (v as any).sessionFile) {
+            try {
+              const st = await fs.stat((v as any).sessionFile);
+              tokens = Math.round(st.size / 5);
+            } catch { /* session file gone — leave 0 */ }
+          }
+          const ctx = (v as any).contextTokens || 1000000;
           out[channelId] = { tokens, ctx, pct: Math.round(tokens / ctx * 1000) / 10 };
         }
       }
@@ -182,8 +188,16 @@ out = {}
 for k, v in d.items():
     if 'portal:channel:' in k:
         channel_id = k.split('portal:channel:')[-1]
-        tokens = v.get('totalTokens', 0)
-        ctx = v.get('contextTokens', 1)
+        tokens = v.get('totalTokens') or 0
+        if not tokens:
+            sf = v.get('sessionFile')
+            if sf:
+                try:
+                    import os
+                    tokens = round(os.path.getsize(sf) / 5)
+                except Exception:
+                    tokens = 0
+        ctx = v.get('contextTokens') or 1000000
         out[channel_id] = {'tokens': tokens, 'ctx': ctx, 'pct': round(tokens/ctx*100, 1)}
 print(json.dumps(out))
 " 2>/dev/null`;

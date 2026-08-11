@@ -75,6 +75,13 @@ export default async function ChannelPage({
 
   const ch = channel as PortalChannel;
 
+  // Fetch member count server-side (admin client bypasses RLS)
+  const { count: memberCount } = await adminSupabase
+    .from('portal_channel_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('channel_id', channelId);
+  const initialMemberCount = memberCount ?? 0;
+
   if (ch.channel_type === 'sms') {
     return (
       <SmsWindow
@@ -88,7 +95,7 @@ export default async function ChannelPage({
   }
 
   if (ch.channel_type === 'feed') {
-    return <FeedWindow channel={ch} initialMessages={messages ?? []} orgId={org.id} />;
+    return <FeedWindow channel={ch} initialMessages={messages ?? []} orgId={org.id} initialMemberCount={initialMemberCount} />;
   }
 
   if (ch.channel_type === 'approval') {
@@ -108,6 +115,7 @@ export default async function ChannelPage({
       initialMessages={messages ?? []}
       currentUser={{ id: portalUser.id, name: portalUser.name, role: portalUser.role }}
       orgId={org.id}
+      initialMemberCount={initialMemberCount}
     />
   );
 }

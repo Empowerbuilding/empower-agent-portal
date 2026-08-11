@@ -24,6 +24,17 @@ const B2B_STAGES = [
   { key: 'lost',      label: 'Lost',      color: '#ef4444' },
 ];
 
+// Barnhaus Shopify pipeline (store buyers — every stage except lost is a paid purchase)
+const SHOPIFY_STAGES = [
+  { key: 'study_set',        label: 'Study Set',        color: '#14b8a6' },
+  { key: 'full_set',         label: 'Full Set',         color: '#06b6d4' },
+  { key: 'modifications',    label: 'Modifications',    color: '#f59e0b' },
+  { key: 'engineering',      label: 'Engineering',      color: '#8b5cf6' },
+  { key: 'builder_referral', label: 'Builder Referral', color: '#f97316' },
+  { key: 'complete',         label: 'Complete',         color: '#22c55e' },
+  { key: 'lost',             label: 'Lost',             color: '#ef4444' },
+];
+
 // Showcase single pipeline
 const SHOWCASE_STAGES = [
   { key: 'new_lead',                label: 'New Lead',                color: '#6b7280' },
@@ -65,13 +76,13 @@ export default function PipelineClient({ deals: initialDeals, users, orgSlug, cr
   const crm = createClient(crmUrl, crmKey);
   const [deals, setDeals] = useState(initialDeals);
   const isShowcase = orgSlug === 'showcase';
-  const [salesType, setSalesType] = useState<'b2c' | 'b2b'>('b2c');
+  const [salesType, setSalesType] = useState<'b2c' | 'b2b' | 'shopify'>('b2c');
   const [ownerFilter, setOwnerFilter] = useState('');
   const [moving, setMoving] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
 
-  const stages = isShowcase ? SHOWCASE_STAGES : (salesType === 'b2c' ? B2C_STAGES : B2B_STAGES);
+  const stages = isShowcase ? SHOWCASE_STAGES : (salesType === 'b2c' ? B2C_STAGES : salesType === 'shopify' ? SHOPIFY_STAGES : B2B_STAGES);
 
   // Filter by sales_type AND owner (Showcase has no sales_type split)
   const filtered = deals.filter(d => {
@@ -122,6 +133,7 @@ export default function PipelineClient({ deals: initialDeals, users, orgSlug, cr
           <div style={{ display: 'flex', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 3, gap: 2 }}>
             <button style={tabStyle(salesType === 'b2c')} onClick={() => setSalesType('b2c')}>🏠 Consumer</button>
             <button style={tabStyle(salesType === 'b2b')} onClick={() => setSalesType('b2b')}>🏗 Builder</button>
+            <button style={tabStyle(salesType === 'shopify')} onClick={() => setSalesType('shopify')}>🛒 Shopify</button>
           </div>
         )}
 

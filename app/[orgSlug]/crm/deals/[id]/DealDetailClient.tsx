@@ -22,6 +22,9 @@ const STAGES = [
   { key: 'engineering',      label: 'Engineering',      color: '#ec4899' },
   { key: 'builder_referral', label: 'Builder Referral', color: '#f97316' },
   { key: 'active',           label: 'Active',           color: '#10b981' },
+  { key: 'study_set',        label: 'Study Set',        color: '#14b8a6' },
+  { key: 'full_set',         label: 'Full Set',         color: '#06b6d4' },
+  { key: 'modifications',    label: 'Modifications',    color: '#d97706' },
   { key: 'complete',         label: 'Complete',         color: '#22c55e' },
   { key: 'lost',             label: 'Lost',             color: '#ef4444' },
 ];

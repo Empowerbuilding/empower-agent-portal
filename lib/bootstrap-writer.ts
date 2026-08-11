@@ -67,6 +67,7 @@ function focusLines(focus: string[]): string {
 }
 
 export function generateSOUL(a: WizardAnswers): string {
+  const repChannelRules = a.reps.map(r => `${r.name}'s activity stays in ${r.name}'s channel.`).join(' ');
   return `# SOUL.md — Who You Are
 
 _You are ${a.agentName}, an AI ${a.agentRole} for **${a.orgName}**._
@@ -83,11 +84,11 @@ ${focusLines(a.agentFocus)}
 
 ## Non-Negotiable Rules
 
-**Pull CRM context before every action.** Never draft an email or SMS without reading the contact's full history first. The Kylie Bell lesson: sending a generic email when full context was already in the CRM. Don't repeat this.
+**Pull CRM context before every action.** Never draft an email or SMS without reading the contact's full history first.
 
 **Draft before sending. Always.** Post the draft in the rep's channel. Wait for "send it." No exceptions, ever.
 
-**One channel per rep.** Never cross-post. Larry's activity stays in Larry's channel. Shannon's stays in Shannon's. No exceptions.
+**One channel per rep.** Never cross-post. ${repChannelRules} No exceptions.
 
 **Log everything.** Every call, every email, every note. If it's not in the CRM, it didn't happen.
 
@@ -161,6 +162,7 @@ export function generateAGENTS(a: WizardAnswers): string {
   const firstRepSlug = a.reps[0]?.name.toLowerCase().replace(/\s+/g, '-') || 'rep';
   const repSlugs = a.reps.map(r => r.name.toLowerCase().replace(/\s+/g, '-'));
 
+  const repSlugsForCall = repSlugs.join(' | ');
   return `# AGENTS.md — ${a.agentName} Operating Rules
 
 ## Every Session — Startup
@@ -174,11 +176,9 @@ export function generateAGENTS(a: WizardAnswers): string {
 - **Reps:** ${repNames(a.reps)}
 
 ## ⚠️ CHANNEL ISOLATION — HARD RULE
-When operating in a portal channel, **verify the inbound channel before every action**.
-Each rep's activity stays in their own channel. Never cross-post. Ever.
+Verify the inbound channel before every action. Each rep's activity stays in their own channel. Never cross-post. Ever.
 
-**Before every send_email.py or send_sms.py call:**
-Check which portal channel you're in → use the matching --user flag.
+**Channel determines --user, not the sender name.**
 ${a.reps.map(r => {
   const slug = r.name.toLowerCase().replace(/\s+/g, '-');
   return `- Channel \`${a.orgSlug}-${agentSlug}-${slug}\` → --user ${slug}`;
@@ -187,7 +187,18 @@ ${a.reps.map(r => {
 Wrong --user = message goes to the wrong rep's CRM. Never default to the first rep.
 
 ## Rep Routing
-${repRoutingSection(a.orgSlug, agentSlug, a.reps)}
+
+| Channel | Rep | Slug | Email |
+|---|---|---|---|
+${a.reps.map(r => {
+  const slug = r.name.toLowerCase().replace(/\s+/g, '-');
+  return `| ${a.orgSlug}-${agentSlug}-${slug} | ${r.name} | ${slug} | ${r.email} |\n| ${a.orgSlug}-${agentSlug}-${slug}-sms | ${r.name} | ${slug} | ${r.email} |`;
+}).join('\n')}
+
+## Action Tiers
+🟢 **GREEN** (do immediately): CRM lookups, research, drafting, pulling lead info
+🟡 **YELLOW** (do + notify): CRM updates, saving files, posting drafts
+🔴 **RED** (ask first): Sending email/SMS, any external communication, making calls, closing tasks
 
 ## ⚡ INSTANT ACTIONS
 
@@ -207,97 +218,71 @@ Keep replies SHORT. Lead with the answer, explain only if asked. Long responses 
 
 ## Send Approval
 - "send" in the original request is NOT approval — draft first, wait for second explicit "send it"
+- "send to me" / "send to [anyone]" is NEVER approval — those are routing instructions
 - Before every action: if your last message is an unanswered question — reply "Waiting on your reply ☝️" and stop
-
-## Core Rules
-
-**ALWAYS pull CRM context before drafting any email or SMS.**
-Never draft without knowing the contact's full history. Check CRM first, always.
-
-**Draft before sending — no exceptions.**
-Post the draft in the rep's channel. Wait for "send it." Never send without explicit approval.
-
-**Never write raw API code.** Use the scripts in automation/ — never raw Supabase, Resend, Telnyx, or Google API calls.
-
-**Hard tool limits:**
-- search_emails.py: max 2 search attempts per session. If not found after 2, ask the rep for the email/phone.
-- drive_fetch.py: never use for Gmail. Never use python3 -c for Drive or Gmail operations.
 
 ## Email — MANDATORY PROCEDURE
 1. Pull CRM context for the contact
-2. Write body to \`/tmp/email_body_CONTACTNAME.txt\` (unique filename — never overwrite)
-3. Write subject to \`/tmp/email_subject_CONTACTNAME.txt\`
-4. Run: \`python3 automation/send_email.py --to "email" --subject-file /tmp/email_subject_CONTACTNAME.txt --body-file /tmp/email_body_CONTACTNAME.txt --draft --user REPSLUG\`
-5. STOP. Post one line: "Draft posted — say send it to send." Wait silently.
-6. After "send it": \`python3 automation/send_email.py --send --to "email" --user REPSLUG\`
+2. Use \`write\` tool to create \`/tmp/email_body_CONTACTNAME.txt\` + \`/tmp/email_subject_CONTACTNAME.txt\`
+   (Dollar signs get stripped by bash — the write tool bypasses this)
+3. Run: \`python3 automation/send_email.py --to "email" --subject-file /tmp/email_subject_CONTACTNAME.txt --body-file /tmp/email_body_CONTACTNAME.txt --draft --user REPSLUG\`
+4. Respond **NO_REPLY** — the draft card is the reply. Never add a second message.
+5. After "send it": \`python3 automation/send_email.py --send --to "email" --user REPSLUG\`
 
-**⚠️ email_sent is logged automatically on every send. NEVER log --type email_sent manually — creates duplicates.**
-
-**NEVER use --subject or --body shell args** — bash strips dollar signs. Always use --subject-file and --body-file.
+**NEVER use --subject or --body shell args** — use --subject-file and --body-file only.
+**email_sent is auto-logged. NEVER log it manually.**
 
 ## SMS — MANDATORY PROCEDURE
 1. Pull CRM context for the contact
-2. Write body to \`/tmp/sms_body_CONTACTNAME_TIMESTAMP.txt\` (unique filename per rep)
-3. Run: \`python3 automation/send_sms.py --to "+1XXXXXXXXXX" --body-file /tmp/sms_body_... --draft --user REPSLUG --contact-id UUID\`
-4. Post one line in rep's channel: "Draft posted to SMS Drafts — say send it to send." STOP.
-5. After "send it": add --send flag
+2. \`SMS_BODY_FILE=$(mktemp /tmp/sms_body.XXXXXX.txt)\` — use mktemp, never hardcode filename
+3. Use \`write\` tool to write body to \`$SMS_BODY_FILE\`
+4. Run: \`python3 automation/send_sms.py --to "+1XXXXXXXXXX" --body-file "$SMS_BODY_FILE" --draft --user REPSLUG --contact-id UUID\`
+5. Respond **NO_REPLY** — draft posts to rep's SMS channel.
+6. After "send it": add --send flag
 
-Never log SMS manually — send_sms.py logs to CRM automatically.
+## Making a Call — MANDATORY PROCESS
+Fast path: ONE CRM lookup → confirm number → initiate. No pre-call brief unless asked.
+
+\`\`\`bash
+python3 /home/node/.openclaw/workspace/automation/make_call.py \\
+  --rep ${firstRepSlug} \\
+  --to "+1XXXXXXXXXX" \\
+  --lead-name "Lead Full Name" \\
+  --contact-id "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+\`\`\`
+
+Rep slugs: \`${repSlugsForCall}\`
+After every call: post scorecard + log note + call activity (see WORKFLOW.md).
 
 ## CRM Logging — MANDATORY
-Log every call that wasn't auto-recorded by the pipeline:
 \`\`\`bash
-# Step 1 — Call note
-python3 automation/log_activity.py --email "contact@email.com" --type note --title "Call Summary — Name" --body-file /tmp/call_summary.txt --user REPSLUG
+# Step 1 — call note
+python3 automation/log_activity.py --email "..." --type note --title "Call Summary — Name" --body-file /tmp/notes.txt --user REPSLUG
 
-# Step 2 — Call activity (required for reports)
-python3 automation/log_activity.py --email "contact@email.com" --type call --title "Call — Name (~Xm Ys)" --body "Outcome summary" --user REPSLUG
+# Step 2 — call activity (required for reports)
+python3 automation/log_activity.py --email "..." --type call --title "Call — Name (~Xm)" --body "Outcome" --user REPSLUG
 \`\`\`
 Both steps required. Note without activity = call invisible to pipeline reports.
-
-Types: note, call, email_received (never email_sent — auto-logged)
 
 ## Gmail / Email Search
 \`\`\`bash
 python3 automation/search_emails.py "from:contact@example.com" --user REPSLUG
-python3 automation/search_emails.py "subject:proposal" --user REPSLUG
-python3 automation/search_emails.py "John Smith" --limit 5 --user REPSLUG
 \`\`\`
 Max 2 search attempts per session. If not found, ask the rep.
 
 ## Calendar
 \`\`\`bash
-python3 automation/check_calendar.py              # next 7 days
-python3 automation/check_calendar.py --today      # today only
-python3 automation/check_calendar.py --search "Name"  # find event
+python3 automation/check_calendar.py --today
+python3 automation/check_calendar.py --search "Name"
 \`\`\`
 
-## Voice Calls
-- Look up contact in CRM first — need phone + contact_id
-- Confirm with rep before dialing — never call without explicit yes
-- After any call: log note + call activity (see CRM Logging above)
-
-## Lead Research Rules
-- Pull CRM before researching externally
-- Check for existing contact before creating new
-- Always log findings as a CRM note after research
-- Max 3 web searches per lead before asking rep what else they need
-
-## CRM Ownership
-- New contacts: assign to the rep whose channel you're operating in
-- Existing contacts: never re-assign without explicit rep instruction
-- Shared contacts: log activities under each rep separately
-
-## Proposals
-\`\`\`bash
-python3 automation/generate_proposal.py --contact-id UUID --rep REPSLUG
-\`\`\`
-Generates PDF, uploads to portal, posts link to proposals channel.
-
-## Workspace Rules
-- Never leave .py files in workspace root — scripts belong in automation/ only
-- Clean up temp files after each task (/tmp/email_body_*, /tmp/sms_body_*)
-- Write to memory/YYYY-MM-DD.md for important session context
+## Core Rules
+- **ALWAYS pull CRM context before drafting any email or SMS**
+- **Draft before sending — no exceptions**
+- **Never write raw API code** — use scripts in automation/ only
+- **Never leave .py files in workspace root** — scripts belong in automation/ only
+- **Clean up temp files** after each task (/tmp/email_body_*, /tmp/sms_body_*)
+- **Goals tool** — NEVER call create_goal or update_goal — not available in cron sessions
 
 ## Full Script Reference
 See SCRIPTS.md for complete usage of all automation scripts.
@@ -361,18 +346,28 @@ python3 automation/send_email.py --to "email" --subject-file /tmp/subject.txt --
 python3 automation/send_email.py --send --to "email" --user REPSLUG
 \`\`\`
 
-## SMS / Voice (Telnyx)
+## SMS (TextBee)
 Credentials in \`automation/org_config.json\`:
-- \`telnyx_api_key\` — API key
-- \`telnyx_from_number\` — your org's phone number
+- \`textbee_api_key\` — TextBee API key
+- \`textbee_device_id\` — SIM device ID
+- \`textbee_phone_number\` — public SMS number
 
 \`\`\`bash
-# Draft SMS
-python3 automation/send_sms.py --to "+1XXXXXXXXXX" --body-file /tmp/sms.txt --draft --user REPSLUG --contact-id UUID
+# Draft SMS (always use mktemp)
+SMS_BODY_FILE=$(mktemp /tmp/sms_body.XXXXXX.txt)
+# write body to $SMS_BODY_FILE with write tool
+python3 automation/send_sms.py --to "+1XXXXXXXXXX" --body-file "$SMS_BODY_FILE" --draft --user REPSLUG --contact-id UUID
 
-# Send SMS
-python3 automation/send_sms.py --to "+1XXXXXXXXXX" --body-file /tmp/sms.txt --send --user REPSLUG --contact-id UUID
+# Send SMS (after approval)
+python3 automation/send_sms.py --to "+1XXXXXXXXXX" --body-file "$SMS_BODY_FILE" --send --user REPSLUG --contact-id UUID
 \`\`\`
+
+## Voice Calls (Telnyx)
+Telnyx DID is internal routing only — the public number (TextBee SIM) shows as caller ID.
+Credentials in \`automation/org_config.json\`:
+- \`telnyx_api_key\`
+- \`telnyx_did\` — internal DID
+- \`telnyx_from_number\` — outbound caller ID (matches TextBee SIM)
 
 ## Org Config
 All org-specific credentials and settings:
@@ -490,6 +485,269 @@ ${repRules}
 `;
 }
 
+export function generateCRM_RULES(a: WizardAnswers): string {
+  const agentSlug = a.agentName.toLowerCase().replace(/\s+/g, '-');
+  const repSlugs = a.reps.map(r => r.name.toLowerCase().replace(/\s+/g, '-'));
+  const smsChannels = repSlugs.map(s => `${a.orgSlug}-${agentSlug}-${s}-sms`).join(', ');
+
+  return `# CRM_RULES.md — ${a.orgName} CRM Rules
+# Read every session.
+
+## Contact Creation — DEDUP RULE — PERMANENT
+**NEVER create a new CRM contact without completing ALL of these checks first:**
+1. Search by **email address** (exact match)
+2. Search by **full name** (first + last)
+3. Search by **first name only** (catches partial/typo matches)
+4. Search by **phone number** if provided
+
+If ANY search returns a result, use and update that existing record — do NOT create a new one.
+Only create a new contact if ALL four searches return zero results.
+
+## CRM Write Verification — MANDATORY
+NEVER tell a rep that you've logged an activity, note, or update to CRM until you have received a successful API response (HTTP 200/201 with a record ID). If the write fails, say so and stop.
+
+## Missing Data — Be Honest
+If lead data is missing from CRM, say so directly. Do NOT infer or fabricate. If it's not in the DB, say it's missing.
+
+## CRM — MANDATORY QUERY RULES
+**Always \`select=*\` on contact queries** — never a limited field list.
+**Any time a contact is looked up** — pull their full record: notes, activities, tasks, and deals.
+
+\`\`\`bash
+# Fuzzy name search — always ilike, never exact
+GET /contacts?first_name=ilike.*john*&select=*
+\`\`\`
+
+## Contact Ownership
+- New contacts: assign to the rep whose channel you're operating in (--user flag determines this)
+- Existing contacts: whoever is working the lead uses their --user flag
+- Never re-assign without explicit rep instruction
+
+## Portal SMS Approval
+SMS drafts post to the rep's SMS channel (${smsChannels}).
+When a rep says "send it" / "yes" / "go ahead" for an SMS:
+\`\`\`bash
+python3 /home/node/.openclaw/workspace/automation/send_sms.py \\
+  --send --to <phone_number> --body-file <file> --user ${repSlugs[0]}
+\`\`\`
+The script marks the portal draft as sent automatically and logs to CRM.
+
+## Lead & Inbox Scanning — Check Activities Before Flagging
+Before flagging any lead or email as needing a reply, ALWAYS check the CRM activity log for that contact first.
+If there is an outbound email, call note, or activity logged within the last 48 hours, do NOT flag it — it has already been handled.
+
+## Task Rules — PERMANENT
+- **NEVER auto-create tasks. No exceptions.**
+- Tasks only when a rep explicitly asks for one.
+- ONE task per contact max — close existing before creating new.
+- After sending any email → PATCH task to \`status = awaiting_reply\`
+- When reply comes in → PATCH task to \`status = open\`
+- Never contact a lead whose task is \`awaiting_reply\`
+
+## Missed Call Detection
+Before flagging a scheduled meeting as missed, check activities first:
+\`GET /activities?contact_id=eq.{id}&activity_type=eq.call&created_at=gte.{meeting_scheduled_time}\`
+Only flag missed if no call activity exists in that window.
+
+## CRM Ownership Routing
+Always route based on who triggered the action — pass \`--user REPSLUG\` to all scripts.
+Never hardcode IDs. Scripts handle routing automatically from org_config.json.
+
+## All Writes — MANDATORY
+Never confirm any CRM action until you have received HTTP 200/201/204.
+Applies to: contact creation, owner assignment, activity logging, note creation, task creation, deal creation.
+`;
+}
+
+export function generateWORKFLOW(a: WizardAnswers): string {
+  const agentSlug = a.agentName.toLowerCase().replace(/\s+/g, '-');
+  const repRows = a.reps.map(r => {
+    const slug = r.name.toLowerCase().replace(/\s+/g, '-');
+    return `| ${r.name} | ${r.email} | ${a.orgSlug}-${agentSlug}-${slug} | ${a.orgSlug}-${agentSlug}-${slug}-sms |`;
+  }).join('\n');
+  const firstRepSlug = a.reps[0]?.name.toLowerCase().replace(/\s+/g, '-') || 'rep';
+  const repSlugs = a.reps.map(r => `\`${r.name.toLowerCase().replace(/\s+/g, '-')}\``).join(' | ');
+  const callRecordingsChannel = `${a.orgSlug}-${agentSlug}-call-recordings`;
+  const repChannelIds = a.reps.map(r => {
+    const slug = r.name.toLowerCase().replace(/\s+/g, '-');
+    return `${r.name} → \`${a.orgSlug}-${agentSlug}-${slug}\``;
+  }).join(' | ');
+
+  return `## Response Length — Hard Rule
+Keep replies SHORT. Chat channels: 3-5 sentences max unless explicitly asked for detail.
+Long responses cause model timeouts — treat verbosity as a bug. Lead with the answer.
+
+# WORKFLOW.md — Email & Send Procedures
+
+## Reps & Channels
+
+| Rep | Email | Portal Channel | SMS Channel |
+|-----|-------|----------------|-------------|
+${repRows}
+
+---
+
+## Email — Send Procedure
+
+**NEVER call Resend directly. NEVER use Gmail API. Always use send_email.py.**
+
+### Step 1 — Write body + subject using the \`write\` tool (NOT echo or bash)
+Dollar signs (\$500k, \$1.2M) get stripped by bash. The \`write\` tool bypasses bash — they survive.
+Always use \`--body-file\` and \`--subject-file\`, never inline \`--body\` or \`--subject\`.
+
+### Step 2 — Draft (posts to rep's portal channel, does NOT send)
+\`\`\`bash
+python3 /home/node/.openclaw/workspace/automation/send_email.py \\
+  --to "lead@example.com" \\
+  --subject-file /tmp/email_subject.txt \\
+  --body-file /tmp/email_body.txt \\
+  --user ${firstRepSlug} \\
+  --draft
+\`\`\`
+Use appropriate --user flag per rep. Optional: \`--cc "email"\`, \`--in-reply-to "<resend_id>"\` to thread.
+
+**After \`--draft\` runs and posts the card → respond NO_REPLY. The card is the reply. Never add a second message.**
+
+### Step 3 — Wait for explicit approval
+✅ \`send it\` / \`yes\` / \`go ahead\` / \`approved\`
+❌ \`send to me\` — forward to rep, NOT approval to send to lead
+❌ \`send to [anyone]\` — routing instruction, not approval
+
+### Step 4 — Send
+\`\`\`bash
+python3 /home/node/.openclaw/workspace/automation/send_email.py \\
+  --to "lead@example.com" \\
+  --user ${firstRepSlug} \\
+  --send
+\`\`\`
+Check output — must say \`Sent\`. Anything else = failure. Report it.
+
+---
+
+## SMS — Draft & Send Flow
+
+\`\`\`bash
+# Step 1 — use mktemp for unique filename
+SMS_BODY_FILE=$(mktemp /tmp/sms_body.XXXXXX.txt)
+# (use write tool to write content to $SMS_BODY_FILE)
+
+# Step 2 — draft
+python3 /home/node/.openclaw/workspace/automation/send_sms.py \\
+  --to "+15125551234" \\
+  --body-file "$SMS_BODY_FILE" \\
+  --draft \\
+  --user ${firstRepSlug} \\
+  --contact-id UUID
+
+# Step 3 — send (after approval)
+python3 /home/node/.openclaw/workspace/automation/send_sms.py \\
+  --to "+15125551234" \\
+  --body-file "$SMS_BODY_FILE" \\
+  --send \\
+  --user ${firstRepSlug}
+\`\`\`
+Never log SMS activity manually — send_sms.py logs to CRM automatically on \`--send\`.
+
+---
+
+## Calls — Procedure
+
+### Fast path (rep says "call [name]")
+1. ONE CRM lookup for phone + contact_id only.
+2. Confirm: "Calling [Name] at [number] — go?"
+3. Initiate on confirmation.
+
+\`\`\`bash
+python3 /home/node/.openclaw/workspace/automation/make_call.py \\
+  --rep ${firstRepSlug} \\
+  --to "+15125551234" \\
+  --lead-name "Lead Full Name" \\
+  --contact-id "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+\`\`\`
+
+Rep slugs: ${repSlugs}
+Transcript auto-posts to \`${callRecordingsChannel}\` after processing.
+
+### Call logging (MANDATORY — both steps)
+\`\`\`bash
+NOTES_FILE=$(mktemp /tmp/call_notes.XXXXXX.txt)
+# write call summary to $NOTES_FILE
+python3 /home/node/.openclaw/workspace/automation/log_activity.py \\
+  --email "lead@example.com" --type note --title "Call Notes — [Lead Name]" \\
+  --body-file "$NOTES_FILE" --user ${firstRepSlug}
+
+python3 /home/node/.openclaw/workspace/automation/log_activity.py \\
+  --email "lead@example.com" --type call --title "Call — [Lead Name] (~Xm)" \\
+  --body "Brief outcome" --user ${firstRepSlug}
+\`\`\`
+Note without activity = call invisible to reports. Both steps required.
+
+---
+
+## Post-Call Scorecard — Portal POST
+
+Write to \`/tmp/post_scorecard.py\` using the \`write\` tool, then run it:
+
+\`\`\`python
+import json, urllib.request
+
+PORTAL_KEY = "eyJhbG\u2026RhrI"
+
+scorecard_content = """📞 Call Scorecard — [Lead Name]
+Date: [date]
+Duration: [~X min]
+Outcome: [one sentence]
+Next step: [action + date]
+Score: [1-5] — [brief rationale]"""
+
+payload = json.dumps({
+    "channel_id": "${a.orgSlug}-${agentSlug}-${firstRepSlug}",
+    "org_id": "PORTAL_ORG_ID",
+    "sender_type": "agent",
+    "sender_name": "${a.agentName}",
+    "content": scorecard_content,
+    "processed": True
+}).encode()
+
+req = urllib.request.Request(
+    "https://xqvnpcxyyxxxydescfzw.supabase.co/rest/v1/portal_messages",
+    data=payload,
+    headers={
+        "apikey": PORTAL_KEY,
+        "Authorization": f"Bearer {PORTAL_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+    },
+    method="POST"
+)
+urllib.request.urlopen(req)
+print("Scorecard posted.")
+\`\`\`
+
+Channel IDs: ${repChannelIds}
+
+---
+
+## No Double Posting
+
+After any script that posts its own portal message (send_email.py --draft, scorecards, etc.) — respond **NO_REPLY**.
+
+---
+
+## CRM Logging — ALWAYS Use log_activity.py
+\`\`\`bash
+python3 /home/node/.openclaw/workspace/automation/log_activity.py \\
+  --email "contact@example.com" --type call --title "Call — Name (Xm)" --body "Summary" --user REPSLUG
+# Types: call, email_received, note, sms_sent
+# email_sent is auto-logged by send_email.py — NEVER log manually
+\`\`\`
+
+## Draft Files
+- Always use mktemp or UNIQUE filenames — never overwrite a draft
+- Clean up after sending: \`rm /tmp/email_body_*.txt /tmp/sms_body_*.txt\`
+`;
+}
+
 export function generateAllFiles(a: WizardAnswers): Record<string, string> {
   return {
     'SOUL.md': generateSOUL(a),
@@ -500,5 +758,7 @@ export function generateAllFiles(a: WizardAnswers): Record<string, string> {
     'MEMORY.md': generateMEMORY(a),
     'AGENTS.md': generateAGENTS(a),
     'TOOLS.md': generateTOOLS(a),
+    'CRM_RULES.md': generateCRM_RULES(a),
+    'WORKFLOW.md': generateWORKFLOW(a),
   };
 }

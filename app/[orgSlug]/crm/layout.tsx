@@ -25,6 +25,7 @@ export default async function CrmLayout({ children, params }: Props) {
 
   const b2bTabs = [
     { label: 'Companies', href: `/${orgSlug}/crm`, exact: true },
+    { label: 'Contacts', href: `/${orgSlug}/crm/contacts` },
     { label: 'Pipeline', href: `/${orgSlug}/crm/deals` },
     { label: 'Tasks', href: `/${orgSlug}/crm/tasks` },
   ];

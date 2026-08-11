@@ -13,7 +13,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   if (!user) redirect('/login');
 
   const { data: org } = await supabase.from('organizations').select('*').eq('slug', orgSlug).single();
-  if (!org?.crm_supabase_url || !org?.crm_supabase_key || org?.crm_mode !== 'b2c') {
+  if (!org?.crm_supabase_url || !org?.crm_supabase_key) {
     return notFound();
   }
 
