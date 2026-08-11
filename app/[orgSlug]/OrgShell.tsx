@@ -7,7 +7,7 @@ import NotificationPrompt from '@/components/NotificationPrompt';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
 import { MobileToolbarProvider, useMobileToolbar } from '@/context/MobileToolbar';
 // PresenceButton removed — replaced by Members panel
-import { registerServiceWorker } from '@/lib/push';
+import { registerServiceWorker, resyncPushSubscription } from '@/lib/push';
 
 interface Props {
   org: Organization;
@@ -23,10 +23,12 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
   const pathname = usePathname();
   const { toolbar } = useMobileToolbar();
 
-  // Register service worker on every load so push infra is always ready
+  // Register service worker on every load so push infra is always ready.
+  // Then re-sync any live browser push subscription back to the server —
+  // recovers from server-side subscription wipes without user action.
   useEffect(() => {
-    registerServiceWorker();
-  }, []);
+    registerServiceWorker().then(() => resyncPushSubscription(currentUser.id));
+  }, [currentUser.id]);
 
   // Dynamic bottom padding — keeps content above Android gesture nav bar (28px),
   // but drops to 0 when keyboard is open so the input bar doesn't jump.

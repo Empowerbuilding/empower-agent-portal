@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
 import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS } from '@/components/ui/Icons';
@@ -327,6 +327,71 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-seed sidebar data (same queries as initial mount) — recovers from
+  // dropped realtime sockets (mobile backgrounding) that leave stale unread
+  // dots and last-message state until manual navigation.
+  const refreshSidebar = useCallback(async () => {
+    try {
+      const { data: seenData } = await supabase
+        .from('portal_channel_members')
+        .select('channel_id, last_seen_at')
+        .eq('user_id', currentUser.id);
+      if (seenData) {
+        setLastSeen(prev => {
+          const updated = { ...prev };
+          for (const row of seenData) {
+            // Never regress a newer local (optimistic) value
+            if (row.last_seen_at && (!updated[row.channel_id] || updated[row.channel_id] < row.last_seen_at)) {
+              updated[row.channel_id] = row.last_seen_at;
+            }
+          }
+          return updated;
+        });
+      }
+
+      const ids = channels.map(c => c.id);
+      if (ids.length > 0) {
+        const results = await Promise.all(
+          ids.map(chId =>
+            supabase
+              .from('portal_messages')
+              .select('channel_id, created_at')
+              .eq('channel_id', chId)
+              .or(`sender_id.is.null,sender_id.neq.${currentUser.id}`)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+          )
+        );
+        const latest: Record<string, string> = {};
+        for (const { data } of results) {
+          if (data) latest[data.channel_id] = data.created_at;
+        }
+        setLatestMsg(latest);
+      }
+    } catch {
+      // network hiccup — keep current state, next tick will retry
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser.id, channels]);
+
+  // Socket-drop insurance: refresh when the tab becomes visible, when the
+  // network comes back, and on a 60s interval while visible.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshSidebar(); };
+    const onOnline = () => refreshSidebar();
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') refreshSidebar();
+    }, 60000);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onOnline);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [refreshSidebar]);
+
   // Track previous channel so we can mark it as seen when leaving
   const prevChId = useRef<string | null>(null);
 
@@ -365,48 +430,94 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
   useEffect(() => {
     const activeChannelIds = channels.map(c => c.id);
     if (activeChannelIds.length === 0) return;
-    const sub = supabase
-      .channel('sidebar_unread')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages' }, (payload) => {
-        const msg = payload.new as { channel_id: string; created_at: string; sender_type: string; sender_id: string | null };
-        if (msg.sender_id === currentUser.id) return;
-        if (!activeChannelIds.includes(msg.channel_id)) return;
-        setLatestMsg(prev => ({ ...prev, [msg.channel_id]: msg.created_at }));
-        // If this message is for the channel we're currently viewing, mark it seen immediately
-        // so no false unread dot appears on the active channel
-        const parts = window.location.pathname.split('/');
-        const activeCh = parts[parts.length - 1];
-        if (msg.channel_id === activeCh) {
-          setLastSeen(prev => ({ ...prev, [msg.channel_id]: msg.created_at }));
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(sub); };
+    let disposed = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let sub: ReturnType<typeof supabase.channel> | null = null;
+    let wasDropped = false;
+
+    const connect = () => {
+      if (disposed) return;
+      if (sub) supabase.removeChannel(sub);
+      sub = supabase
+        .channel('sidebar_unread')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages' }, (payload) => {
+          const msg = payload.new as { channel_id: string; created_at: string; sender_type: string; sender_id: string | null };
+          if (msg.sender_id === currentUser.id) return;
+          if (!activeChannelIds.includes(msg.channel_id)) return;
+          setLatestMsg(prev => ({ ...prev, [msg.channel_id]: msg.created_at }));
+          // If this message is for the channel we're currently viewing, mark it seen immediately
+          // so no false unread dot appears on the active channel
+          const parts = window.location.pathname.split('/');
+          const activeCh = parts[parts.length - 1];
+          if (msg.channel_id === activeCh) {
+            setLastSeen(prev => ({ ...prev, [msg.channel_id]: msg.created_at }));
+          }
+        })
+        .subscribe((status) => {
+          if (disposed) return;
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            // Socket dropped — resubscribe after a short backoff
+            wasDropped = true;
+            if (retryTimer) clearTimeout(retryTimer);
+            retryTimer = setTimeout(connect, 5000);
+          } else if (status === 'SUBSCRIBED' && wasDropped) {
+            // Reconnected — catch up on anything missed while the socket was down
+            wasDropped = false;
+            refreshSidebar();
+          }
+        });
+    };
+    connect();
+    return () => {
+      disposed = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (sub) supabase.removeChannel(sub);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channels]);
 
   // Bug 2 fix: cross-device seen sync via realtime on portal_channel_members
   // When you read on phone → DB updates → desktop picks it up immediately
   useEffect(() => {
     if (!currentUser.id) return;
-    const sub = supabase
-      .channel(`seen_sync:${currentUser.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'portal_channel_members',
-        filter: `user_id=eq.${currentUser.id}`,
-      }, (payload) => {
-        const row = payload.new as { channel_id: string; last_seen_at: string };
-        if (row.channel_id && row.last_seen_at) {
-          setLastSeen(prev => {
-            // Only update if the incoming value is newer (don't regress)
-            if (prev[row.channel_id] && prev[row.channel_id] >= row.last_seen_at) return prev;
-            return { ...prev, [row.channel_id]: row.last_seen_at };
-          });
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(sub); };
+    let disposed = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let sub: ReturnType<typeof supabase.channel> | null = null;
+
+    const connect = () => {
+      if (disposed) return;
+      if (sub) supabase.removeChannel(sub);
+      sub = supabase
+        .channel(`seen_sync:${currentUser.id}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'portal_channel_members',
+          filter: `user_id=eq.${currentUser.id}`,
+        }, (payload) => {
+          const row = payload.new as { channel_id: string; last_seen_at: string };
+          if (row.channel_id && row.last_seen_at) {
+            setLastSeen(prev => {
+              // Only update if the incoming value is newer (don't regress)
+              if (prev[row.channel_id] && prev[row.channel_id] >= row.last_seen_at) return prev;
+              return { ...prev, [row.channel_id]: row.last_seen_at };
+            });
+          }
+        })
+        .subscribe((status) => {
+          if (disposed) return;
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            if (retryTimer) clearTimeout(retryTimer);
+            retryTimer = setTimeout(connect, 5000);
+          }
+        });
+    };
+    connect();
+    return () => {
+      disposed = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (sub) supabase.removeChannel(sub);
+    };
   }, [currentUser.id]);
 
   function hasUnread(chId: string) {

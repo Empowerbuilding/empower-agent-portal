@@ -46,6 +46,8 @@ export default function SettingsPage() {
   const [installed, setInstalled] = useState(false);
   const [isIOSDevice, setIsIOSDevice] = useState(false);
   const [notifStatus, setNotifStatus] = useState<'loading' | 'unsupported' | 'blocked' | 'enabled' | 'disabled'>('loading');
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState('');
   const [notifToggling, setNotifToggling] = useState(false);
   const [notifError, setNotifError] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
@@ -150,6 +152,29 @@ export default function SettingsPage() {
       setNotifError(e?.message || 'Unexpected error.');
     } finally {
       setNotifToggling(false);
+    }
+  }
+
+  async function handleSendTest() {
+    if (testSending) return;
+    setNotifError('');
+    setTestResult('');
+    setTestSending(true);
+    try {
+      // Idempotent re-sync first — guarantees the server has this device's
+      // subscription even if server-side rows were wiped
+      if (currentUserId) await subscribeToPush(currentUserId);
+      const res = await fetch('/api/push/test', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setTestResult(`Test sent to ${data.sent} device${data.sent === 1 ? '' : 's'} ✅`);
+      } else {
+        setNotifError(data.error || 'Test notification failed.');
+      }
+    } catch (e: any) {
+      setNotifError(e?.message || 'Test notification failed.');
+    } finally {
+      setTestSending(false);
     }
   }
 
@@ -331,6 +356,23 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+          {notifStatus === 'enabled' && (
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button
+                onClick={handleSendTest}
+                disabled={testSending}
+                style={{
+                  padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '6px',
+                  background: 'none', color: 'var(--muted)', fontWeight: 600,
+                  cursor: testSending ? 'wait' : 'pointer', fontSize: '12px',
+                  opacity: testSending ? 0.6 : 1,
+                }}
+              >
+                {testSending ? 'Sending…' : '🔔 Send test notification'}
+              </button>
+              {testResult && <span style={{ fontSize: '12px', color: '#22c55e' }}>{testResult}</span>}
+            </div>
+          )}
           {notifStatus === 'blocked' && (
             <div style={{ marginTop: '10px', padding: '8px 10px', background: 'rgba(218,54,51,0.08)', borderRadius: '6px', fontSize: '12px', color: 'var(--muted)' }}>
               Chrome: click the 🔒 lock icon in the address bar → Notifications → Allow

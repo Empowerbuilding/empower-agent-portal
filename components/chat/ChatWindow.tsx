@@ -809,7 +809,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                   {(channel.id === 'ceo-general' ? [
                     { label: '🧠 CEO Digest',  cmd: 'generate report: ceo_digest' },
                   ] : [
-                    { label: 'Pipeline Report',  cmd: 'generate report: pipeline' },
+                    { label: 'Pipeline Report (B2C)', cmd: 'generate report: pipeline' },
+                    { label: 'B2B Pipeline Report',   cmd: 'generate report: b2b_pipeline' },
                     { label: 'Activity Report',  cmd: 'generate report: activity' },
                     { label: 'Whale Prospects',  cmd: 'generate report: whale_prospects' },
                     { label: 'Call Summary',     cmd: 'generate report: call_summary' },

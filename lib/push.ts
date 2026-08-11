@@ -65,6 +65,34 @@ export async function subscribeToPush(userId: string): Promise<{ ok: boolean; er
   }
 }
 
+/**
+ * Re-sync an existing browser push subscription to the server.
+ * Covers the case where server-side push_subscriptions rows were wiped
+ * (e.g. cascade delete) while the browser still holds a live subscription —
+ * the UI thinks notifications are enabled but the server has nobody to push to.
+ * Idempotent (server upserts on user_id+endpoint) and debounced to once per session.
+ */
+export async function resyncPushSubscription(userId: string): Promise<void> {
+  try {
+    if (typeof window === 'undefined') return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+    if (Notification.permission !== 'granted') return;
+    if (sessionStorage.getItem('push-resynced') === '1') return;
+    const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+    if (!reg) return;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON(), userId }),
+    });
+    if (res.ok) sessionStorage.setItem('push-resynced', '1');
+  } catch (e) {
+    console.error('[push] resync failed:', e);
+  }
+}
+
 export async function unsubscribeFromPush(userId: string): Promise<void> {
   const reg = await navigator.serviceWorker?.getRegistration('/sw.js');
   if (!reg) return;

@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import ImageLightbox from '@/components/ui/ImageLightbox';
@@ -77,9 +77,10 @@ export default function GalleryPage() {
     init();
   }, [orgSlug]);
 
-  const loadRenders = useCallback(async () => {
+  // background=true skips the loading spinner — used for silent refreshes
+  const loadRenders = useCallback(async (background = false) => {
     if (!orgId || !currentUser) return;
-    setLoading(true);
+    if (!background) setLoading(true);
     try {
       let query = supabase
         .from('render_gallery')
@@ -96,22 +97,50 @@ export default function GalleryPage() {
       if (error) throw error;
       setRenders(data ?? []);
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, currentUser]);
+
+  const loadAllRenders = useCallback(async (background = false) => {
+    if (!orgId) return;
+    if (!background) setAllRendersLoading(true);
+    try {
+      const r = await fetch(`/api/renders/all?orgId=${orgId}`);
+      const d = await r.json();
+      setAllRenders(d.renders ?? []);
+    } catch {
+      // keep existing data on failed background refresh
+    } finally {
+      if (!background) setAllRendersLoading(false);
+    }
+  }, [orgId]);
 
   useEffect(() => { loadRenders(); }, [loadRenders]);
 
-  // Load all renders when tab switches
+  // Refetch "all renders" every time the tab is activated — spinner only on first load
+  const allLoadedOnce = useRef(false);
   useEffect(() => {
-    if (activeTab !== 'all' || !orgId || allRenders.length > 0) return;
-    setAllRendersLoading(true);
-    fetch(`/api/renders/all?orgId=${orgId}`)
-      .then(r => r.json())
-      .then(d => setAllRenders(d.renders ?? []))
-      .catch(() => {})
-      .finally(() => setAllRendersLoading(false));
-  }, [activeTab, orgId]);
+    if (activeTab !== 'all' || !orgId) return;
+    loadAllRenders(allLoadedOnce.current);
+    allLoadedOnce.current = true;
+  }, [activeTab, orgId, loadAllRenders]);
+
+  // Live updates: poll every 30s while visible + refetch when tab regains visibility
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (activeTab === 'all') loadAllRenders(true);
+      else loadRenders(true);
+    };
+    const interval = setInterval(refresh, 30000);
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [activeTab, loadAllRenders, loadRenders]);
 
   const isInternal = currentUser && currentUser.role !== 'contractor';
   const canQA = isInternal;
