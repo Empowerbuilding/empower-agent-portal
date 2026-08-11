@@ -47,6 +47,7 @@ export default function EditDealSlideOver({
     title: '',
     contact_id: '',
     deal_type: '',
+    sales_type: 'b2c',
     stage: 'qualified',
     value: '',
     expected_close_date: '',
@@ -62,6 +63,7 @@ export default function EditDealSlideOver({
         title: deal.title ?? '',
         contact_id: deal.contact_id ?? deal.contact?.id ?? '',
         deal_type: deal.deal_type ?? '',
+        sales_type: deal.sales_type ?? 'b2c',
         stage: deal.stage ?? 'qualified',
         value: deal.value != null ? String(deal.value) : '',
         expected_close_date: deal.expected_close_date ?? '',
@@ -84,6 +86,7 @@ export default function EditDealSlideOver({
       title: form.title.trim(),
       contact_id: form.contact_id || null,
       deal_type: form.deal_type || null,
+      sales_type: form.sales_type,
       stage: form.stage,
       value: form.value ? parseFloat(form.value) : null,
       expected_close_date: form.expected_close_date || null,
@@ -224,6 +227,20 @@ export default function EditDealSlideOver({
               {contacts.map(c => (
                 <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
               ))}
+            </select>
+          </div>
+
+          {/* Pipeline (sales type) */}
+          <div>
+            <label style={labelStyle}>Pipeline</label>
+            <select
+              value={form.sales_type}
+              onChange={e => setForm(f => ({ ...f, sales_type: e.target.value }))}
+              style={{ ...inputStyle, cursor: 'pointer' }}
+            >
+              <option value="b2c">Consumer (B2C)</option>
+              <option value="b2b">Builder (B2B)</option>
+              <option value="shopify">Shopify</option>
             </select>
           </div>
 
