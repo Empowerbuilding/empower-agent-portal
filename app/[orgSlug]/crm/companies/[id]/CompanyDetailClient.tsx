@@ -12,6 +12,9 @@ const STAGE_LABELS: Record<string, { label: string; color: string }> = {
   negotiation:    { label: 'Negotiation',    color: '#f97316' },
   closed_won:     { label: 'Closed Won',     color: '#22c55e' },
   closed_lost:    { label: 'Closed Lost',    color: '#ef4444' },
+  study_set:      { label: 'Study Set',      color: '#14b8a6' },
+  full_set:       { label: 'Full Set',       color: '#06b6d4' },
+  modifications:  { label: 'Modifications',  color: '#d97706' },
 };
 
 function StageBadge({ stage }: { stage: string }) {

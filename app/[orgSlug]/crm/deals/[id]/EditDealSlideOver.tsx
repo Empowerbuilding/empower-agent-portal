@@ -10,6 +10,9 @@ const STAGES = [
   { key: 'engineering',      label: 'Engineering' },
   { key: 'builder_referral', label: 'Builder Referral' },
   { key: 'active',           label: 'Active' },
+  { key: 'study_set',        label: 'Study Set (Shopify)' },
+  { key: 'full_set',         label: 'Full Set (Shopify)' },
+  { key: 'modifications',    label: 'Modifications (Shopify)' },
   { key: 'complete',         label: 'Complete' },
   { key: 'lost',             label: 'Lost' },
 ];
