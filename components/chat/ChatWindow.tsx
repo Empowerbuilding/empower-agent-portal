@@ -91,6 +91,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       });
   }, [orgId]);
   const [agentTyping, setAgentTyping] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [listening, setListening] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -181,6 +182,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       // This handles long-running agent tasks (code changes, deploys) that take >90s.
       const isPendingAgentReply = lastMsg && lastMsg.sender_type === 'user' &&
         lastMsg.content !== '/reset' &&
+        lastMsg.content !== '/stop' &&
         shouldShowTyping(channel.id, lastMsg.content);
       if (isPendingAgentReply) {
         setAgentTyping(true);
@@ -224,7 +226,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages', filter: `channel_id=eq.${channel.id}` },
         (payload) => {
           const msg = payload.new as PortalMessage;
-          if (msg.sender_type === 'user' && msg.content !== '/reset' && shouldShowTyping(channel.id, msg.content)) {
+          if (msg.sender_type === 'user' && msg.content !== '/reset' && msg.content !== '/stop' && shouldShowTyping(channel.id, msg.content)) {
             setAgentTyping(true);
             if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
             // 10-min safety fallback; cleared immediately when agent reply lands
@@ -609,10 +611,32 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       processed: false,
     });
     setSending(false);
-    if (shouldShowTyping(channel.id, content)) {
+    if (content !== '/stop' && shouldShowTyping(channel.id, content)) {
       setAgentTyping(true);
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
+    }
+  }
+
+  // Stop button — sends a literal '/stop' message (plugin aborts the agent's in-flight run).
+  // Dedicated helper: bypasses staged attachments and clears the typing indicator immediately.
+  async function sendStop() {
+    if (stopping) return;
+    setStopping(true);
+    try {
+      await supabase.from('portal_messages').insert({
+        channel_id: channel.id,
+        org_id: orgId,
+        sender_type: 'user',
+        sender_id: currentUser.id,
+        sender_name: currentUser.name,
+        content: '/stop',
+        processed: false,
+      });
+    } finally {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      setAgentTyping(false);
+      setStopping(false);
     }
   }
 
@@ -840,6 +864,21 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', fontSize: '18px', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
               {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
             </button>
+            {agentTyping && (
+              <button
+                className="send-btn"
+                onClick={sendStop}
+                disabled={stopping}
+                title="Stop the agent"
+                style={{ background: '#da3633' }}
+              >
+                {stopping ? '…' : (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                    <rect x="1" y="1" width="10" height="10" rx="2" />
+                  </svg>
+                )}
+              </button>
+            )}
             <button className="send-btn" onClick={() => sendMessage()} disabled={(!input.trim() && !stagedFiles.length) || sending}>
               {sending ? '…' : <IconSend size={15} />}
             </button>
