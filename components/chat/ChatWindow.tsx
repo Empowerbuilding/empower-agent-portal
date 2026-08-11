@@ -11,6 +11,7 @@ import SearchModal from './SearchModal';
 import ChatOverflowMenu from './ChatOverflowMenu';
 import PresenceButton from '@/components/presence/PresenceButton';
 import MemberPanel from './MemberPanel';
+import NotifyBell from './NotifyBell';
 import { playSend, playReceive, unlockAudio } from '@/lib/sounds';
 
 interface Props {
@@ -390,6 +391,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             <span style={{ position: 'absolute', top: 0, right: 0, background: onlineCount > 0 ? '#22c55e' : '#6b7280', color: '#fff', borderRadius: '50%', width: 14, height: 14, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--bg)' }}>{onlineCount}</span>
           </button>
           <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.9 }}><IconSearch size={17} /></button>
+          <NotifyBell channelId={channel.id} size={17} />
           <ChatOverflowMenu
             contextPct={contextPct}
             resetting={resetting}
@@ -698,6 +700,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               ); })()}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <NotifyBell channelId={channel.id} size={16} />
               <button onClick={() => setSearchOpen(true)} title="Search" style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.85 }}><IconSearch size={17} /></button>
               <button onClick={() => { setShowMembers(v => !v); const since = new Date(Date.now()-5*60*1000).toISOString(); supabase.from('portal_users').select('id').eq('org_id',orgId).gte('last_active_at',since).then(({data})=>{ if(data) setOnlineCount(data.length); }); }} title="Members" style={{ position: 'relative', background: showMembers ? 'var(--surface-hover)' : 'none', border: 'none', color: showMembers ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', padding: '4px 6px', borderRadius: 4, display: 'flex', alignItems: 'center', opacity: 0.85 }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>

@@ -25,14 +25,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const record = body.record;
 
-  // Only notify on agent messages
-  if (!record || record.sender_type !== 'agent') {
+  // Notify on agent + human messages (system messages never push).
+  // Per-recipient filtering happens below via portal_channel_members.notify_mode.
+  if (!record || (record.sender_type !== 'agent' && record.sender_type !== 'user')) {
     return NextResponse.json({ ok: true, skipped: true });
   }
 
   const channelId = record.channel_id;
   const messagePreview = record.content?.slice(0, 120) || '';
-  const senderName = record.sender_name || 'Vanessa';
+  const senderName = record.sender_name || (record.sender_type === 'agent' ? 'Agent' : 'Someone');
 
   // Get channel info
   const { data: channel } = await supabase
@@ -53,15 +54,33 @@ export async function POST(req: NextRequest) {
   const channelUrl = org ? `/${org.slug}/${channelId}` : '/';
   const notifTitle = `${senderName} • #${channel.display_name}`;
 
-  // Get all channel members
+  // Get all channel members with their notification preferences + last-seen
   const { data: members } = await supabase
     .from('portal_channel_members')
-    .select('user_id')
+    .select('user_id, notify_mode, last_seen_at')
     .eq('channel_id', channelId);
 
   if (!members || members.length === 0) return NextResponse.json({ ok: true });
 
-  const userIds = members.map((m: any) => m.user_id);
+  // Per-channel notification prefs: 'all' | 'agents' | 'humans' | 'none' (missing → 'agents', the legacy behavior)
+  const wantsThisMessage = (mode: string | null) => {
+    const m = mode || 'agents';
+    if (m === 'none') return false;
+    if (m === 'all') return true;
+    if (m === 'agents') return record.sender_type === 'agent';
+    if (m === 'humans') return record.sender_type === 'user';
+    return record.sender_type === 'agent';
+  };
+
+  const optedInMembers = members.filter((m: any) => {
+    // Never notify the sender themselves (user messages carry portal_users.id in sender_id)
+    if (record.sender_type === 'user' && record.sender_id && m.user_id === record.sender_id) return false;
+    return wantsThisMessage(m.notify_mode);
+  });
+
+  if (optedInMembers.length === 0) return NextResponse.json({ ok: true, skipped: 'no opted-in recipients' });
+
+  const userIds = optedInMembers.map((m: any) => m.user_id);
 
   // Bug 3 fix: skip push for users who are actively in the portal or have already seen this channel
   const ACTIVE_WINDOW_MS = 90 * 1000; // 90s — heartbeat fires every 30s
@@ -72,11 +91,7 @@ export async function POST(req: NextRequest) {
     .select('id, last_active_at')
     .in('id', userIds);
 
-  const { data: channelSeenRows } = await supabase
-    .from('portal_channel_members')
-    .select('user_id, last_seen_at')
-    .eq('channel_id', channelId)
-    .in('user_id', userIds);
+  const channelSeenRows = optedInMembers;
 
   const activeUserIds = new Set(
     (portalUsers ?? []).filter((u: any) => {
