@@ -532,6 +532,10 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
 
     // Clone entire sales-agent .openclaw dir (brings plugins, extensions, config, pre-approved device pairing)
     await ssh.execCommand(`cp -r /root/.sales-agent ${ocPath}`);
+    // Purge cloned state that must NEVER carry over to a new org:
+    // - .env holds the SOURCE org's CRM credentials (caused the ITS↔Barnhaus data leak, Aug 2026)
+    // - cron dir carries file-based job cruft (jobs.json.migrated.*) from the source agent
+    await ssh.execCommand(`rm -rf ${ocPath}/.env ${ocPath}/cron`);
 
     // Replace workspace with fresh template
     await ssh.execCommand(`rm -rf ${workspacePath}`);
@@ -674,6 +678,7 @@ print('cleared')
         email:           r.email,
         phone:           r.phone || '',
         crm_id:          crmRepIds[r.email] || '',   // auto-populated from CRM users table
+        crm_user_id:     crmRepIds[r.email] || '',   // some scripts read crm_user_id, some crm_id — write both
         portal_channel:  `${input.orgSlug}-${agentSlug}-${r.name.toLowerCase().replace(/\s+/g, '-')}`,
         sms_channel:     `${input.orgSlug}-${agentSlug}-${r.name.toLowerCase().replace(/\s+/g, '-')}-sms`,
         token_file:      `${r.name.toLowerCase().replace(/\s+/g, '_')}_token.json`,
@@ -684,6 +689,21 @@ print('cleared')
     await ssh.putFile(orgConfigTmp, `${workspacePath}/automation/org_config.json`);
     fs.unlinkSync(orgConfigTmp);
     console.log('[provision] org_config.json written for', input.orgSlug);
+
+    // ── STEP 6d: Write org-scoped .env (agent runtime env — replaces the one purged from the clone) ──
+    const envContent = [
+      `GEMINI_API_KEY=${process.env.GOOGLE_AI_STUDIO_KEY || ''}`,
+      `PORTAL_SUPABASE_URL=${PORTAL_SUPABASE_URL}`,
+      `PORTAL_SUPABASE_KEY=${PORTAL_SUPABASE_KEY}`,
+      `CRM_SUPABASE_URL=${crmSupabaseUrl}`,
+      `CRM_SUPABASE_KEY=${crmServiceRoleKey}`,
+      '',
+    ].join('\n');
+    const envTmp = path.join(os.tmpdir(), `provision-env-${input.orgSlug}`);
+    fs.writeFileSync(envTmp, envContent, 'utf8');
+    await ssh.putFile(envTmp, `${ocPath}/.env`);
+    fs.unlinkSync(envTmp);
+    console.log('[provision] org-scoped .env written for', input.orgSlug);
 
     progress('starting_container', 'Starting agent container');
     // ── STEP 7: Start Docker container ───────────────────────────────────────
