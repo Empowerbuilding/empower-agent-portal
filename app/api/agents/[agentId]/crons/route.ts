@@ -4,6 +4,13 @@ import { getAgent, agentDockerExec } from '@/lib/agent-router';
 
 export const runtime = 'nodejs';
 
+// agentDockerExec appends `|| true`, so failures surface only in output text — detect them.
+function execFailed(output: string): string | null {
+  const t = (output || '').trim();
+  if (/error|not found|failed|cannot |no such container|invalid/i.test(t)) return t.slice(0, 300);
+  return null;
+}
+
 async function authCheck(agentId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -38,6 +45,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ age
 
   try {
     const output = await agentDockerExec(agentId, cmd);
+    const fail = execFailed(output);
+    if (fail) return NextResponse.json({ error: `Cron create failed on agent: ${fail}` }, { status: 500 });
     return NextResponse.json({ success: true, output: output.trim() });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -56,8 +65,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ag
   }
 
   try {
-    await agentDockerExec(agentId, `node /app/openclaw.mjs cron ${action} ${cronId}`);
-    // Update local DB cache
+    const output = await agentDockerExec(agentId, `node /app/openclaw.mjs cron ${action} ${cronId}`);
+    const fail = execFailed(output);
+    if (fail) return NextResponse.json({ error: `Cron ${action} failed on agent: ${fail}` }, { status: 500 });
+    // Update local DB cache only after the agent-side change succeeded
     await auth.supabase.from('agent_cron_jobs').update({ enabled: action === 'enable' }).eq('id', cronId);
     return NextResponse.json({ success: true });
   } catch (err: any) {
@@ -74,8 +85,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ a
   const { cronId } = await req.json();
   if (!cronId) return NextResponse.json({ error: 'Missing cronId' }, { status: 400 });
 
+
   try {
-    await agentDockerExec(agentId, `node /app/openclaw.mjs cron rm ${cronId}`);
+    const output = await agentDockerExec(agentId, `node /app/openclaw.mjs cron rm ${cronId}`);
+    const fail = execFailed(output);
+    // Host-crontab mirror rows aren't in the agent scheduler — still allow removing the row.
+    if (fail && !String(cronId).startsWith('host-cron::')) {
+      return NextResponse.json({ error: `Cron delete failed on agent: ${fail}` }, { status: 500 });
+    }
     await auth.supabase.from('agent_cron_jobs').delete().eq('id', cronId);
     return NextResponse.json({ success: true });
   } catch (err: any) {

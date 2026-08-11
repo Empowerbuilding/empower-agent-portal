@@ -53,11 +53,31 @@ function getJobInfo(name: string | null): { label: string; description: string; 
   return { label: name.replace(/_/g, ' ').replace(/-/g, ' '), description: '', isJunk: false };
 }
 
-function humanSchedule(expr: string | null): string {
+const DOW_NAMES: Record<string, string> = { '0': 'Sundays', '1': 'Mondays', '2': 'Tuesdays', '3': 'Wednesdays', '4': 'Thursdays', '5': 'Fridays', '6': 'Saturdays', '7': 'Sundays' };
+
+function dowPrefix(dow: string): string {
+  if (dow === '*') return 'Daily';
+  if (dow === '1-5') return 'Weekdays';
+  if (DOW_NAMES[dow]) return DOW_NAMES[dow];
+  return 'Daily';
+}
+
+function fmt12(h: number, m: number): string {
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function tzLabel(tz: string | null | undefined): string {
+  if (!tz || tz === 'UTC' || tz === 'America/Chicago') return 'CT';
+  return tz.split('/').pop()?.replace(/_/g, ' ') ?? tz;
+}
+
+function humanSchedule(expr: string | null, tz?: string | null): string {
   if (!expr) return '—';
   if (expr.startsWith('at ')) {
     const d = new Date(expr.slice(3));
-    if (!isNaN(d.getTime())) return `Once — ${d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })} CST`;
+    if (!isNaN(d.getTime())) return `Once — ${d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })} CT`;
     return expr;
   }
   if (expr === 'manual') return 'Manual only';
@@ -65,14 +85,20 @@ function humanSchedule(expr: string | null): string {
   if (expr.startsWith('every ')) return expr.charAt(0).toUpperCase() + expr.slice(1);
   const parts = expr.split(' ');
   if (parts.length !== 5) return expr;
-  const [min, hour, dom] = parts;
+  const [min, hour, dom, , dow] = parts;
   if (min.startsWith('*/') && hour === '*') return `Every ${min.slice(2)} min`;
   if (min === '*' && hour === '*') return 'Every minute';
   if (!min.includes('*') && !hour.includes('*') && !hour.includes(',') && dom === '*') {
-    const d = new Date(); d.setUTCHours(parseInt(hour), parseInt(min), 0);
-    return `Daily at ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })} CST`;
+    const h = parseInt(hour), m = parseInt(min);
+    if (!tz || tz === 'UTC') {
+      // Cron expression is in UTC — convert to Central for display
+      const d = new Date(); d.setUTCHours(h, m, 0, 0);
+      return `${dowPrefix(dow)} at ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })} CT`;
+    }
+    // Cron expression is already in its own timezone — display verbatim
+    return `${dowPrefix(dow)} at ${fmt12(h, m)} ${tzLabel(tz)}`;
   }
-  if (hour.includes('-') || hour.includes(',')) return 'Hourly (active hours)';
+  if (hour.includes('-') || hour.includes(',')) return `At ${expr.split(' ')[1].replace(/,/g, ', ')}h ${tzLabel(tz)}`;
   return expr;
 }
 
@@ -377,7 +403,7 @@ export default function CronsPage() {
                           </div>
                           {description && <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '3px' }}>{description}</div>}
                           <div style={{ display: 'flex', gap: '14px', marginTop: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--text)' }}>🕐 {humanSchedule(job.schedule_expr)}</span>
+                            <span style={{ fontSize: '12px', color: 'var(--text)' }}>🕐 {humanSchedule(job.schedule_expr, job.schedule_tz)}</span>
                             <span style={{ fontSize: '12px', color: statusColor }}>
                               {hasError ? '⚠️' : isExternal ? '🔧' : '✓'} {lastRunText}
                               {hasError ? ` · ${job.consecutive_errors} error${(job.consecutive_errors ?? 0) > 1 ? 's' : ''}` : ''}
