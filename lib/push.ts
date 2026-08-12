@@ -1,5 +1,20 @@
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
+/** Compare a live subscription's applicationServerKey to our VAPID public key. */
+function subscriptionMatchesKey(sub: PushSubscription, vapidKey: string): boolean {
+  try {
+    const raw = (sub.options as any)?.applicationServerKey as ArrayBuffer | null;
+    if (!raw) return true; // can't tell — assume ok
+    const a = new Uint8Array(raw);
+    const b = urlBase64ToUint8Array(vapidKey);
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -46,10 +61,29 @@ export async function subscribeToPush(userId: string): Promise<{ ok: boolean; er
     // Wait for SW to be active
     await navigator.serviceWorker.ready;
 
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as ArrayBuffer,
-    });
+    // A pre-existing subscription created with a DIFFERENT VAPID key makes
+    // subscribe() throw InvalidStateError. Detect and clear the stale one first.
+    const existing = await reg.pushManager.getSubscription();
+    if (existing && !subscriptionMatchesKey(existing, VAPID_PUBLIC_KEY)) {
+      console.warn('[push] stale subscription with old VAPID key — unsubscribing');
+      try { await existing.unsubscribe(); } catch {}
+    }
+
+    let sub: PushSubscription;
+    try {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as ArrayBuffer,
+      });
+    } catch (subErr: any) {
+      // Last-resort recovery: nuke any existing subscription and retry once
+      const cur = await reg.pushManager.getSubscription();
+      if (cur) { try { await cur.unsubscribe(); } catch {} }
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as ArrayBuffer,
+      });
+    }
 
     const res = await fetch('/api/push/subscribe', {
       method: 'POST',
@@ -82,6 +116,15 @@ export async function resyncPushSubscription(userId: string): Promise<void> {
     if (!reg) return;
     const sub = await reg.pushManager.getSubscription();
     if (!sub) return;
+    // Don't re-sync a subscription made with an old VAPID key — pushes to it
+    // would fail signature checks. Replace it with a fresh one instead.
+    if (!subscriptionMatchesKey(sub, VAPID_PUBLIC_KEY)) {
+      console.warn('[push] resync found stale-key subscription — replacing');
+      try { await sub.unsubscribe(); } catch {}
+      const r = await subscribeToPush(userId);
+      if (r.ok) sessionStorage.setItem('push-resynced', '1');
+      return;
+    }
     const res = await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

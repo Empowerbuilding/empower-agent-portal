@@ -134,14 +134,17 @@ export default function SettingsPage() {
           setNotifError('Notifications are blocked. Allow them in browser settings first.');
           return;
         }
-        const ok = await subscribeToPush(currentUserId);
-        if (ok) {
+        const result = await subscribeToPush(currentUserId);
+        if (result.ok) {
           setNotifStatus('enabled');
         } else {
           const perm = Notification.permission as string;
           if (perm === 'denied') {
             setNotifStatus('blocked');
             setNotifError('Blocked in system settings. On Android: Settings → Apps → Chrome → Notifications → Allow. On iOS: Settings → Chrome/Safari → Notifications → Allow.');
+          } else if (perm === 'granted') {
+            // Permission fine but subscribe/save failed — surface the real error
+            setNotifError(`Could not enable: ${result.error || 'unknown error'}. Try again — if it persists, tell Mitch.`);
           } else {
             // permission is 'default' — prompt was dismissed, try again guidance
             setNotifError('Tap Enable again and look for a system popup asking to allow notifications — tap Allow when it appears.');
