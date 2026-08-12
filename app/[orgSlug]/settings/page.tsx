@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
-import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, isIOS, isInStandaloneMode } from '@/lib/push';
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, isIOS, isInStandaloneMode, requestNotificationPermission } from '@/lib/push';
 
 interface User {
   id: string;
@@ -133,6 +133,22 @@ export default function SettingsPage() {
           setNotifStatus('blocked');
           setNotifError('Notifications are blocked. Allow them in browser settings first.');
           return;
+        }
+        // Request permission FIRST — iOS only shows the system popup when the
+        // request happens directly inside the tap gesture. Previously this was
+        // never called here, so iOS never prompted and enabling was impossible.
+        if (Notification.permission !== 'granted') {
+          const granted = await requestNotificationPermission();
+          if (!granted) {
+            const perm = Notification.permission as string;
+            if (perm === 'denied') {
+              setNotifStatus('blocked');
+              setNotifError('Blocked in system settings. On iOS: Settings → Notifications → find this app → Allow. On Android: Settings → Apps → Chrome → Notifications → Allow.');
+            } else {
+              setNotifError('The system popup was dismissed — tap Enable again and choose Allow.');
+            }
+            return;
+          }
         }
         const result = await subscribeToPush(currentUserId);
         if (result.ok) {
