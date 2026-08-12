@@ -168,7 +168,7 @@ html, body {
   background: var(--bg);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
-  min-height: 61px; /* grows with textarea on mobile */
+  min-height: 65px; /* grows with textarea on mobile */
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -185,8 +185,8 @@ html, body {
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 8px 14px; /* reduced from 10px so input-row (40px) fits inside 61px bar without inflating it */
+  border-radius: 999px; /* true pill — clamps to half the row height so buttons nest concentrically */
+  padding: 4px 5px 4px 14px; /* tight right inset lets the round send button nest into the pill end (iMessage-style) */
   flex: 1;
   width: 100%;
   min-width: 0;
@@ -218,6 +218,8 @@ html, body {
   flex-shrink: 0;
   height: 34px;
   width: 34px;
+  min-width: 34px;
+  aspect-ratio: 1 / 1; /* guarantees a perfect circle — flex can never squish it into an oval */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -320,7 +322,7 @@ html, body {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  height: 73px; /* matches actual input-area rendered height: send-btn(34) + row-pad(8×2) + row-border(2) + area-pad(10×2) + area-border(1) = 73px */
+  height: 65px; /* matches actual input-area rendered height: send-btn(34) + row-pad(4×2) + row-border(2) + area-pad(10×2) + area-border(1) = 65px */
   box-sizing: border-box;
   overflow: hidden;
 }

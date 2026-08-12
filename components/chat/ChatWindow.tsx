@@ -835,7 +835,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               )}
             </div>}
             <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Attach file"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '20px', padding: '0 4px', flexShrink: 0, opacity: uploading ? 0.4 : 0.7 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', width: '30px', height: '34px', minWidth: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: uploading ? 0.4 : 0.7 }}>
               <IconPaperclip size={18} />
             </button>
             {stagedFiles.map((sf, i) => (
@@ -865,7 +865,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               rows={1}
             />
             <button onClick={toggleVoice} title={listening ? 'Stop recording' : 'Voice input'}
-              style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', fontSize: '18px', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
+              style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '50%', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', width: '34px', height: '34px', minWidth: '34px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
               {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
             </button>
             {agentTyping && (
