@@ -868,25 +868,26 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '50%', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', width: '34px', height: '34px', minWidth: '34px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
               {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
             </button>
-            {agentTyping && (
-              <button
-                className="send-btn"
-                onClick={sendStop}
-                disabled={stopping}
-                title="Stop the agent"
-                style={{ background: '#da3633' }}
-              >
-                {stopping ? '…' : (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-                    <rect x="1" y="1" width="10" height="10" rx="2" />
-                  </svg>
-                )}
-              </button>
-            )}
-            <button className="send-btn" onClick={() => sendMessage()} disabled={(!input.trim() && !stagedFiles.length) || sending}>
-              {sending ? '…' : <IconSend size={15} />}
-            </button>
           </div>
+          {/* Send / stop — standalone circles outside the pill (WhatsApp-style) */}
+          {agentTyping && (
+            <button
+              className="send-btn"
+              onClick={sendStop}
+              disabled={stopping}
+              title="Stop the agent"
+              style={{ background: '#da3633' }}
+            >
+              {stopping ? '…' : (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                  <rect x="1" y="1" width="10" height="10" rx="2" />
+                </svg>
+              )}
+            </button>
+          )}
+          <button className="send-btn" onClick={() => sendMessage()} disabled={(!input.trim() && !stagedFiles.length) || sending}>
+            {sending ? '…' : <IconSend size={16} />}
+          </button>
         </div>
       )}
     </div>
