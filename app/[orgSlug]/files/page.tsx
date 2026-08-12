@@ -284,8 +284,8 @@ export default function FilesPage() {
     return matchTab && matchSearch && matchQa;
   });
 
-  const isContractor = currentUser?.role === 'contractor';
-  const canUpload = !isContractor;
+  // Contractors have full library access incl. uploads (2026-08-11, per Mitch)
+  const canUpload = true;
   const canQA = currentUser?.role === 'admin' || currentUser?.role === 'owner' || currentUser?.name === 'Ben';
 
   return (

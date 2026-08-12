@@ -29,18 +29,9 @@ export async function GET(req: NextRequest) {
     query = query.eq('category', 'design');
   }
 
-  // Contractors only see files tied to their tasks
-  if (role === 'contractor' && userId) {
-    const { data: tasks } = await supabase
-      .from('production_tasks')
-      .select('file_id')
-      .eq('drafter', userId)
-      .not('file_id', 'is', null);
-
-    const fileIds = (tasks ?? []).map((t: any) => t.file_id).filter(Boolean);
-    if (fileIds.length === 0) return NextResponse.json({ files: [] });
-    query = query.in('id', fileIds);
-  }
+  // Contractors get full library access (changed 2026-08-11 per Mitch —
+  // contractors work the library like any team member). Previously they were
+  // scoped to files linked to their production tasks.
 
   const { data: files, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
