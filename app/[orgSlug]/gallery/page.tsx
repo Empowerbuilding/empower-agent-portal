@@ -142,6 +142,37 @@ export default function GalleryPage() {
     };
   }, [activeTab, loadAllRenders, loadRenders]);
 
+  // Instant push updates — no waiting on the 30s poll:
+  // 1. broadcast ping 'render-updates' fired by a DB trigger in the render tool
+  //    the moment a new render row is created → refresh the All tab live
+  // 2. postgres_changes on render_gallery → refresh the Submitted tab live
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  const pingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!orgId) return;
+    const onPing = () => {
+      // trailing debounce — burst of renders collapses into one refetch
+      if (pingTimer.current) clearTimeout(pingTimer.current);
+      pingTimer.current = setTimeout(() => {
+        pingTimer.current = null;
+        // Only refresh live when the All tab is open — tab activation already refetches
+        if (activeTabRef.current === 'all') loadAllRenders(true);
+      }, 1000);
+    };
+    const sub = supabase
+      .channel('render-updates')
+      .on('broadcast', { event: 'new_render' }, onPing)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'render_gallery', filter: `org_id=eq.${orgId}` },
+        () => loadRenders(true))
+      .subscribe();
+    return () => {
+      if (pingTimer.current) clearTimeout(pingTimer.current);
+      supabase.removeChannel(sub);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, loadAllRenders, loadRenders]);
+
   const isInternal = currentUser && currentUser.role !== 'contractor';
   const canQA = isInternal;
   const canToggleMarketing = currentUser?.role === 'owner' || currentUser?.role === 'admin' || currentUser?.name === 'Esry';
