@@ -622,6 +622,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
               return (
                 <button
                   key={g.id}
+                  className="circle-btn"
                   onClick={() => selectGroup(g.id)}
                   title={g.name}
                   style={{
@@ -670,6 +671,7 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
           {/* M avatar — opens profile popover */}
             <div ref={profileMenuRef} style={{ marginTop: 'auto', paddingBottom: 8, paddingTop: 4, position: 'relative' }}>
               <button
+                className="circle-btn"
                 onClick={() => setProfileOpen(o => !o)}
                 title="Profile & settings"
                 style={{

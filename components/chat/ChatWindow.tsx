@@ -801,6 +801,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             {/* Report picker button — Vanessa channels only */}
             {(channel.id.startsWith('barnhaus-vanessa-') || channel.id === 'ceo-general') && <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
+                className="circle-btn"
                 onClick={() => setShowReportPicker(v => !v)}
                 title="Generate report"
                 style={{ background: showReportPicker ? 'var(--surface-hover)' : 'none', border: 'none', cursor: 'pointer', color: showReportPicker ? 'var(--text)' : 'var(--muted)', padding: '0 4px', display: 'flex', alignItems: 'center', borderRadius: 4, opacity: 0.85 }}
@@ -834,7 +835,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                 </div>
               )}
             </div>}
-            <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Attach file"
+            <button className="circle-btn" onClick={() => fileRef.current?.click()} disabled={uploading} title="Attach file"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', width: '30px', height: '34px', minWidth: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: uploading ? 0.4 : 0.7 }}>
               <IconPaperclip size={18} />
             </button>
@@ -848,7 +849,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
                     📎 {sf.file.name}
                   </div>
                 )}
-                <button onClick={() => removeStagedFile(i)}
+                <button className="circle-btn" onClick={() => removeStagedFile(i)}
                   style={{ position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', borderRadius: '50%', background: 'var(--border)', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
                   ✕
                 </button>
@@ -864,7 +865,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               placeholder={`Message ${channel.display_name}…`}
               rows={1}
             />
-            <button onClick={toggleVoice} title={listening ? 'Stop recording' : 'Voice input'}
+            <button className="circle-btn" onClick={toggleVoice} title={listening ? 'Stop recording' : 'Voice input'}
               style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '50%', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', width: '34px', height: '34px', minWidth: '34px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
               {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
             </button>

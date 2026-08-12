@@ -589,6 +589,10 @@ html, body {
   .sms-mobile-layout button {
     min-height: unset;
   }
+  /* Circular buttons — the 40px min-height stretches fixed-size circles into ovals */
+  .circle-btn {
+    min-height: unset;
+  }
 }
 
 /* ── Deals list → mobile card layout ── */

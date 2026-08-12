@@ -36,6 +36,7 @@ export default function ImageLightbox({ src, alt, onClose }: Props) {
         }}
       />
       <button
+        className="circle-btn"
         onClick={onClose}
         style={{
           position: 'fixed', top: 16, right: 20,
