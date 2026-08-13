@@ -14,7 +14,7 @@ interface InviteData {
   accepted_at: string | null;
   token: string;
   channel_ids: string[] | null;
-  organizations: { name: string; slug: string; logo_url: string | null };
+  organizations: { name: string; slug: string; logo_url: string | null } | null;
 }
 
 function AcceptInviteContent() {
@@ -35,17 +35,22 @@ function AcceptInviteContent() {
     if (!token) { setStatus('invalid'); return; }
 
     async function loadInvite() {
-      const { data, error } = await supabase
-        .from('portal_invites')
-        .select('*, organizations(name, slug, logo_url), token, channel_ids')
-        .eq('token', token as string)
-        .single();
+      // Server-side lookup (service role) — anon RLS blocks the organizations join,
+      // which used to crash this page with a null org.
+      let data: InviteData | null = null;
+      try {
+        const res = await fetch(`/api/accept-invite?token=${encodeURIComponent(token as string)}`);
+        if (res.ok) {
+          const json = await res.json();
+          data = json.invite ?? null;
+        }
+      } catch { /* fall through to invalid */ }
 
-      if (error || !data) { setStatus('invalid'); return; }
+      if (!data) { setStatus('invalid'); return; }
       if (data.accepted_at) { setStatus('used'); return; }
       if (new Date(data.expires_at) < new Date()) { setStatus('expired'); return; }
 
-      setInvite(data as InviteData);
+      setInvite(data);
       setStatus('valid');
     }
     loadInvite();
@@ -111,7 +116,7 @@ function AcceptInviteContent() {
       setStatus('success');
       // Redirect to their org after a moment
       setTimeout(() => {
-        router.push(`/${invite.organizations.slug}`);
+        router.push(invite.organizations?.slug ? `/${invite.organizations.slug}` : '/');
       }, 1500);
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
@@ -225,7 +230,7 @@ function AcceptInviteContent() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
           <Image src="/logo.png" alt="Empower" width={28} height={28} style={{ objectFit: 'contain', borderRadius: '4px' }} />
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{invite?.organizations.name}</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{invite?.organizations?.name ?? 'Empower Portal'}</div>
             <div style={{ fontSize: '11px', color: '#7d8590' }}>Agent Portal</div>
           </div>
         </div>

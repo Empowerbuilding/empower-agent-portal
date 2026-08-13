@@ -10,6 +10,31 @@ const adminSupabase = createClient(
 );
 
 /**
+ * GET /api/accept-invite?token=...
+ * Public invite lookup for the accept-invite page. Uses service role because
+ * the anon client can read portal_invites but NOT the joined organizations row
+ * (org_isolation RLS) — which crashed the page with a null org. Only exposes
+ * org name/slug/logo, nothing sensitive.
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const token = req.nextUrl.searchParams.get('token');
+    if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 });
+
+    const { data: invite, error } = await adminSupabase
+      .from('portal_invites')
+      .select('id, org_id, email, role, expires_at, accepted_at, token, channel_ids, organizations(name, slug, logo_url)')
+      .eq('token', token)
+      .single();
+
+    if (error || !invite) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    return NextResponse.json({ invite });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+/**
  * POST /api/accept-invite
  * Called after a user successfully signs up via an invite link.
  * Uses service role to assign channel memberships and delete the invite row,
