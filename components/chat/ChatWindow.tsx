@@ -112,7 +112,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const SUMMON_ONLY_CHANNELS: Record<string, RegExp> = {
     'juanito-production': /@juanito|hey juanito/i,
     'studio-general': /@juanito|hey juanito/i,
-    'studio-zunaria': /@juanito|hey juanito/i,
+    'studio-zunaira': /@juanito|hey juanito/i,
     'studio-arooba': /@juanito|hey juanito/i,
     'studio-reviews': /@juanito|hey juanito/i,
   };
