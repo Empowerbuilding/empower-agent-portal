@@ -89,29 +89,22 @@ function AcceptInviteContent() {
       const authId = authData?.user?.id ?? (await supabase.auth.getUser()).data.user?.id;
       if (!authId) { setError('Auth failed. Please try again.'); setSubmitting(false); return; }
 
-      // 2. Create portal_users row
-      const { error: userError } = await supabase.from('portal_users').insert({
-        org_id: invite.org_id,
-        supabase_auth_id: authId,
-        name: name.trim(),
-        email: invite.email,
-        role: invite.role,
-        active: true,
+      // 2. Create portal_users row + assign channels + delete invite — all server-side
+      // (service role — bypasses RLS; a brand-new user has no org membership yet,
+      // so a client-side insert into portal_users is always blocked by user_isolation RLS)
+      const res = await fetch('/api/accept-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: invite.token, authId, name: name.trim() }),
       });
 
-      if (userError && !userError.message.includes('duplicate')) {
-        console.error('User insert error:', userError);
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok || result.error) {
+        console.error('Accept-invite setup error:', result);
         setError('Account created but failed to set up profile. Contact support.');
         setSubmitting(false);
         return;
       }
-
-      // 3. Assign channels + delete invite via server-side API (uses service role — bypasses RLS)
-      await fetch('/api/accept-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: invite.token, authId }),
-      });
 
       setStatus('success');
       // Redirect to their org after a moment

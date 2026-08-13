@@ -37,14 +37,16 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/accept-invite
  * Called after a user successfully signs up via an invite link.
- * Uses service role to assign channel memberships and delete the invite row,
- * bypassing RLS restrictions that block the client-side anon user from doing this.
+ * Uses service role to create the portal_users profile, assign channel
+ * memberships, and delete the invite row. This MUST all happen server-side:
+ * a freshly signed-up user has no org membership yet, so the user_isolation
+ * RLS policy blocks any client-side insert into portal_users (chicken-and-egg).
  *
- * Body: { token: string, authId: string }
+ * Body: { token: string, authId: string, name?: string }
  */
 export async function POST(req: NextRequest) {
   try {
-    const { token, authId } = await req.json();
+    const { token, authId, name } = await req.json();
     if (!token || !authId) {
       return NextResponse.json({ error: 'Missing token or authId' }, { status: 400 });
     }
@@ -52,13 +54,31 @@ export async function POST(req: NextRequest) {
     // Fetch the invite (service role — no RLS restrictions)
     const { data: invite, error: inviteError } = await adminSupabase
       .from('portal_invites')
-      .select('id, org_id, email, channel_ids')
+      .select('id, org_id, email, role, channel_ids')
       .eq('token', token)
       .single();
 
     if (inviteError || !invite) {
       // Invite already deleted or invalid — not fatal, user is already set up
       return NextResponse.json({ success: true, note: 'invite not found, may already be cleaned up' });
+    }
+
+    // Create the portal_users profile (idempotent — unique on supabase_auth_id + org_id)
+    const { error: profileError } = await adminSupabase
+      .from('portal_users')
+      .upsert({
+        org_id: invite.org_id,
+        supabase_auth_id: authId,
+        name: (name || '').trim() || invite.email.split('@')[0],
+        email: invite.email,
+        role: invite.role || 'member',
+        active: true,
+        accepted_at: new Date().toISOString(),
+      }, { onConflict: 'supabase_auth_id,org_id', ignoreDuplicates: true });
+
+    if (profileError) {
+      console.error('Profile insert error:', profileError);
+      return NextResponse.json({ error: 'Failed to create profile: ' + profileError.message }, { status: 500 });
     }
 
     // Look up the portal_users row for this user
