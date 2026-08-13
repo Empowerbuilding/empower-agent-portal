@@ -95,12 +95,13 @@ export default async function ChannelPage({
   }
 
   if (ch.channel_type === 'feed') {
-    return <FeedWindow channel={ch} initialMessages={messages ?? []} orgId={org.id} initialMemberCount={initialMemberCount} />;
+    return <FeedWindow key={ch.id} channel={ch} initialMessages={messages ?? []} orgId={org.id} initialMemberCount={initialMemberCount} />;
   }
 
   if (ch.channel_type === 'approval') {
     return (
       <ApprovalWindow
+        key={ch.id}
         channel={ch}
         initialMessages={messages ?? []}
         currentUser={{ id: portalUser.id, name: portalUser.name }}
@@ -111,6 +112,7 @@ export default async function ChannelPage({
 
   return (
     <ChatWindow
+      key={ch.id}
       channel={ch}
       initialMessages={messages ?? []}
       currentUser={{ id: portalUser.id, name: portalUser.name, role: portalUser.role }}

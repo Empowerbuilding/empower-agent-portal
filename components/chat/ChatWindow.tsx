@@ -147,6 +147,35 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   };
 
   const isInitialLoad = useRef(true);
+
+  // Re-arm the initial bottom snap on every channel switch. Next.js reuses this
+  // component instance across dynamic-route navigations (belt & suspenders with
+  // the key={ch.id} remount in page.tsx), so without this the forced scroll only
+  // ever fired once per session.
+  useEffect(() => {
+    isInitialLoad.current = true;
+    isAtBottom.current = true;
+    requestAnimationFrame(() => scrollToBottom(true));
+  }, [channel.id]);
+
+  // Keep pinned to bottom while media loads. Images/videos finish loading after
+  // the initial snap and grow scrollHeight, leaving the view stuck mid-chat
+  // (worst in image-heavy channels like juanito-production). load/loadedmetadata
+  // don't bubble, but they DO fire during the capture phase.
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const onMediaLoad = () => {
+      if (isAtBottom.current) list.scrollTop = list.scrollHeight;
+    };
+    list.addEventListener('load', onMediaLoad, true);
+    list.addEventListener('loadedmetadata', onMediaLoad, true);
+    return () => {
+      list.removeEventListener('load', onMediaLoad, true);
+      list.removeEventListener('loadedmetadata', onMediaLoad, true);
+    };
+  }, [channel.id]);
+
   useEffect(() => {
     if (isInitialLoad.current) {
       // Defer initial snap scroll by one animation frame so the browser has
