@@ -627,10 +627,25 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             }
 
             // Outbound sent
+            const outboundMedia: string[] = Array.isArray(meta.media_urls) ? meta.media_urls : [];
+            const outboundImages = outboundMedia.filter(u => typeof u === 'string' && (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u) || u.includes('/storage/')));
             return (
               <div key={msg.id} style={{ alignSelf: 'flex-end', maxWidth: '80%' }}>
                 <div style={{ background: 'var(--accent-dim)', borderRadius: '18px 18px 4px 18px', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
+                  {body ? <div style={{ fontSize: '14px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div> : null}
+                  {outboundImages.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: body ? '8px' : '0' }}>
+                      {outboundImages.map((u, i) => (
+                        <img
+                          key={i}
+                          src={u}
+                          alt="MMS attachment"
+                          style={{ maxWidth: '220px', maxHeight: '180px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer', display: 'block' }}
+                          onClick={() => window.open(u, '_blank')}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px', textAlign: 'right' }} suppressHydrationWarning>✓ {formatFull(msg.created_at)}</div>
               </div>
