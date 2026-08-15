@@ -6,6 +6,7 @@ import { PortalChannel, PortalMessage } from '@/lib/types';
 import { useMobileToolbar } from '@/context/MobileToolbar';
 import { IconSend, IconMic, IconMicOff, IconSearch } from '@/components/ui/Icons';
 import SearchModal from '@/components/chat/SearchModal';
+import { useVoiceRecorder, formatRecSeconds } from '@/lib/useVoiceRecorder';
 
 interface Props {
   channel: PortalChannel;
@@ -95,7 +96,6 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list');
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
-  const [listening, setListening] = useState(false);
   const [askingVanessa, setAskingVanessa] = useState<string | null>(null);
   const [stagedDraftId, setStagedDraftId] = useState<string | null>(null);
   // When a draft is staged, track the original text so Enter-to-send is blocked until the user edits it
@@ -106,12 +106,16 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   const bottomRef = useRef<HTMLDivElement>(null);
   const smsListRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<any>(null);
-  const voiceActiveRef = useRef(false);
-  const voiceBaseRef = useRef('');
-  const voiceSessionFinalsRef = useRef('');
-  const voiceLastSetRef = useRef('');
   const supabase = createClient();
+
+  // Record-first voice input → /api/transcribe (Whisper-class model, domain vocab)
+  const { recording, transcribing, seconds: recSeconds, toggle: toggleVoice, stop: stopVoiceRec } = useVoiceRecorder((text) => {
+    setReplyText(prev => {
+      const sep = prev && !prev.endsWith(' ') ? ' ' : '';
+      return prev + sep + text;
+    });
+    textareaRef.current?.focus();
+  });
   const { setToolbar } = useMobileToolbar();
 
   const userFlag = channel.id.includes('larry') ? 'larry' : channel.id.includes('shannon') ? 'shannon' : null;
@@ -204,51 +208,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   function selectContact(phone: string) {
     setSelectedPhone(phone);
     setMobileView('thread');
-    setListening(false);
-    recognitionRef.current?.stop();
-  }
-
-  function toggleVoice() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { alert('Voice input not supported in this browser.'); return; }
-    if (listening) { voiceActiveRef.current = false; recognitionRef.current?.stop(); setListening(false); return; }
-
-    voiceBaseRef.current = replyText;
-    voiceLastSetRef.current = replyText;
-    voiceSessionFinalsRef.current = '';
-    voiceActiveRef.current = true;
-    setListening(true);
-
-    function startRec() {
-      const r = new SR();
-      r.lang = 'en-US'; r.interimResults = true; r.continuous = false;
-      recognitionRef.current = r;
-      r.onresult = (e: any) => {
-        let finals = ''; let interim = '';
-        for (let i = 0; i < e.results.length; i++) {
-          if (e.results[i].isFinal) finals += e.results[i][0].transcript;
-          else interim = e.results[i][0].transcript;
-        }
-        voiceSessionFinalsRef.current = finals;
-        const base = voiceBaseRef.current;
-        const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
-        const sep = base && !base.endsWith(' ') && spoken ? ' ' : '';
-        const newVal = spoken ? base + sep + spoken : base;
-        voiceLastSetRef.current = newVal;
-        setReplyText(newVal);
-      };
-      r.onend = () => {
-        if (voiceActiveRef.current) {
-          voiceBaseRef.current = voiceLastSetRef.current;
-          voiceSessionFinalsRef.current = '';
-          setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 100);
-        } else { setListening(false); }
-      };
-      r.onerror = (e: any) => { if (e.error === 'no-speech' || e.error === 'aborted') return; voiceActiveRef.current = false; setListening(false); };
-      r.start();
-    }
-
-    startRec();
+    stopVoiceRec(true);
   }
 
   async function askVanessa(msg: PortalMessage) {
@@ -304,6 +264,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
 
   async function sendReply() {
     if (!replyText.trim() || !activeConv || sending) return;
+    if (recording) stopVoiceRec(true); // discard in-flight recording — transcript would land after send
     setSending(true);
     const body = replyText.trim();
     setReplyText('');
@@ -700,9 +661,19 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             placeholder={`Reply to ${activeConv.contact_name}…`}
             rows={1}
           />
-          <button onClick={toggleVoice} title={listening ? 'Stop recording' : 'Voice input'}
-            style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '6px', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', padding: '0 6px', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s', display: 'flex', alignItems: 'center' }}>
-            {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
+          {recording && (
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#e5534b', flexShrink: 0, fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#e5534b', animation: 'pulse 1.2s ease-in-out infinite' }} />
+              {formatRecSeconds(recSeconds)}
+            </span>
+          )}
+          {transcribing && (
+            <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>Transcribing…</span>
+          )}
+          <button onClick={toggleVoice} disabled={transcribing}
+            title={recording ? 'Stop recording (Space) — Esc to cancel' : 'Record voice message'}
+            style={{ background: recording ? 'rgba(229,83,75,0.15)' : 'none', border: recording ? '1px solid #e5534b' : 'none', borderRadius: '6px', cursor: transcribing ? 'default' : 'pointer', color: recording ? '#e5534b' : 'var(--muted)', padding: '0 6px', flexShrink: 0, opacity: transcribing ? 0.4 : recording ? 1 : 0.7, transition: 'all 0.15s', display: 'flex', alignItems: 'center' }}>
+            {recording ? <IconMicOff size={17} /> : <IconMic size={17} />}
           </button>
           <button
             className="send-btn"

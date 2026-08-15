@@ -13,6 +13,7 @@ import PresenceButton from '@/components/presence/PresenceButton';
 import MemberPanel from './MemberPanel';
 import NotifyBell from './NotifyBell';
 import { playSend, playReceive, unlockAudio } from '@/lib/sounds';
+import { useVoiceRecorder, formatRecSeconds } from '@/lib/useVoiceRecorder';
 
 interface Props {
   channel: PortalChannel;
@@ -93,17 +94,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   }, [orgId]);
   const [agentTyping, setAgentTyping] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const [listening, setListening] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const isAtBottom = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
-  const voiceActiveRef = useRef(false);
-  const voiceBaseRef = useRef('');
-  const voiceSessionFinalsRef = useRef('');
-  const voiceLastSetRef = useRef('');    // mirrors displayed input for use as base after restart
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
@@ -122,15 +117,24 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     return true;
   };
 
-  // Clear typing timer and stop mic on unmount / channel switch
+  // Record-first voice input → /api/transcribe (Whisper-class model, domain vocab)
+  const { recording, transcribing, seconds: recSeconds, toggle: toggleVoice, stop: stopVoiceRec } = useVoiceRecorder((text) => {
+    setInput(prev => {
+      const sep = prev && !prev.endsWith(' ') ? ' ' : '';
+      const next = prev + sep + text;
+      localStorage.setItem(draftKey, next);
+      return next;
+    });
+    textareaRef.current?.focus();
+  });
+
+  // Clear typing timer and discard any in-flight recording on channel switch
   useEffect(() => {
     return () => {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      // Fix Issue 4: stop recognition when component unmounts or channel changes
-      voiceActiveRef.current = false;
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
+      stopVoiceRec(true);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel.id]);
 
   const scrollToBottom = (force = false) => {
@@ -499,91 +503,6 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     setStagedFiles(prev => { prev.forEach(f => URL.revokeObjectURL(f.previewUrl)); return []; });
   }
 
-  // Fix Issue 1+2: helper to fully stop the mic and reset all voice state
-  function stopVoice() {
-    voiceActiveRef.current = false;
-    recognitionRef.current?.stop();
-    recognitionRef.current = null;
-    voiceBaseRef.current = '';
-    voiceLastSetRef.current = '';
-    voiceSessionFinalsRef.current = '';
-    setListening(false);
-  }
-
-  function toggleVoice() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { alert('Voice input is not supported in this browser.'); return; }
-
-    if (listening) {
-      stopVoice();
-      return;
-    }
-
-    voiceBaseRef.current = input;
-    voiceLastSetRef.current = input;
-    voiceSessionFinalsRef.current = '';
-    voiceActiveRef.current = true;
-    setListening(true);
-
-    function startRec() {
-      // Fix Issue 3: bail cleanly if voice was deactivated during the 100ms gap
-      if (!voiceActiveRef.current) return;
-
-      const r = new SR();
-      r.lang = 'en-US';
-      r.interimResults = true;
-      // continuous=false: each phrase is a clean atomic session.
-      // Avoids the Android Chrome bug where continuous=true causes the previous phrase
-      // to be re-delivered to every restarted session.
-      // We restart manually in onend to keep the mic alive until user taps off.
-      r.continuous = false;
-      recognitionRef.current = r;
-
-      r.onresult = (e: any) => {
-        let finals = '';
-        let interim = '';
-        for (let i = 0; i < e.results.length; i++) {
-          if (e.results[i].isFinal) finals += e.results[i][0].transcript;
-          else interim = e.results[i][0].transcript;
-        }
-        voiceSessionFinalsRef.current = finals;
-        const base = voiceBaseRef.current;
-        const spoken = finals + (interim ? (finals && !finals.endsWith(' ') ? ' ' : '') + interim : '');
-        const sep = base && !base.endsWith(' ') && spoken ? ' ' : '';
-        const newVal = spoken ? base + sep + spoken : base;
-        voiceLastSetRef.current = newVal;
-        localStorage.setItem(draftKey, newVal);
-        setInput(newVal);
-      };
-
-      r.onend = () => {
-        if (voiceActiveRef.current) {
-          // Commit this phrase into base, then restart for next phrase
-          voiceBaseRef.current = voiceLastSetRef.current;
-          voiceSessionFinalsRef.current = '';
-          setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 150);
-        } else {
-          setListening(false);
-        }
-      };
-
-      r.onerror = (e: any) => {
-        // aborted = we called stop() ourselves, no-speech = silence timeout — both are fine
-        if (e.error === 'no-speech' || e.error === 'aborted') return;
-        stopVoice();
-      };
-
-      try {
-        r.start();
-      } catch {
-        // Fix Issue 3: r.start() can throw if browser not ready — back off and retry once
-        setTimeout(() => { if (voiceActiveRef.current) startRec(); }, 300);
-      }
-    }
-
-    startRec();
-  }
-
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     localStorage.setItem(draftKey, e.target.value);
     setInput(e.target.value);
@@ -595,8 +514,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   async function sendMessage(overrideContent?: string) {
     const content = (overrideContent ?? input).trim();
     if (!content && !stagedFiles.length || sending) return;
-    // Stop mic before sending — must happen before clearing input so voice onresult can't re-populate it
-    if (listening) stopVoice();
+    // Discard any in-flight recording before sending — its transcript would arrive after the send
+    if (recording) stopVoiceRec(true);
     setSending(true);
     isAtBottom.current = true; // snap to bottom after user sends
     localStorage.removeItem(draftKey);
@@ -894,9 +813,19 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               placeholder={`Message ${channel.display_name}…`}
               rows={1}
             />
-            <button className="circle-btn" onClick={toggleVoice} title={listening ? 'Stop recording' : 'Voice input'}
-              style={{ background: listening ? 'rgba(76,139,240,0.15)' : 'none', border: listening ? '1px solid var(--accent)' : 'none', borderRadius: '50%', cursor: 'pointer', color: listening ? 'var(--accent)' : 'var(--muted)', width: '34px', height: '34px', minWidth: '34px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: listening ? 1 : 0.7, transition: 'all 0.15s' }}>
-              {listening ? <IconMicOff size={17} /> : <IconMic size={17} />}
+            {recording && (
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#e5534b', flexShrink: 0, fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#e5534b', animation: 'pulse 1.2s ease-in-out infinite' }} />
+                {formatRecSeconds(recSeconds)}
+              </span>
+            )}
+            {transcribing && (
+              <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>Transcribing…</span>
+            )}
+            <button className="circle-btn" onClick={toggleVoice} disabled={transcribing}
+              title={recording ? 'Stop recording (Space) — Esc to cancel' : 'Record voice message'}
+              style={{ background: recording ? 'rgba(229,83,75,0.15)' : 'none', border: recording ? '1px solid #e5534b' : 'none', borderRadius: '50%', cursor: transcribing ? 'default' : 'pointer', color: recording ? '#e5534b' : 'var(--muted)', width: '34px', height: '34px', minWidth: '34px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: transcribing ? 0.4 : recording ? 1 : 0.7, transition: 'all 0.15s' }}>
+              {recording ? <IconMicOff size={17} /> : <IconMic size={17} />}
             </button>
           </div>
           {/* Send / stop — standalone circles outside the pill (WhatsApp-style) */}
