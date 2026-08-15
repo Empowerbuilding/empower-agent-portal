@@ -319,7 +319,7 @@ export default function GalleryPage() {
                       <div style={{ position: 'absolute', bottom: 5, left: 5, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 6 }}>{r.render_type}</div>
                     </div>
                     <div style={{ padding: '8px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.profile_id ?? 'unknown'} · {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.profile_name ?? r.profile_id ?? 'Unknown'} · {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                       {r.prompt && <div style={{ fontSize: 10, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.7 }}>{r.prompt}</div>}
                     </div>
                     <div style={{ padding: '0 8px 8px', display: 'flex', gap: 5 }}>
@@ -327,7 +327,7 @@ export default function GalleryPage() {
                         try {
                           await supabase.from('render_gallery').upsert({
                             image_url: url,
-                            created_by: r.profile_id ?? 'unknown',
+                            created_by: r.profile_name ?? r.profile_id ?? 'Unknown',
                             org_id: orgId,
                             plan_name: null,
                             client_name: null,

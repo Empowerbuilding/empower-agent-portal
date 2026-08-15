@@ -18,16 +18,19 @@ const STATUSES = [
   { value: 'pending', label: 'Pending', color: '#6e7681', bg: 'rgba(110,118,129,0.15)' },
   { value: 'planned', label: 'Planned', color: '#58a6ff', bg: 'rgba(88,166,255,0.12)' },
   { value: 'in-progress', label: 'In Progress', color: '#f0883e', bg: 'rgba(240,136,62,0.12)' },
+  { value: 'needs-work', label: 'Needs Work 🔧', color: '#e3b341', bg: 'rgba(227,179,65,0.12)' },
   { value: 'shipped', label: 'Shipped ✓', color: '#3fb950', bg: 'rgba(63,185,80,0.12)' },
   { value: 'declined', label: 'Declined', color: '#da3633', bg: 'rgba(218,54,51,0.12)' },
+  { value: 'archived', label: 'Archived', color: '#6e7681', bg: 'rgba(110,118,129,0.1)' },
 ];
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'pending', label: 'Pending' },
-  { value: 'planned', label: 'Planned' },
   { value: 'in-progress', label: 'In Progress' },
+  { value: 'needs-work', label: 'Needs Work' },
   { value: 'shipped', label: 'Shipped' },
+  { value: 'archived', label: 'Archived' },
 ];
 
 interface FeatureRequest {
@@ -43,6 +46,103 @@ interface FeatureRequest {
   voter_ids: string[];
   admin_note: string | null;
   created_at: string;
+}
+
+interface RequestComment {
+  id: string;
+  request_id: string;
+  user_id: string | null;
+  user_name: string;
+  body: string;
+  created_at: string;
+}
+
+function CommentThread({
+  requestId, currentUser, onCountChange,
+}: {
+  requestId: string;
+  currentUser: { id: string; name: string } | null;
+  onCountChange?: (n: number) => void;
+}) {
+  const supabase = createClient();
+  const [comments, setComments] = useState<RequestComment[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [body, setBody] = useState('');
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('feature_request_comments')
+        .select('*')
+        .eq('request_id', requestId)
+        .order('created_at', { ascending: true });
+      setComments((data ?? []) as RequestComment[]);
+      setLoaded(true);
+      onCountChange?.((data ?? []).length);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestId]);
+
+  async function post() {
+    if (!body.trim() || !currentUser) return;
+    setPosting(true);
+    const { data } = await supabase.from('feature_request_comments').insert({
+      request_id: requestId,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      body: body.trim(),
+    }).select().single();
+    setPosting(false);
+    if (data) {
+      const next = [...comments, data as RequestComment];
+      setComments(next);
+      setBody('');
+      onCountChange?.(next.length);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {loaded && comments.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {comments.map(c => (
+            <div key={c.id} style={{ background: 'var(--bg)', borderRadius: '6px', padding: '8px 10px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '3px' }}>
+                <span style={{ fontWeight: 700, color: 'var(--text)' }}>{c.user_name}</span>
+                {' · '}
+                {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {' '}
+                {new Date(c.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{c.body}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {currentUser && (
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <input
+            value={body}
+            onChange={e => setBody(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && post()}
+            placeholder="Add a comment — debugging notes, feedback, what still needs fixing…"
+            style={{
+              flex: 1, padding: '8px 10px', background: 'var(--bg)', border: '1px solid var(--border)',
+              borderRadius: '6px', color: 'var(--text)', fontSize: '13px', boxSizing: 'border-box',
+            }}
+          />
+          <button onClick={post} disabled={!body.trim() || posting} style={{
+            padding: '8px 14px', background: 'var(--accent)', border: 'none', borderRadius: '6px',
+            color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '12px',
+            opacity: !body.trim() || posting ? 0.5 : 1, flexShrink: 0,
+          }}>
+            {posting ? '…' : 'Post'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -280,6 +380,7 @@ export default function RoadmapPage() {
   const [sort, setSort] = useState<'votes' | 'recent'>('votes');
   const [votingId, setVotingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
 
   useEffect(() => { loadAll(); }, [orgSlug]);
 
@@ -301,6 +402,12 @@ export default function RoadmapPage() {
       .order('vote_count', { ascending: false });
     setRequests((rows ?? []) as FeatureRequest[]);
     setLoading(false);
+
+    // Comment counts (lightweight — just request_ids)
+    const { data: cRows } = await supabase.from('feature_request_comments').select('request_id');
+    const counts: Record<string, number> = {};
+    for (const c of cRows ?? []) counts[c.request_id] = (counts[c.request_id] ?? 0) + 1;
+    setCommentCounts(counts);
   }
 
   async function handleVote(req: FeatureRequest) {
@@ -334,8 +441,20 @@ export default function RoadmapPage() {
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.role === 'admin';
 
+  async function handleReopen(req: FeatureRequest) {
+    if (!currentUser) return;
+    const { data } = await supabase.from('feature_requests')
+      .update({ status: 'needs-work', updated_at: new Date().toISOString() })
+      .eq('id', req.id)
+      .select().single();
+    if (data) {
+      handleUpdated(data as FeatureRequest);
+      setExpandedId(req.id); // open it so they can drop a comment explaining what's wrong
+    }
+  }
+
   const filtered = requests
-    .filter(r => statusFilter === 'all' || r.status === statusFilter)
+    .filter(r => statusFilter === 'all' ? r.status !== 'archived' : r.status === statusFilter)
     .filter(r => catFilter === 'all' || r.category === catFilter)
     .sort((a, b) => sort === 'votes'
       ? b.vote_count - a.vote_count
@@ -479,15 +598,13 @@ export default function RoadmapPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
                         <div
-                          style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)', cursor: req.description ? 'pointer' : 'default', flex: 1 }}
-                          onClick={() => req.description && setExpandedId(isExpanded ? null : req.id)}
+                          style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', flex: 1 }}
+                          onClick={() => setExpandedId(isExpanded ? null : req.id)}
                         >
                           {req.title}
-                          {req.description && (
-                            <span style={{ fontSize: '12px', color: 'var(--muted)', marginLeft: '6px' }}>
-                              {isExpanded ? '▲' : '▼'}
-                            </span>
-                          )}
+                          <span style={{ fontSize: '12px', color: 'var(--muted)', marginLeft: '6px' }}>
+                            {isExpanded ? '▲' : '▼'}
+                          </span>
                         </div>
                         <StatusBadge status={req.status} />
                       </div>
@@ -496,6 +613,9 @@ export default function RoadmapPage() {
                       <div style={{ display: 'flex', gap: '6px', marginTop: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                         <CategoryTag category={req.category} />
                         <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{req.user_name} · {timeAgo}</span>
+                        {(commentCounts[req.id] ?? 0) > 0 && (
+                          <span style={{ fontSize: '11px', color: 'var(--muted)' }}>💬 {commentCounts[req.id]}</span>
+                        )}
                       </div>
 
                       {/* Description (expanded) */}
@@ -508,6 +628,17 @@ export default function RoadmapPage() {
                         }}>
                           {req.description}
                         </div>
+                      )}
+
+                      {/* Reopen — requester or admin can flag a shipped/declined ticket as needing more work */}
+                      {(req.status === 'shipped' || req.status === 'declined') && currentUser && (isOwner || req.user_id === currentUser.id) && (
+                        <button onClick={() => handleReopen(req)} style={{
+                          marginTop: '10px', padding: '4px 10px', background: 'rgba(227,179,65,0.1)',
+                          border: '1px solid rgba(227,179,65,0.4)', borderRadius: '6px',
+                          color: '#e3b341', cursor: 'pointer', fontSize: '11px', fontWeight: 600,
+                        }}>
+                          🔧 Still needs work
+                        </button>
                       )}
 
                       {/* Admin note */}
@@ -524,6 +655,15 @@ export default function RoadmapPage() {
                       {/* Admin controls */}
                       {isOwner && (
                         <AdminControls request={req} onUpdated={handleUpdated} />
+                      )}
+
+                      {/* Comment thread — iterate on one ticket instead of filing new ones */}
+                      {isExpanded && (
+                        <CommentThread
+                          requestId={req.id}
+                          currentUser={currentUser}
+                          onCountChange={n => setCommentCounts(prev => ({ ...prev, [req.id]: n }))}
+                        />
                       )}
                     </div>
                   </div>

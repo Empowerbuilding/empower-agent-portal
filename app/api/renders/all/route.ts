@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createPortalClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@supabase/supabase-js';
 
 // Only Mitchell and Michael can access this
@@ -35,5 +36,32 @@ export async function GET(req: NextRequest) {
     .limit(200);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ renders: renders ?? [] });
+
+  // Resolve profile_id → friendly display name.
+  // profile_id is a mix of render-tool nicknames (maca, ben, banks…) and portal_users UUIDs.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidIds = [...new Set((renders ?? []).map(r => r.profile_id).filter((p): p is string => !!p && UUID_RE.test(p)))];
+  const nameById: Record<string, string> = {};
+  if (uuidIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: users } = await admin
+      .from('portal_users')
+      .select('id, name')
+      .in('id', uuidIds);
+    for (const u of users ?? []) nameById[u.id] = u.name;
+  }
+  const NICKNAMES: Record<string, string> = {
+    maca: 'Michael', mitch: 'Mitchell',
+  };
+  const resolveName = (pid: string | null): string => {
+    if (!pid) return 'Unknown';
+    if (nameById[pid]) return nameById[pid];
+    if (UUID_RE.test(pid)) return 'Unknown';
+    const lower = pid.toLowerCase();
+    if (NICKNAMES[lower]) return NICKNAMES[lower];
+    return pid.charAt(0).toUpperCase() + pid.slice(1);
+  };
+
+  const enriched = (renders ?? []).map(r => ({ ...r, profile_name: resolveName(r.profile_id) }));
+  return NextResponse.json({ renders: enriched });
 }
