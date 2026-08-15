@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     const {
       orgId, planName, planSlug, filename, fileKey, fileUrl,
       version, contentType, fileSize, uploadedBy,
-      projectName, contactName, category,
+      projectName, contactName, category, folderName,
     } = await req.json();
 
     if (!orgId || !planName || !fileKey) {
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
         contact_name: contactName || null,
         file_url: fileUrl,
         category: category || 'project',
+        folder_name: folderName?.trim() || 'Unfiled',
       })
       .select()
       .single();

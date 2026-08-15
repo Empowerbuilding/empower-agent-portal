@@ -139,6 +139,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // ── Move file (all versions) to another folder ────────────────────────────
+  if (action === 'move') {
+    const { planSlug, folderName, orgId } = body;
+    if (!planSlug || !folderName || !orgId) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    }
+    // Move every version so history stays together in one folder
+    const { error } = await supabase
+      .from('project_files')
+      .update({ folder_name: folderName.trim() })
+      .eq('org_id', orgId)
+      .eq('plan_slug', planSlug);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
   // ── Update QA status ────────────────────────────────────────────────────────
   if (action === 'qa-update') {
     const { fileId, qaStatus, qaNotes, orgId } = body;

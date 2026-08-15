@@ -24,6 +24,7 @@ interface ProjectFile {
   project_name?: string | null;
   contact_name?: string | null;
   category?: string;
+  folder_name?: string | null;
 }
 
 const QA_COLORS: Record<QAStatus, { bg: string; color: string; label: string }> = {
@@ -60,9 +61,21 @@ export default function FilesPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadModal, setUploadModal] = useState(false);
   const [uploadPlanName, setUploadPlanName] = useState('');
-  const [uploadProjectName, setUploadProjectName] = useState('');
+  const [uploadFolder, setUploadFolder] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
   const [uploadContactName, setUploadContactName] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+
+  // Folder navigation + picker options
+  const [openFolder, setOpenFolder] = useState<string | null>(null);
+  const [designProjects, setDesignProjects] = useState<string[]>([]);
+  const [existingFolders, setExistingFolders] = useState<string[]>([]);
+
+  // Move modal
+  const [moveTarget, setMoveTarget] = useState<ProjectFile | null>(null);
+  const [moveFolder, setMoveFolder] = useState('');
+  const [moveNewName, setMoveNewName] = useState('');
+  const [moving, setMoving] = useState(false);
   const [frankChannels, setFrankChannels] = useState<{ id: string; display_name: string; project_name: string | null; agent_id: string }[]>([]);
   const [activeTab, setActiveTab] = useState<'design' | 'project'>(() => {
     if (typeof window !== 'undefined') {
@@ -134,6 +147,31 @@ export default function FilesPage() {
       .then(({ data }) => setFrankChannels(data ?? []));
   }, [orgId]);
 
+  // Load folder picker options (Design OS projects + folders already in use)
+  const loadFolderOptions = useCallback(async () => {
+    if (!orgId) return;
+    try {
+      const res = await fetch(`/api/files/folders?orgId=${orgId}`);
+      const d = await res.json();
+      setDesignProjects(d.projects ?? []);
+      setExistingFolders(d.folders ?? []);
+    } catch { /* picker degrades to free-text */ }
+  }, [orgId]);
+  useEffect(() => { loadFolderOptions(); }, [loadFolderOptions]);
+
+  // Unified picker options: Design OS projects + Frank bidding projects + folders in use
+  const folderOptions = (() => {
+    const frank = frankChannels.map(ch => ch.project_name!).filter(Boolean);
+    return {
+      design: designProjects,
+      bidding: frank.filter(f => !designProjects.includes(f)),
+      other: existingFolders.filter(f => !designProjects.includes(f) && !frank.includes(f)),
+    };
+  })();
+
+  const resolveUploadFolder = () =>
+    uploadFolder === '__new__' ? newFolderName.trim() : uploadFolder.trim();
+
   // Upload flow
   const handleUpload = async () => {
     if (!uploadFile || !orgId || !currentUser) return;
@@ -143,8 +181,10 @@ export default function FilesPage() {
 
     try {
       const FRANK_AGENT_ID = '73a73a44-347f-4817-8f43-3b14ef7c8c2e';
-      const selectedChannel = frankChannels.find(ch => ch.project_name === uploadProjectName);
+      const folderName = resolveUploadFolder() || 'Unfiled';
+      const selectedChannel = frankChannels.find(ch => ch.project_name === folderName);
       const uploadCategory = selectedChannel?.agent_id === FRANK_AGENT_ID ? 'project' : 'design';
+      const uploadProjectName = selectedChannel ? folderName : '';
 
       // Step 1: Get presigned URL from server (fast, no file transfer)
       const presignRes = await fetch('/api/files/presign', {
@@ -156,7 +196,7 @@ export default function FilesPage() {
           planName: effectiveName,
           orgId,
           uploadedBy: currentUser.name,
-          projectName: uploadProjectName.trim() || '',
+          projectName: uploadProjectName,
           contactName: uploadContactName.trim() || '',
           category: uploadCategory,
         }),
@@ -195,9 +235,10 @@ export default function FilesPage() {
           contentType: uploadFile.type || 'application/octet-stream',
           fileSize: uploadFile.size,
           uploadedBy: currentUser.name,
-          projectName: uploadProjectName.trim() || '',
+          projectName: uploadProjectName,
           contactName: uploadContactName.trim() || '',
           category: uploadCategory,
+          folderName,
         }),
       });
       const result = await confirmRes.json();
@@ -206,10 +247,12 @@ export default function FilesPage() {
       showToast(`✅ ${uploadFile.name} uploaded — v${result?.file?.version ?? '?'}`);
       setUploadModal(false);
       setUploadPlanName('');
-      setUploadProjectName('');
+      setUploadFolder('');
+      setNewFolderName('');
       setUploadContactName('');
       setUploadFile(null);
       loadFiles();
+      loadFolderOptions();
     } catch (err: any) {
       showToast(`❌ ${err.message}`, false);
     } finally {
@@ -279,10 +322,54 @@ export default function FilesPage() {
 
   const filtered = files.filter(f => {
     const matchTab = (f.category ?? 'project') === effectiveTab;
-    const matchSearch = !search || f.plan_name.toLowerCase().includes(search.toLowerCase()) || f.filename.toLowerCase().includes(search.toLowerCase()) || (f.project_name ?? '').toLowerCase().includes(search.toLowerCase()) || (f.contact_name ?? '').toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || f.plan_name.toLowerCase().includes(search.toLowerCase()) || f.filename.toLowerCase().includes(search.toLowerCase()) || (f.folder_name ?? '').toLowerCase().includes(search.toLowerCase()) || (f.project_name ?? '').toLowerCase().includes(search.toLowerCase()) || (f.contact_name ?? '').toLowerCase().includes(search.toLowerCase());
     const matchQa = qaFilter === 'all' || f.qa_status === qaFilter;
     return matchTab && matchSearch && matchQa;
   });
+
+  // Folder grouping — searching shows a flat list across all folders instead
+  const searching = search.trim().length > 0;
+  const folderOf = (f: ProjectFile) => (f.folder_name ?? '').trim() || 'Unfiled';
+  const folderGroups = (() => {
+    const map = new Map<string, ProjectFile[]>();
+    for (const f of filtered) {
+      const key = folderOf(f);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(f);
+    }
+    return [...map.entries()].sort((a, b) => {
+      const la = Math.max(...a[1].map(f => new Date(f.created_at).getTime()));
+      const lb = Math.max(...b[1].map(f => new Date(f.created_at).getTime()));
+      return lb - la;
+    });
+  })();
+  const visibleFiles = searching ? filtered : openFolder ? filtered.filter(f => folderOf(f) === openFolder) : [];
+  const showFolderGrid = !searching && !openFolder;
+
+  const handleMove = async () => {
+    if (!moveTarget || !orgId) return;
+    const dest = (moveFolder === '__new__' ? moveNewName : moveFolder).trim();
+    if (!dest) return;
+    setMoving(true);
+    try {
+      const res = await fetch('/api/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'move', planSlug: moveTarget.plan_slug, folderName: dest, orgId }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Move failed');
+      showToast(`📂 Moved to ${dest}`);
+      setMoveTarget(null);
+      setMoveFolder('');
+      setMoveNewName('');
+      loadFiles();
+      loadFolderOptions();
+    } catch (e: any) {
+      showToast(`❌ ${e.message}`, false);
+    } finally {
+      setMoving(false);
+    }
+  };
 
   // Contractors have full library access incl. uploads (2026-08-11, per Mitch)
   const canUpload = true;
@@ -312,7 +399,7 @@ export default function FilesPage() {
         </div>
         {canUpload && (
           <button
-            onClick={() => setUploadModal(true)}
+            onClick={() => { setUploadFolder(openFolder ?? ''); setNewFolderName(''); setUploadModal(true); }}
             style={{
               background: 'var(--accent)', border: 'none', color: '#fff',
               padding: '8px 16px', borderRadius: 7, fontSize: 13, fontWeight: 600,
@@ -328,7 +415,7 @@ export default function FilesPage() {
       {canSeeProjects && (
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           {(['design', 'project'] as const).map(tab => (
-            <button key={tab} onClick={() => { setActiveTab(tab); localStorage.setItem('files-tab', tab); }} style={{
+            <button key={tab} onClick={() => { setActiveTab(tab); localStorage.setItem('files-tab', tab); setOpenFolder(null); }} style={{
               flex: 1, padding: '10px 0', border: 'none', borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
               background: 'none', color: activeTab === tab ? 'var(--accent)' : 'var(--muted)',
               fontWeight: activeTab === tab ? 700 : 400, fontSize: 13, cursor: 'pointer',
@@ -371,17 +458,53 @@ export default function FilesPage() {
         </div>
       </div>
 
-      {/* File List */}
+      {/* Breadcrumb — inside a folder */}
+      {!searching && openFolder && (
+        <div style={{ padding: '10px 20px 0', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <button onClick={() => setOpenFolder(null)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, padding: 0, fontWeight: 600 }}>
+            ← Folders
+          </button>
+          <span style={{ color: 'var(--muted)', fontSize: 13 }}>/</span>
+          <span style={{ color: 'var(--text)', fontSize: 13, fontWeight: 700 }}>📁 {openFolder}</span>
+        </div>
+      )}
+
+      {/* Folder grid / File list */}
       <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
         {loading ? (
           <div style={{ color: 'var(--muted)', textAlign: 'center', marginTop: 60, fontSize: 14 }}>Loading files…</div>
-        ) : filtered.length === 0 ? (
+        ) : showFolderGrid ? (
+          folderGroups.length === 0 ? (
+            <div style={{ color: 'var(--muted)', textAlign: 'center', marginTop: 60, fontSize: 14 }}>
+              {files.length === 0 ? 'No files yet. Upload the first one.' : 'No files match your filters.'}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 12 }}>
+              {folderGroups.map(([name, group]) => {
+                const latest = Math.max(...group.map(f => new Date(f.created_at).getTime()));
+                return (
+                  <button key={name} onClick={() => setOpenFolder(name)} style={{
+                    background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+                    padding: '18px 14px', cursor: 'pointer', textAlign: 'left',
+                    display: 'flex', flexDirection: 'column', gap: 6, transition: 'border-color 0.15s',
+                  }}>
+                    <div style={{ fontSize: 26 }}>📁</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      {group.length} file{group.length === 1 ? '' : 's'} · {formatDate(new Date(latest).toISOString())}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        ) : visibleFiles.length === 0 ? (
           <div style={{ color: 'var(--muted)', textAlign: 'center', marginTop: 60, fontSize: 14 }}>
             {files.length === 0 ? 'No files yet. Upload the first one.' : 'No files match your filters.'}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filtered.map(file => {
+            {visibleFiles.map(file => {
               const qa = QA_COLORS[file.qa_status] ?? QA_COLORS.pending;
               return (
                 <div
@@ -413,9 +536,9 @@ export default function FilesPage() {
                       <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>
                         {file.filename} · {formatBytes(file.file_size)}
                       </div>
-                      {(file.project_name || file.contact_name) && (
+                      {(searching || file.contact_name) && (
                         <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                          {file.project_name && <span style={{ fontSize: 11, background: 'rgba(76,139,240,0.12)', color: 'var(--accent)', padding: '1px 7px', borderRadius: 10 }}>📁 {file.project_name}</span>}
+                          {searching && <span style={{ fontSize: 11, background: 'rgba(76,139,240,0.12)', color: 'var(--accent)', padding: '1px 7px', borderRadius: 10 }}>📁 {folderOf(file)}</span>}
                           {file.contact_name && <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', padding: '1px 7px', borderRadius: 10 }}>👤 {file.contact_name}</span>}
                         </div>
                       )}
@@ -454,6 +577,17 @@ export default function FilesPage() {
                         ✅ QA
                       </button>
                     )}
+                    <button
+                      onClick={() => { setMoveTarget(file); setMoveFolder(folderOf(file)); setMoveNewName(''); }}
+                      title="Move to another folder"
+                      style={{
+                        background: 'var(--sidebar-bg)', border: '1px solid var(--border)',
+                        color: 'var(--muted)', padding: '7px 10px', borderRadius: 6,
+                        fontSize: 12, cursor: 'pointer', flexShrink: 0,
+                      }}
+                    >
+                      📂
+                    </button>
                     {canQA && (
                       <button
                         onClick={() => handleRecategorize(file)}
@@ -513,28 +647,44 @@ export default function FilesPage() {
               style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
             />
 
-            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Project</label>
-                <select
-                  value={uploadProjectName}
-                  onChange={e => setUploadProjectName(e.target.value)}
-                  disabled={uploading}
-                  style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: uploadProjectName ? 'var(--text)' : 'var(--muted)', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box' }}
-                >
-                  <option value=''>None</option>
-                  {frankChannels.map(ch => (
-                    <option key={ch.id} value={ch.project_name!}>
-                      {ch.project_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Contact</label>
-                <input value={uploadContactName} onChange={e => setUploadContactName(e.target.value)} placeholder="e.g. John Smith" disabled={uploading} style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box' }} />
-              </div>
-            </div>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Folder *</label>
+            <select
+              value={uploadFolder}
+              onChange={e => setUploadFolder(e.target.value)}
+              disabled={uploading}
+              style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: uploadFolder ? 'var(--text)' : 'var(--muted)', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box', marginBottom: uploadFolder === '__new__' ? 8 : 12 }}
+            >
+              <option value=''>Select a folder…</option>
+              {folderOptions.design.length > 0 && (
+                <optgroup label="🏠 Design Projects">
+                  {folderOptions.design.map(p => <option key={`d-${p}`} value={p}>{p}</option>)}
+                </optgroup>
+              )}
+              {folderOptions.bidding.length > 0 && (
+                <optgroup label="📋 Bidding Projects">
+                  {folderOptions.bidding.map(p => <option key={`b-${p}`} value={p}>{p}</option>)}
+                </optgroup>
+              )}
+              {folderOptions.other.length > 0 && (
+                <optgroup label="📁 Other Folders">
+                  {folderOptions.other.map(p => <option key={`o-${p}`} value={p}>{p}</option>)}
+                </optgroup>
+              )}
+              <option value='__new__'>➕ New folder…</option>
+            </select>
+            {uploadFolder === '__new__' && (
+              <input
+                value={newFolderName}
+                onChange={e => setNewFolderName(e.target.value)}
+                placeholder="New folder name — e.g. Townsend"
+                disabled={uploading}
+                autoFocus
+                style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--accent)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
+              />
+            )}
+
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>Contact <span style={{ fontWeight: 400 }}>(optional)</span></label>
+            <input value={uploadContactName} onChange={e => setUploadContactName(e.target.value)} placeholder="e.g. John Smith" disabled={uploading} style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }} />
 
             <label style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginBottom: 5 }}>File *</label>
             <div
@@ -577,11 +727,11 @@ export default function FilesPage() {
               <button onClick={() => setUploadModal(false)} disabled={uploading} style={{ flex: 1, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', color: 'var(--muted)', padding: '9px 0', borderRadius: 7, cursor: 'pointer', fontSize: 14 }}>Cancel</button>
               <button
                 onClick={handleUpload}
-                disabled={uploading || !uploadFile}
+                disabled={uploading || !uploadFile || !resolveUploadFolder()}
                 style={{
-                  flex: 2, background: uploading || !uploadFile ? '#2a5299' : 'var(--accent)',
+                  flex: 2, background: uploading || !uploadFile || !resolveUploadFolder() ? '#2a5299' : 'var(--accent)',
                   border: 'none', color: '#fff', padding: '9px 0', borderRadius: 7,
-                  cursor: uploading || !uploadFile ? 'not-allowed' : 'pointer',
+                  cursor: uploading || !uploadFile || !resolveUploadFolder() ? 'not-allowed' : 'pointer',
                   fontSize: 14, fontWeight: 600,
                 }}
               >
@@ -665,6 +815,55 @@ export default function FilesPage() {
                 }}
                 style={{ padding: '8px 16px', background: '#ef4444', border: 'none', borderRadius: 6, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}>
                 {deleting ? 'Deleting…' : 'Delete Permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move to Folder Modal */}
+      {moveTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={() => !moving && setMoveTarget(null)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px 16px', width: '100%', maxWidth: 420, boxSizing: 'border-box' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 4 }}>📂 Move to Folder</div>
+            <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>{moveTarget.plan_name} — all versions move together</div>
+            <select
+              value={moveFolder}
+              onChange={e => setMoveFolder(e.target.value)}
+              disabled={moving}
+              style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box', marginBottom: moveFolder === '__new__' ? 8 : 16 }}
+            >
+              {folderOptions.design.length > 0 && (
+                <optgroup label="🏠 Design Projects">
+                  {folderOptions.design.map(p => <option key={`d-${p}`} value={p}>{p}</option>)}
+                </optgroup>
+              )}
+              {folderOptions.bidding.length > 0 && (
+                <optgroup label="📋 Bidding Projects">
+                  {folderOptions.bidding.map(p => <option key={`b-${p}`} value={p}>{p}</option>)}
+                </optgroup>
+              )}
+              {folderOptions.other.length > 0 && (
+                <optgroup label="📁 Other Folders">
+                  {folderOptions.other.map(p => <option key={`o-${p}`} value={p}>{p}</option>)}
+                </optgroup>
+              )}
+              <option value='__new__'>➕ New folder…</option>
+            </select>
+            {moveFolder === '__new__' && (
+              <input
+                value={moveNewName}
+                onChange={e => setMoveNewName(e.target.value)}
+                placeholder="New folder name"
+                disabled={moving}
+                autoFocus
+                style={{ width: '100%', background: 'var(--sidebar-bg)', border: '1px solid var(--accent)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontSize: 14, marginBottom: 16, boxSizing: 'border-box' }}
+              />
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setMoveTarget(null)} disabled={moving} style={{ flex: 1, background: 'var(--sidebar-bg)', border: '1px solid var(--border)', color: 'var(--muted)', padding: '9px 0', borderRadius: 7, cursor: 'pointer', fontSize: 14 }}>Cancel</button>
+              <button onClick={handleMove} disabled={moving || !(moveFolder === '__new__' ? moveNewName.trim() : moveFolder.trim())} style={{ flex: 2, background: 'var(--accent)', border: 'none', color: '#fff', padding: '9px 0', borderRadius: 7, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+                {moving ? 'Moving…' : 'Move'}
               </button>
             </div>
           </div>
