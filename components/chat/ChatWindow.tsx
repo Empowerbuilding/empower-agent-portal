@@ -125,7 +125,15 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       localStorage.setItem(draftKey, next);
       return next;
     });
-    textareaRef.current?.focus();
+    // Programmatic insert skips the typing handler — grow the textarea and
+    // scroll to the top so the whole transcript is visible (esp. mobile)
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+      el.scrollTop = 0;
+    });
   });
 
   // Clear typing timer and discard any in-flight recording on channel switch

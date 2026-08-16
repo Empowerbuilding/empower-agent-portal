@@ -114,7 +114,15 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
       const sep = prev && !prev.endsWith(' ') ? ' ' : '';
       return prev + sep + text;
     });
-    textareaRef.current?.focus();
+    // Programmatic insert skips the typing handler — grow the textarea and
+    // scroll to the top so the whole transcript is visible (esp. mobile)
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+      el.scrollTop = 0;
+    });
   });
   const { setToolbar } = useMobileToolbar();
 
