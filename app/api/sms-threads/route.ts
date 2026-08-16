@@ -60,17 +60,20 @@ export async function GET(req: NextRequest) {
 
     const crm = createSupabaseClient(CRM_URL, CRM_SERVICE_KEY);
 
+    // Fetch newest-first so the limit trims OLD history, never recent messages,
+    // then flip back to chronological order for grouping/rendering.
     let activitiesQuery = crm
       .from('activities')
       .select('id, contact_id, activity_type, title, description, created_at')
       .in('activity_type', ['sms_sent', 'sms_received'])
-      .order('created_at', { ascending: true })
-      .limit(1000);
+      .order('created_at', { ascending: false })
+      .limit(2000);
     if (sinceIso) activitiesQuery = activitiesQuery.gte('created_at', sinceIso);
 
-    const { data: activities, error: actErr } = await activitiesQuery;
+    const { data: activitiesDesc, error: actErr } = await activitiesQuery;
 
     if (actErr) return NextResponse.json({ error: actErr.message }, { status: 500 });
+    const activities = (activitiesDesc ?? []).slice().reverse();
 
     const contactIds = Array.from(new Set((activities as CrmActivity[] ?? [])
       .map(a => a.contact_id).filter(Boolean))) as string[];
