@@ -143,7 +143,7 @@ ${playbook}` : ''}`;
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-          generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.7, thinkingConfig: { thinkingBudget: 0 } },
         }),
       }
     );
@@ -155,7 +155,16 @@ ${playbook}` : ''}`;
     }
 
     const aiData = await aiRes.json();
-    const draft = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    const parts = aiData.candidates?.[0]?.content?.parts || [];
+    const draft = parts
+      .filter((p: any) => p.text && !p.thought)
+      .map((p: any) => p.text)
+      .join('')
+      .trim();
+    const finishReason = aiData.candidates?.[0]?.finishReason;
+    if (finishReason && finishReason !== 'STOP') {
+      console.warn('[sms/draft] non-STOP finishReason:', finishReason);
+    }
 
     return NextResponse.json({ draft });
   } catch (err: any) {
