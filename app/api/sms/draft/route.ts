@@ -35,11 +35,12 @@ export async function POST(req: NextRequest) {
     // Look up org → name + CRM credentials
     const { data: org } = await portal
       .from('organizations')
-      .select('name, crm_supabase_url, crm_supabase_key')
+      .select('name, crm_supabase_url, crm_supabase_key, sms_playbook')
       .eq('id', orgId)
       .single();
 
     const orgName = org?.name || 'the company';
+    const playbook = (org as any)?.sms_playbook || '';
 
     // Quick CRM lookup for contact context (best effort — don't fail if unavailable)
     let contactContext = '';
@@ -59,20 +60,52 @@ export async function POST(req: NextRequest) {
           if (c.lead_source) parts.push(`source: ${c.lead_source}`);
           if (c.notes) parts.push(`notes: ${c.notes.slice(0, 300)}`);
           if (parts.length) contactContext = `Contact context: ${parts.join(' | ')}`;
+
+          // Open deals — plan interest, stage, value
+          try {
+            const { data: deals } = await crm
+              .from('deals')
+              .select('title, stage, value')
+              .eq('contact_id', c.id)
+              .not('stage', 'in', '("complete","lost","won")')
+              .order('updated_at', { ascending: false })
+              .limit(3);
+            if (deals?.length) {
+              const dealText = deals
+                .map((d: any) => `"${d.title}" (stage: ${d.stage}${d.value ? `, $${d.value}` : ''})`)
+                .join('; ');
+              contactContext += `\nOpen deals: ${dealText}`;
+            }
+          } catch { /* non-fatal */ }
+
+          // Upcoming meetings — don't pitch a call they already booked
+          try {
+            const { data: meetings } = await crm
+              .from('scheduled_meetings')
+              .select('start_time, status')
+              .eq('contact_id', c.id)
+              .gte('start_time', new Date().toISOString())
+              .neq('status', 'cancelled')
+              .order('start_time', { ascending: true })
+              .limit(1);
+            if (meetings?.[0]) {
+              contactContext += `\nUpcoming meeting already booked: ${meetings[0].start_time} — do NOT ask them to book another call; reference the upcoming call instead.`;
+            }
+          } catch { /* non-fatal */ }
         }
       } catch {
         // CRM lookup failure is non-fatal
       }
     }
 
-    // Build conversation context from history (last 6 messages)
+    // Build conversation context from history (last 10 messages)
     let historyText = '';
     if (Array.isArray(conversationHistory) && conversationHistory.length > 0) {
-      const recent = conversationHistory.slice(-6);
+      const recent = conversationHistory.slice(-10);
       historyText = recent
         .map((m: any) => {
           const dir = m.metadata?.direction === 'inbound' ? `${contactName || 'Contact'}` : `${repName || 'Rep'}`;
-          const body = (m.content || '').replace(/```\n([\s\S]*?)\n```/, '$1').trim().slice(0, 200);
+          const body = (m.content || '').replace(/```\n([\s\S]*?)\n```/, '$1').trim().slice(0, 300);
           return `${dir}: ${body}`;
         })
         .join('\n');
@@ -83,11 +116,16 @@ export async function POST(req: NextRequest) {
 
 Rules:
 - Write ONLY the message text — no labels, no quotes, no formatting
-- Keep it under 160 characters
+- Keep it under 300 characters (1-2 SMS segments). Shorter is better when it still answers fully.
+- ANSWER THE LEAD'S LITERAL QUESTION FIRST. Never dodge it, never reply with only a compliment or enthusiasm.
+- Every draft ends with a question or a clear next step (CTA). Never leave the conversation with nowhere to go.
 - Sound natural and human, like a real person texting
 - Match the tone of the conversation — casual if they're casual, professional if they're professional
 - Never mention AI, automation, or that this was drafted for them
-- Be direct and helpful`;
+- Only state facts found in the playbook, contact context, or conversation. Never invent prices, specs, or capabilities.${playbook ? `
+
+# ${orgName} Sales Playbook — follow this exactly
+${playbook}` : ''}`;
 
     const userPrompt = [
       historyText ? `Recent conversation:\n${historyText}` : '',
