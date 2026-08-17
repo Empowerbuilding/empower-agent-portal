@@ -48,11 +48,12 @@ export async function POST(req: NextRequest) {
       try {
         const crm = createServiceClient(org.crm_supabase_url, org.crm_supabase_key, { auth: { persistSession: false } });
         const digits = contactPhone.replace(/\D/g, '').slice(-10);
-        const { data: contacts } = await crm
+        const { data: contacts, error: contactErr } = await crm
           .from('contacts')
-          .select('id, full_name, lifecycle_stage, notes, lead_source')
+          .select('id, first_name, last_name, lifecycle_stage, notes, lead_source')
           .ilike('phone', `%${digits}%`)
           .limit(1);
+        if (contactErr) console.error('[sms/draft] CRM contact lookup error:', contactErr.message);
         if (contacts?.[0]) {
           const c = contacts[0];
           const parts = [];
@@ -92,9 +93,26 @@ export async function POST(req: NextRequest) {
               contactContext += `\nUpcoming meeting already booked: ${meetings[0].start_time} — do NOT ask them to book another call; reference the upcoming call instead.`;
             }
           } catch { /* non-fatal */ }
+
+          // Recent CRM activities — calls, emails, prior SMS (same context Vanessa pulls when drafting)
+          try {
+            const { data: acts } = await crm
+              .from('activities')
+              .select('activity_type, title, description, created_at')
+              .eq('contact_id', c.id)
+              .order('created_at', { ascending: false })
+              .limit(5);
+            if (acts?.length) {
+              const actText = acts
+                .map((a: any) => `- [${(a.created_at || '').slice(0, 10)}] ${a.activity_type}: ${a.title || ''}${a.description ? ` — ${String(a.description).slice(0, 150)}` : ''}`)
+                .join('\n');
+              contactContext += `\nRecent CRM activity (newest first):\n${actText}`;
+            }
+          } catch { /* non-fatal */ }
         }
-      } catch {
-        // CRM lookup failure is non-fatal
+      } catch (crmErr: any) {
+        // CRM lookup failure is non-fatal, but never silent — schema drift hid all contact context once already
+        console.error('[sms/draft] CRM context lookup failed:', crmErr?.message || crmErr);
       }
     }
 
