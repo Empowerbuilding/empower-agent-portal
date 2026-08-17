@@ -20,7 +20,7 @@ const SCOPES = [
   'profile',
   'email',
   'offline_access',
-  'https://graph.microsoft.com/Mail.Read',
+  'https://graph.microsoft.com/Mail.ReadWrite',
 ].join(' ');
 
 export const runtime = 'nodejs';

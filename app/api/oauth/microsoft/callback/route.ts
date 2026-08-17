@@ -178,7 +178,7 @@ export async function GET(req: NextRequest) {
       client_secret: clientSecret,
       redirect_uri: REDIRECT_URI,
       grant_type: 'authorization_code',
-      scope: 'openid profile email offline_access https://graph.microsoft.com/Mail.Read',
+      scope: 'openid profile email offline_access https://graph.microsoft.com/Mail.ReadWrite',
     }),
   });
 
