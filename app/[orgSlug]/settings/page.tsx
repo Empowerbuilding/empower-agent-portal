@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
-import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, isIOS, isInStandaloneMode, requestNotificationPermission } from '@/lib/push';
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, isIOS, isInStandaloneMode, requestNotificationPermission, getPushDebugInfo, type PushDebugInfo } from '@/lib/push';
 
 interface User {
   id: string;
@@ -64,6 +64,8 @@ export default function SettingsPage() {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [userChannelMap, setUserChannelMap] = useState<Record<string, string[]>>({});
   const [channelToggling, setChannelToggling] = useState<string | null>(null);
+  const [pushDebug, setPushDebug] = useState<PushDebugInfo | null>(null);
+  const [showPushDebug, setShowPushDebug] = useState(false);
 
   useEffect(() => {
     const ios = isIOS();
@@ -83,7 +85,8 @@ export default function SettingsPage() {
     }
   }, []);
 
-  // Load notification status
+  // Load notification status — re-checked whenever the tab regains focus so the
+  // toggle always reflects live browser state (helps diagnose "it reverted").
   useEffect(() => {
     async function checkNotifStatus() {
       if (!('Notification' in window) || !('serviceWorker' in navigator)) {
@@ -92,12 +95,17 @@ export default function SettingsPage() {
       }
       if (Notification.permission === 'denied') {
         setNotifStatus('blocked');
+        getPushDebugInfo().then(setPushDebug);
         return;
       }
       const subscribed = await isPushSubscribed();
       setNotifStatus(subscribed && Notification.permission === 'granted' ? 'enabled' : 'disabled');
+      getPushDebugInfo().then(setPushDebug);
     }
     checkNotifStatus();
+    const onVisible = () => { if (document.visibilityState === 'visible') checkNotifStatus(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
 
@@ -395,6 +403,29 @@ export default function SettingsPage() {
           {notifStatus === 'blocked' && (
             <div style={{ marginTop: '10px', padding: '8px 10px', background: 'rgba(218,54,51,0.08)', borderRadius: '6px', fontSize: '12px', color: 'var(--muted)' }}>
               Chrome: click the 🔒 lock icon in the address bar → Notifications → Allow
+            </div>
+          )}
+          {pushDebug && (
+            <div style={{ marginTop: '8px' }}>
+              <button
+                onClick={() => setShowPushDebug(!showPushDebug)}
+                style={{ background: 'none', border: 'none', padding: 0, fontSize: '11px', color: 'var(--muted)', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                {showPushDebug ? 'Hide diagnostics' : 'Diagnostics'}
+              </button>
+              {showPushDebug && (
+                <div style={{ marginTop: '6px', padding: '8px 10px', background: 'var(--border)', borderRadius: '6px', fontSize: '11px', color: 'var(--muted)', fontFamily: 'monospace', lineHeight: 1.7, wordBreak: 'break-all' }}>
+                  permission: {pushDebug.permission} · sw: {pushDebug.swRegistered ? 'yes' : 'NO'} · sub: {pushDebug.hasSubscription ? 'yes' : 'NO'}
+                  {pushDebug.hasSubscription && <> · key: {pushDebug.keyMatch === false ? 'MISMATCH' : 'ok'} · …{pushDebug.endpointTail}</>}
+                  {pushDebug.recentEvents.length > 0 && (
+                    <div style={{ marginTop: '4px', borderTop: '1px solid var(--sidebar-bg)', paddingTop: '4px' }}>
+                      {pushDebug.recentEvents.map((e, i) => (
+                        <div key={i}>{e.t.slice(5, 16).replace('T', ' ')} {e.action}{e.detail ? ` (${e.detail})` : ''}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {notifError && (

@@ -1,5 +1,24 @@
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
+/** Persistent client-side event log for diagnosing push state changes. */
+export function logPushEvent(action: string, detail?: string): void {
+  try {
+    if (typeof window === 'undefined') return;
+    const log = JSON.parse(localStorage.getItem('push-event-log') || '[]');
+    log.push({ t: new Date().toISOString(), action, ...(detail ? { detail } : {}) });
+    while (log.length > 30) log.shift();
+    localStorage.setItem('push-event-log', JSON.stringify(log));
+  } catch {}
+}
+
+export function getPushEventLog(): { t: string; action: string; detail?: string }[] {
+  try {
+    return JSON.parse(localStorage.getItem('push-event-log') || '[]');
+  } catch {
+    return [];
+  }
+}
+
 /** Compare a live subscription's applicationServerKey to our VAPID public key. */
 function subscriptionMatchesKey(sub: PushSubscription, vapidKey: string): boolean {
   try {
@@ -66,6 +85,7 @@ export async function subscribeToPush(userId: string): Promise<{ ok: boolean; er
     const existing = await reg.pushManager.getSubscription();
     if (existing && !subscriptionMatchesKey(existing, VAPID_PUBLIC_KEY)) {
       console.warn('[push] stale subscription with old VAPID key — unsubscribing');
+      logPushEvent('subscribe-stale-key-unsub', existing.endpoint.slice(-12));
       try { await existing.unsubscribe(); } catch {}
     }
 
@@ -77,6 +97,7 @@ export async function subscribeToPush(userId: string): Promise<{ ok: boolean; er
       });
     } catch (subErr: any) {
       // Last-resort recovery: nuke any existing subscription and retry once
+      logPushEvent('subscribe-retry', subErr?.name || String(subErr).slice(0, 60));
       const cur = await reg.pushManager.getSubscription();
       if (cur) { try { await cur.unsubscribe(); } catch {} }
       sub = await reg.pushManager.subscribe({
@@ -91,10 +112,15 @@ export async function subscribeToPush(userId: string): Promise<{ ok: boolean; er
       body: JSON.stringify({ subscription: sub.toJSON(), userId }),
     });
 
-    if (!res.ok) return { ok: false, error: `Server error: ${res.status}` };
+    if (!res.ok) {
+      logPushEvent('subscribe-server-error', String(res.status));
+      return { ok: false, error: `Server error: ${res.status}` };
+    }
+    logPushEvent('subscribe-ok', sub.endpoint.slice(-12));
     return { ok: true };
   } catch (e: any) {
     console.error('[push] subscribe failed:', e);
+    logPushEvent('subscribe-FAILED', e?.message?.slice(0, 80) ?? 'unknown');
     return { ok: false, error: e?.message ?? 'Unknown error' };
   }
 }
@@ -120,9 +146,17 @@ export async function resyncPushSubscription(userId: string): Promise<void> {
     // would fail signature checks. Replace it with a fresh one instead.
     if (!subscriptionMatchesKey(sub, VAPID_PUBLIC_KEY)) {
       console.warn('[push] resync found stale-key subscription — replacing');
+      logPushEvent('resync-stale-key-replace', sub.endpoint.slice(-12));
       try { await sub.unsubscribe(); } catch {}
       const r = await subscribeToPush(userId);
-      if (r.ok) sessionStorage.setItem('push-resynced', '1');
+      if (r.ok) {
+        sessionStorage.setItem('push-resynced', '1');
+      } else {
+        // We just destroyed the old subscription and could not create a new one —
+        // this is the silent "toggle reverted" scenario. Log it loudly.
+        logPushEvent('resync-replace-FAILED', r.error?.slice(0, 80));
+        console.error('[push] resync replace FAILED — subscription lost:', r.error);
+      }
       return;
     }
     const res = await fetch('/api/push/subscribe', {
@@ -141,6 +175,7 @@ export async function unsubscribeFromPush(userId: string): Promise<void> {
   if (!reg) return;
   const sub = await reg.pushManager.getSubscription();
   if (!sub) return;
+  logPushEvent('manual-unsubscribe', sub.endpoint.slice(-12));
   await fetch('/api/push/subscribe', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
@@ -165,4 +200,36 @@ export async function isPushSubscribed(): Promise<boolean> {
   if (!reg) return false;
   const sub = await reg.pushManager.getSubscription();
   return !!sub;
+}
+
+export interface PushDebugInfo {
+  permission: string;
+  swRegistered: boolean;
+  hasSubscription: boolean;
+  keyMatch: boolean | null;
+  endpointTail: string | null;
+  recentEvents: { t: string; action: string; detail?: string }[];
+}
+
+/** Full client-side push state — for the settings diagnostics readout. */
+export async function getPushDebugInfo(): Promise<PushDebugInfo> {
+  const info: PushDebugInfo = {
+    permission: typeof Notification !== 'undefined' ? Notification.permission : 'unsupported',
+    swRegistered: false,
+    hasSubscription: false,
+    keyMatch: null,
+    endpointTail: null,
+    recentEvents: getPushEventLog().slice(-6).reverse(),
+  };
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration('/sw.js');
+    if (!reg) return info;
+    info.swRegistered = true;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return info;
+    info.hasSubscription = true;
+    info.endpointTail = sub.endpoint.slice(-12);
+    info.keyMatch = subscriptionMatchesKey(sub, VAPID_PUBLIC_KEY);
+  } catch {}
+  return info;
 }
