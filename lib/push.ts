@@ -41,6 +41,30 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
+/**
+ * Persist { userId, vapidKey } in IndexedDB so the service worker can
+ * re-subscribe on its own during a `pushsubscriptionchange` event
+ * (fires when the browser rotates/expires the subscription while the
+ * app is closed — the SW has no access to localStorage or React state).
+ */
+async function savePushContextForSW(userId: string): Promise<void> {
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('portal-push', 1);
+      open.onupgradeneeded = () => open.result.createObjectStore('ctx');
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const tx = open.result.transaction('ctx', 'readwrite');
+        tx.objectStore('ctx').put({ userId, vapidKey: VAPID_PUBLIC_KEY }, 'push-ctx');
+        tx.oncomplete = () => { open.result.close(); resolve(); };
+        tx.onerror = () => { open.result.close(); reject(tx.error); };
+      };
+    });
+  } catch (e) {
+    console.warn('[push] failed to save SW push context:', e);
+  }
+}
+
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!('serviceWorker' in navigator)) return null;
   try {
@@ -117,6 +141,10 @@ export async function subscribeToPush(userId: string): Promise<{ ok: boolean; er
       return { ok: false, error: `Server error: ${res.status}` };
     }
     logPushEvent('subscribe-ok', sub.endpoint.slice(-12));
+    // Remember user intent so we can silently re-subscribe if the browser
+    // drops the subscription later (Chrome Android does this periodically).
+    try { localStorage.setItem('push-enabled', '1'); } catch {}
+    await savePushContextForSW(userId);
     return { ok: true };
   } catch (e: any) {
     console.error('[push] subscribe failed:', e);
@@ -141,7 +169,21 @@ export async function resyncPushSubscription(userId: string): Promise<void> {
     const reg = await navigator.serviceWorker.getRegistration('/sw.js');
     if (!reg) return;
     const sub = await reg.pushManager.getSubscription();
-    if (!sub) return;
+    if (!sub) {
+      // Self-heal: user previously enabled push (intent flag) and permission is
+      // still granted, but the browser dropped the subscription. Re-subscribe
+      // silently — no prompt is shown since permission persists.
+      if (localStorage.getItem('push-enabled') === '1') {
+        logPushEvent('auto-resubscribe', 'browser dropped subscription');
+        const r = await subscribeToPush(userId);
+        if (r.ok) {
+          sessionStorage.setItem('push-resynced', '1');
+        } else {
+          logPushEvent('auto-resubscribe-FAILED', r.error?.slice(0, 80));
+        }
+      }
+      return;
+    }
     // Don't re-sync a subscription made with an old VAPID key — pushes to it
     // would fail signature checks. Replace it with a fresh one instead.
     if (!subscriptionMatchesKey(sub, VAPID_PUBLIC_KEY)) {
@@ -165,12 +207,18 @@ export async function resyncPushSubscription(userId: string): Promise<void> {
       body: JSON.stringify({ subscription: sub.toJSON(), userId }),
     });
     if (res.ok) sessionStorage.setItem('push-resynced', '1');
+    // Backfill intent flag + SW context for devices subscribed before this
+    // feature existed — gives them self-heal without re-toggling.
+    try { localStorage.setItem('push-enabled', '1'); } catch {}
+    await savePushContextForSW(userId);
   } catch (e) {
     console.error('[push] resync failed:', e);
   }
 }
 
 export async function unsubscribeFromPush(userId: string): Promise<void> {
+  // Clear intent flag first so auto-resubscribe never fights a manual disable
+  try { localStorage.removeItem('push-enabled'); } catch {}
   const reg = await navigator.serviceWorker?.getRegistration('/sw.js');
   if (!reg) return;
   const sub = await reg.pushManager.getSubscription();
