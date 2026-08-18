@@ -265,6 +265,19 @@ print('reset ok, deleted:', to_delete)
 
   try {
     await sshExec(config, command);
+    // Zero the context stats badge immediately (same as local-agent path),
+    // otherwise the % badge stays stale until the agent's next reply.
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const portalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const portalKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+      const sb = createClient(portalUrl, portalKey);
+      await sb.from('portal_context_stats').delete().eq('channel_id', channelId);
+      await sb.from('portal_context_stats').upsert(
+        { channel_id: channelId, tokens: 0, ctx: 1000000, pct: 0 },
+        { onConflict: 'channel_id' }
+      );
+    } catch { /* badge refresh is best-effort; reset itself succeeded */ }
     return true;
   } catch {
     return false;
