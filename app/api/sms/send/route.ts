@@ -67,6 +67,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── Opt-out guard: block sends to contacts who replied STOP ──────────────
+    if (crmUrl && crmKey) {
+      try {
+        const optRes = await fetch(
+          `${crmUrl}/rest/v1/contacts?phone=eq.${encodeURIComponent(to)}&select=sms_opt_out&limit=1`,
+          { headers: { apikey: crmKey, Authorization: `Bearer ${crmKey}` } }
+        );
+        const optRows = await optRes.json().catch(() => []);
+        if (Array.isArray(optRows) && optRows[0]?.sms_opt_out) {
+          return NextResponse.json(
+            { ok: false, error: 'This contact replied STOP and is opted out of texts. Sending is blocked (TCPA).' },
+            { status: 403 }
+          );
+        }
+      } catch { /* fail open if CRM column missing or lookup fails */ }
+    }
+
     // ── Send via carrier (TextBee or Telnyx) ────────────────────────────────
     let msgId = 'unknown';
 

@@ -505,8 +505,23 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
             const meta = (msg.metadata || {}) as Record<string, any>;
             const direction = meta.direction || 'outbound';
             const isPending = meta.approval_state === 'pending';
+            const isSuppressed = typeof meta.approval_state === 'string' && meta.approval_state.startsWith('suppressed');
             const isInbound = direction === 'inbound';
             const body = extractSmsBody(msg.content);
+            if (isSuppressed) {
+              const isOptOut = meta.approval_state === 'suppressed_opt_out';
+              return (
+                <div key={msg.id} style={{ alignSelf: 'center', maxWidth: '90%', width: '100%' }}>
+                  <div style={{ background: 'var(--sidebar-bg)', border: `1px dashed ${isOptOut ? '#da3633' : 'var(--border)'}`, borderRadius: '10px', padding: '10px 14px', opacity: 0.85 }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: isOptOut ? '#da3633' : '#d29922', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                      {isOptOut ? '\u{1F6D1} Not sent \u2014 contact opted out (STOP)' : '\u26A0\uFE0F Not sent \u2014 duplicate blocked'}
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--muted)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{body}</div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px', textAlign: 'center' }} suppressHydrationWarning>{formatFull(msg.created_at)}</div>
+                </div>
+              );
+            }
             if (isPending) {
               return (
                 <div key={msg.id} style={{ alignSelf: 'flex-end', maxWidth: '85%', width: '100%' }}>
