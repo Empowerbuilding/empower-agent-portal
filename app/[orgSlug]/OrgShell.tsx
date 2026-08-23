@@ -102,7 +102,10 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
 
   return (
     <div className="app-shell">
-      <NotificationPrompt userId={currentUser.id} />
+      <NotificationPrompt userId={currentUser.id} agentName={(() => {
+        const names = Array.from(new Set(channels.map(c => (c as any).agents?.display_name).filter(Boolean)));
+        return names.length === 1 ? (names[0] as string) : undefined;
+      })()} />
       <Sidebar
         org={org}
         channels={channels}

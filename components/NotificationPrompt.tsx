@@ -5,9 +5,10 @@ import { requestNotificationPermission, subscribeToPush, isIOS, isInStandaloneMo
 
 interface Props {
   userId: string;
+  agentName?: string;
 }
 
-export default function NotificationPrompt({ userId }: Props) {
+export default function NotificationPrompt({ userId, agentName }: Props) {
   const [show, setShow] = useState<'push' | 'ios' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,7 +94,7 @@ export default function NotificationPrompt({ userId }: Props) {
       <div className="notif-prompt-icon">🔔</div>
       <div className="notif-prompt-text">
         <strong>Enable notifications</strong>
-        <span>Get alerted when Vanessa replies</span>
+        <span>Get alerted when {agentName ?? 'your agent'} replies</span>
       </div>
       {error && <span style={{ fontSize: '11px', color: '#f85149', maxWidth: '180px' }}>{error}</span>}
       <button className="notif-prompt-enable" onClick={handleEnablePush} disabled={loading}>
