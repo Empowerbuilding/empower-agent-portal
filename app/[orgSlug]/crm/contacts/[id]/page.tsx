@@ -26,7 +26,8 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     .eq('id', id)
     .single();
 
-  if (contactError || !contact) return notFound();
+  // Stale link (deleted/imported-over contact): send back to the list instead of 404
+  if (contactError || !contact) redirect(`/${orgSlug}/crm/contacts`);
 
   const normalizedContact = {
     ...contact,

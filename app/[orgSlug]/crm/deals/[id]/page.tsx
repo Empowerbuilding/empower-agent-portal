@@ -21,7 +21,8 @@ export default async function DealDetailPage({ params }: { params: Promise<{ org
     .eq('id', id)
     .single();
 
-  if (error || !deal) return notFound();
+  // Stale link (deleted deal): send back to the list instead of 404
+  if (error || !deal) redirect(`/${orgSlug}/crm/deals`);
 
   const [activitiesRes, usersRes, tasksRes, contactsRes] = await Promise.all([
     crm.from('activities').select('*').eq('deal_id', id).order('created_at', { ascending: false }).limit(30),
