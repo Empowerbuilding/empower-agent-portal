@@ -19,7 +19,9 @@ export const runtime = 'nodejs';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portal.empowerbuilding.ai';
 const REDIRECT_URI = `${APP_URL}/api/oauth/microsoft/callback`;
-const TOKEN_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+// App registration is single-tenant — must use tenant-specific endpoint (AADSTS50194)
+const MS_TENANT = process.env.MS_TENANT_ID || 'common';
+const TOKEN_URL = `https://login.microsoftonline.com/${MS_TENANT}/oauth2/v2.0/token`;
 const GRAPH_ME_URL = 'https://graph.microsoft.com/v1.0/me';
 
 /** Standalone HTML success page — no portal login needed. */

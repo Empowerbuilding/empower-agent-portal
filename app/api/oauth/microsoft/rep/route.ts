@@ -11,7 +11,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const MS_AUTH_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+// App registration is single-tenant — must use tenant-specific endpoint (AADSTS50194)
+const MS_TENANT = process.env.MS_TENANT_ID || 'common';
+const MS_AUTH_URL = `https://login.microsoftonline.com/${MS_TENANT}/oauth2/v2.0/authorize`;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portal.empowerbuilding.ai';
 const REDIRECT_URI = `${APP_URL}/api/oauth/microsoft/callback`;
 
