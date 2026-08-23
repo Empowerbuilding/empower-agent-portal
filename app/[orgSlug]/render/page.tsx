@@ -23,6 +23,7 @@ export default function RenderStudioPage() {
   const [studioChannel, setStudioChannel] = useState<string | null>(null);
   const [iframeReady, setIframeReady] = useState(false);
 
+  const [featureAllowed, setFeatureAllowed] = useState<boolean | null>(null);
   const [submitModal, setSubmitModal] = useState<SubmitPayload | null>(null);
   const [planName, setPlanName] = useState('');
   const [clientName, setClientName] = useState('');
@@ -37,8 +38,11 @@ export default function RenderStudioPage() {
       if (!user) return;
 
       const { data: org } = await supabase
-        .from('organizations').select('id').eq('slug', orgSlug).single();
+        .from('organizations').select('id, features').eq('slug', orgSlug).single();
       if (!org) return;
+      const allowed = Array.isArray(org.features) && org.features.includes('render');
+      setFeatureAllowed(allowed);
+      if (!allowed) return;
       setOrgId(org.id);
 
       const { data: portalUser } = await supabase
@@ -141,6 +145,14 @@ export default function RenderStudioPage() {
   const iframeUrl = currentUser
     ? `${RENDER_ORIGIN}/${currentUser.id}`
     : RENDER_ORIGIN;
+
+  if (featureAllowed === false) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#111', color: 'var(--muted, #888)', fontSize: 14 }}>
+        Render Studio is not enabled for this organization.
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#111', overflow: 'hidden' }}>

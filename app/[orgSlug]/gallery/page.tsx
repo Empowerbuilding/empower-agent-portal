@@ -37,6 +37,7 @@ export default function GalleryPage() {
   const supabase = createClient();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [featureAllowed, setFeatureAllowed] = useState<boolean | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [renders, setRenders] = useState<RenderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,8 +69,11 @@ export default function GalleryPage() {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: org } = await supabase.from('organizations').select('id').eq('slug', orgSlug).single();
+      const { data: org } = await supabase.from('organizations').select('id, features').eq('slug', orgSlug).single();
       if (!org) return;
+      const allowed = Array.isArray(org.features) && org.features.includes('gallery');
+      setFeatureAllowed(allowed);
+      if (!allowed) return;
       setOrgId(org.id);
       const { data: pu } = await supabase.from('portal_users').select('*').eq('supabase_auth_id', user.id).eq('org_id', org.id).single();
       if (pu) setCurrentUser(pu);
@@ -236,6 +240,14 @@ export default function GalleryPage() {
       showToast(e.message, false);
     }
   };
+
+  if (featureAllowed === false) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: 'var(--muted, #888)', fontSize: 14 }}>
+        Render Gallery is not enabled for this organization.
+      </div>
+    );
+  }
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg)', minHeight: 0, overflow: 'hidden' }}>
