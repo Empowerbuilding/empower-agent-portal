@@ -35,8 +35,8 @@ function renderInline(text: string, onImageClick?: (src: string) => void): React
     } else if (match[4] && match[5]) {
       // Markdown link: [text](url)
       parts.push(<a key={key++} href={match[5]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>{match[4]}</a>);
-    } else if (match[6]) parts.push(<strong key={key++}>{match[6]}</strong>);
-    else if (match[7]) parts.push(<em key={key++}>{match[7]}</em>);
+    } else if (match[6]) parts.push(<strong key={key++}>{renderInline(match[6], onImageClick)}</strong>);
+    else if (match[7]) parts.push(<em key={key++}>{renderInline(match[7], onImageClick)}</em>);
     else if (match[8]) parts.push(<code key={key++} style={{ background: 'var(--border)', borderRadius: '3px', padding: '1px 5px', fontSize: '0.9em', fontFamily: 'monospace' }}>{match[8]}</code>);
     else if (match[10]) {
       // Bare non-image URL — auto-link
