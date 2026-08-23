@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { getClientTypeOptions, TypeOption } from '@/lib/crmTypes';
 
 interface Company {
   id: string;
@@ -26,18 +27,6 @@ interface Props {
   crmUrl: string;
   crmKey: string;
 }
-
-const CLIENT_TYPES = [
-  { value: 'builder',       label: 'Builder' },
-  { value: 'subcontractor', label: 'Subcontractor' },
-  { value: 'engineer',      label: 'Engineer' },
-  { value: 'architect',     label: 'Architect' },
-  { value: 'realtor',       label: 'Realtor' },
-  { value: 'consumer',      label: 'Consumer' },
-  { value: 'roofing',       label: 'Roofing' },
-  { value: 'o&g',           label: 'O&G' },
-  { value: 'pool_builder',  label: 'Pool Builder' },
-];
 
 const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   builder:       { bg: 'rgba(59,130,246,0.15)',  color: '#60a5fa' },
@@ -69,12 +58,13 @@ function formatRevenue(val: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
 }
 
-function NewCompanyModal({ onClose, onCreated, crmUrl, crmKey, defaultType }: {
+function NewCompanyModal({ onClose, onCreated, crmUrl, crmKey, defaultType, typeOptions }: {
   onClose: () => void;
   onCreated: (c: Company) => void;
   crmUrl: string;
   crmKey: string;
   defaultType: string;
+  typeOptions: TypeOption[];
 }) {
   const [form, setForm] = useState({ name: '', type: defaultType, city: '', state: '', phone: '', website: '' });
   const [saving, setSaving] = useState(false);
@@ -107,7 +97,7 @@ function NewCompanyModal({ onClose, onCreated, crmUrl, crmKey, defaultType }: {
         <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>Add Company</div>
         <input style={inputStyle} placeholder="Company name *" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
         <select style={inputStyle} value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}>
-          {CLIENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          {typeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
         <input style={inputStyle} placeholder="City" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} />
         <input style={inputStyle} placeholder="State" value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value }))} />
@@ -126,6 +116,7 @@ function NewCompanyModal({ onClose, onCreated, crmUrl, crmKey, defaultType }: {
 
 export default function CompaniesClient({ companies: initial, orgSlug, crmUrl, crmKey }: Props) {
   const router = useRouter();
+  const CLIENT_TYPES = getClientTypeOptions(orgSlug);
   const [companies, setCompanies] = useState(initial);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -147,12 +138,12 @@ export default function CompaniesClient({ companies: initial, orgSlug, crmUrl, c
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, padding: '12px 20px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg, #0f1117)' }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search name, city, contact…"
-          style={{ ...selectStyle, flex: 1 }}
+          style={{ ...selectStyle, flex: 1, minWidth: 160 }}
         />
         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={{ ...selectStyle, minWidth: 130 }}>
           <option value="">All Types</option>
@@ -170,7 +161,7 @@ export default function CompaniesClient({ companies: initial, orgSlug, crmUrl, c
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px' }}>
         <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
           {/* Header */}
-          <div style={{
+          <div className="companies-list-header" style={{
             display: 'grid', gridTemplateColumns: '2fr 100px 140px 140px 70px 90px',
             padding: '8px 16px', background: 'rgba(255,255,255,0.03)',
             borderBottom: '1px solid var(--border)',
@@ -192,6 +183,7 @@ export default function CompaniesClient({ companies: initial, orgSlug, crmUrl, c
             filtered.map((c, i) => (
               <div
                 key={c.id}
+                className="companies-list-row"
                 onClick={() => router.push(`/${orgSlug}/crm/companies/${c.id}`)}
                 style={{
                   display: 'grid', gridTemplateColumns: '2fr 100px 140px 140px 70px 90px',
@@ -202,21 +194,21 @@ export default function CompaniesClient({ companies: initial, orgSlug, crmUrl, c
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <div>
+                <div className="companies-card-name">
                   <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{c.name}</div>
                   {c.phone && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{c.phone}</div>}
                 </div>
-                <div><TypeBadge type={c.type} /></div>
-                <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                <div className="companies-card-type"><TypeBadge type={c.type} /></div>
+                <div className="companies-card-location" style={{ fontSize: 12, color: 'var(--muted)' }}>
                   {[c.city, c.state].filter(Boolean).join(', ') || '—'}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text)' }}>
+                <div className="companies-card-contact" style={{ fontSize: 12, color: 'var(--text)' }}>
                   {c.primary_contact || <span style={{ color: 'var(--muted)' }}>—</span>}
                 </div>
-                <div style={{ textAlign: 'center', fontSize: 13, color: c.open_deals > 0 ? 'var(--text)' : 'var(--muted)' }}>
+                <div className="companies-card-hide-mobile" style={{ textAlign: 'center', fontSize: 13, color: c.open_deals > 0 ? 'var(--text)' : 'var(--muted)' }}>
                   {c.open_deals || '—'}
                 </div>
-                <div style={{ textAlign: 'right', fontSize: 12, fontWeight: c.total_revenue > 0 ? 600 : 400, color: c.total_revenue > 0 ? 'var(--text)' : 'var(--muted)' }}>
+                <div className="companies-card-hide-mobile" style={{ textAlign: 'right', fontSize: 12, fontWeight: c.total_revenue > 0 ? 600 : 400, color: c.total_revenue > 0 ? 'var(--text)' : 'var(--muted)' }}>
                   {formatRevenue(c.total_revenue)}
                 </div>
               </div>
@@ -234,7 +226,8 @@ export default function CompaniesClient({ companies: initial, orgSlug, crmUrl, c
           onCreated={c => { setCompanies(prev => [c, ...prev].sort((a, b) => a.name.localeCompare(b.name))); setShowModal(false); }}
           crmUrl={crmUrl}
           crmKey={crmKey}
-          defaultType="builder"
+          defaultType={CLIENT_TYPES[0]?.value ?? 'other'}
+          typeOptions={CLIENT_TYPES}
         />
       )}
     </div>

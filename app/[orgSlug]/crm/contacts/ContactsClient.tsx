@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { getClientTypeOptions } from '@/lib/crmTypes';
 
 interface Contact {
   id: string;
@@ -213,17 +214,7 @@ export default function ContactsClient({ contacts: initialContacts, totalCount, 
 
   // Client-side filters
   const uniqueSources = Array.from(new Set(allContacts.map(c => c.lead_source).filter(Boolean))) as string[];
-  const CLIENT_TYPE_OPTIONS = [
-    { value: 'builder', label: 'Builder' },
-    { value: 'consumer', label: 'Consumer' },
-    { value: 'subcontractor', label: 'Subcontractor' },
-    { value: 'engineer', label: 'Engineer' },
-    { value: 'architect', label: 'Architect' },
-    { value: 'realtor', label: 'Realtor' },
-    { value: 'roofing', label: 'Roofing' },
-    { value: 'o&g', label: 'O&G' },
-    { value: 'pool_builder', label: 'Pool Builder' },
-  ];
+  const CLIENT_TYPE_OPTIONS = getClientTypeOptions(orgSlug);
 
   const filtered = base.filter(c => {
     if (scoreFilter && c.lead_score?.toLowerCase() !== scoreFilter) return false;

@@ -632,6 +632,34 @@ html, body {
   }
 }
 
+/* ── Companies list → mobile card layout ── */
+@media (max-width: 639px) {
+  .companies-list-header {
+    display: none !important;
+  }
+  .companies-list-row {
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px !important;
+  }
+  .companies-card-name {
+    order: 1;
+  }
+  .companies-card-type {
+    order: 2;
+  }
+  .companies-card-location {
+    order: 3;
+  }
+  .companies-card-contact {
+    order: 4;
+  }
+  .companies-card-hide-mobile {
+    display: none !important;
+  }
+}
+
 /* ── Pipeline Kanban horizontal scroll hint ── */
 .pipeline-kanban-scroll {
   scrollbar-width: thin;

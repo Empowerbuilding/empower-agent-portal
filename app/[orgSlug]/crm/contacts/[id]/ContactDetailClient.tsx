@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { getClientTypeOptions } from '@/lib/crmTypes';
 import TaskFormModal from '../../tasks/TaskFormModal';
 
 const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
@@ -143,18 +144,8 @@ export default function ContactDetailClient({
   // Quick task from contact
   const [showQuickTask, setShowQuickTask] = useState(false);
 
-  // Client type editing
-  const CLIENT_TYPES = [
-    { value: 'builder', label: 'Builder' },
-    { value: 'consumer', label: 'Consumer' },
-    { value: 'subcontractor', label: 'Subcontractor' },
-    { value: 'engineer', label: 'Engineer' },
-    { value: 'architect', label: 'Architect' },
-    { value: 'realtor', label: 'Realtor' },
-    { value: 'roofing', label: 'Roofing' },
-    { value: 'o&g', label: 'O&G' },
-    { value: 'pool_builder', label: 'Pool Builder' },
-  ];
+  // Client type editing (org-aware)
+  const CLIENT_TYPES = getClientTypeOptions(orgSlug);
   const [clientType, setClientType] = useState<string>(contactData.client_type ?? '');
   const [savingClientType, setSavingClientType] = useState(false);
 
