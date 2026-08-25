@@ -64,13 +64,17 @@ export default async function ChannelPage({
   }
   if (!channel) redirect(`/${orgSlug}`);
 
-  // Load last 100 messages (fetch newest-first, then reverse for chronological display)
+  // Load recent messages (fetch newest-first, then reverse for chronological display).
+  // SMS channels get a much deeper window: threads are grouped per phone number, so a
+  // small limit makes quiet threads vanish entirely after a few days (~30/day traffic
+  // meant 100 msgs ≈ 3-4 days of visible history). 2000 covers ~2+ months.
+  const messageLimit = (channel as PortalChannel).channel_type === 'sms' ? 2000 : 100;
   const { data: rawMessages } = await supabase
     .from('portal_messages')
     .select('*')
     .eq('channel_id', channelId)
     .order('created_at', { ascending: false })
-    .limit(100);
+    .limit(messageLimit);
   const messages = (rawMessages ?? []).reverse();
 
   const ch = channel as PortalChannel;
