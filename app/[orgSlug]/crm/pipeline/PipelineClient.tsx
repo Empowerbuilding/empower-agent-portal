@@ -175,7 +175,7 @@ export default function PipelineClient({ deals: initialDeals, users, orgSlug, cr
                   border: `1px solid ${isDragTarget ? stage.color : 'var(--border)'}`,
                   borderRadius: 10, overflow: 'hidden',
                   transition: 'background 0.15s, border-color 0.15s',
-                  maxHeight: 'calc(100vh - 165px)',
+                  maxHeight: '100%',
                 }}
               >
                 {/* Column header */}
