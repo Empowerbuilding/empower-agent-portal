@@ -16,6 +16,7 @@ const VOCAB_PROMPT =
   'steel frame, Spring Mountain, study set, design concierge, CRM, lead, deal.';
 
 const GEMINI_MODEL = 'gemini-3-flash-preview';
+const GEMINI_TIMEOUT_MS = 40_000; // hung Gemini calls were locking the mic button client-side
 
 export async function POST(req: NextRequest) {
   const supabase = await createPortalClient();
@@ -45,37 +46,60 @@ export async function POST(req: NextRequest) {
   const mimeType = audio.type?.split(';')[0] || 'audio/webm';
   const bytes = Buffer.from(await audio.arrayBuffer()).toString('base64');
 
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: VOCAB_PROMPT },
-              { inlineData: { mimeType, data: bytes } },
-            ],
-          },
+  const body = JSON.stringify({
+    contents: [
+      {
+        parts: [
+          { text: VOCAB_PROMPT },
+          { inlineData: { mimeType, data: bytes } },
         ],
-        generationConfig: { temperature: 0 },
-      }),
-    }
-  );
+      },
+    ],
+    generationConfig: { temperature: 0 },
+  });
 
-  if (!r.ok) {
-    const errText = await r.text().catch(() => '');
-    console.error('[transcribe] Gemini error', r.status, errText.slice(0, 300));
-    return NextResponse.json({ error: 'Transcription failed' }, { status: 502 });
+  // Two attempts with a hard timeout each — the preview model occasionally hangs
+  // or returns an empty candidate; without this the request stalled indefinitely.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    let r: Response;
+    try {
+      r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+        }
+      );
+    } catch (e) {
+      console.error(`[transcribe] Gemini attempt ${attempt} failed:`, e instanceof Error ? e.message : e);
+      continue;
+    }
+
+    if (!r.ok) {
+      const errText = await r.text().catch(() => '');
+      console.error(`[transcribe] Gemini error (attempt ${attempt})`, r.status, errText.slice(0, 300));
+      // 4xx other than 429 won't get better on retry
+      if (r.status >= 400 && r.status < 500 && r.status !== 429) break;
+      continue;
+    }
+
+    const d = await r.json().catch(() => null);
+    const text: string =
+      d?.candidates?.[0]?.content?.parts
+        ?.map((p: { text?: string }) => p.text ?? '')
+        .join('')
+        .trim() ?? '';
+
+    const finishReason: string | undefined = d?.candidates?.[0]?.finishReason;
+    if (!text && finishReason && finishReason !== 'STOP') {
+      console.error(`[transcribe] empty result, finishReason=${finishReason} (attempt ${attempt})`);
+      continue; // flaky/blocked candidate — retry once
+    }
+
+    return NextResponse.json({ text });
   }
 
-  const d = await r.json();
-  const text: string =
-    d?.candidates?.[0]?.content?.parts
-      ?.map((p: { text?: string }) => p.text ?? '')
-      .join('')
-      .trim() ?? '';
-
-  return NextResponse.json({ text });
+  return NextResponse.json({ error: 'Transcription failed' }, { status: 502 });
 }

@@ -79,12 +79,26 @@ export function useVoiceRecorder(onText: (text: string) => void) {
         const fd = new FormData();
         const ext = type.includes('mp4') ? 'm4a' : 'webm';
         fd.append('audio', blob, `voice.${ext}`);
-        const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
-        const d = await r.json().catch(() => ({}));
-        if (r.ok && d.text) onTextRef.current(d.text);
-        else if (!r.ok) alert(d.error ?? 'Transcription failed — try again.');
-      } catch {
-        alert('Transcription failed — check your connection and try again.');
+        // Hard client timeout — a hung request used to leave the mic button
+        // permanently disabled in the "transcribing" state.
+        const r = await fetch('/api/transcribe', {
+          method: 'POST',
+          body: fd,
+          signal: AbortSignal.timeout(50_000),
+        });
+        const d: { text?: string; error?: string } = await r.json().catch(() => ({}));
+        if (r.ok) {
+          const text = (d.text ?? '').trim();
+          if (text) onTextRef.current(text);
+          else alert('No speech detected — try again.');
+        } else {
+          alert(d.error ?? 'Transcription failed — try again.');
+        }
+      } catch (e) {
+        const timedOut = e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError');
+        alert(timedOut
+          ? 'Transcription timed out — try again.'
+          : 'Transcription failed — check your connection and try again.');
       } finally {
         setTranscribing(false);
       }
