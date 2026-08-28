@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getUploadUrl, getDownloadUrl, deleteObject } from '@/lib/spaces';
+import { requireOrgMember } from '@/lib/api-auth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// GET /api/files?orgId=...&userId=...&role=...
-// Returns project_files list, scoped for contractors
+// GET /api/files?orgId=...
+// Returns project_files list for the caller's org. Caller must be a logged-in
+// member of orgId; role comes from their portal_users row (never the query string).
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const orgId = searchParams.get('orgId');
-  const userId = searchParams.get('userId');
-  const role = searchParams.get('role');
 
-  if (!orgId) return NextResponse.json({ error: 'Missing orgId' }, { status: 400 });
+  const auth = await requireOrgMember(orgId);
+  if (!auth.ok) return auth.response;
+  const role = auth.role;
 
   let query = supabase
     .from('project_files')
@@ -43,6 +45,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { action } = body;
+
+  // Auth: every action requires a logged-in member of the target org.
+  // presign-download has no orgId in the body — its org is resolved from the
+  // fileKey below, then membership is checked there.
+  if (action !== 'presign-download') {
+    const auth = await requireOrgMember(body.orgId);
+    if (!auth.ok) return auth.response;
+  }
 
   // ── Presign upload ──────────────────────────────────────────────────────────
   if (action === 'presign-upload') {
@@ -115,6 +125,19 @@ export async function POST(req: NextRequest) {
     const { fileKey, filename } = body;
     if (!fileKey || !filename) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
+    // Resolve the file's org from the DB (never trust the client), then
+    // require the caller to be a member of that org.
+    const { data: fileRow } = await supabase
+      .from('project_files')
+      .select('org_id')
+      .eq('file_key', fileKey)
+      .limit(1)
+      .maybeSingle();
+    if (!fileRow) return NextResponse.json({ error: 'File not found' }, { status: 404 });
+
+    const auth = await requireOrgMember(fileRow.org_id);
+    if (!auth.ok) return auth.response;
+
     const downloadUrl = await getDownloadUrl(fileKey, filename);
     return NextResponse.json({ downloadUrl });
   }
@@ -128,11 +151,20 @@ export async function POST(req: NextRequest) {
 
   // ── Delete file (removes from DO Spaces + Supabase) ─────────────────────────
   if (action === 'delete') {
-    const { fileId, fileKey, orgId } = body;
+    const { fileId, orgId } = body;
     if (!fileId || !orgId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    // Look up the row first (scoped to the caller's org) and use the DB's
+    // file_key for the Spaces delete — never a client-supplied key.
+    const { data: fileRow } = await supabase
+      .from('project_files')
+      .select('file_key')
+      .eq('id', fileId)
+      .eq('org_id', orgId)
+      .maybeSingle();
+    if (!fileRow) return NextResponse.json({ error: 'File not found' }, { status: 404 });
     // Delete from DO Spaces (best-effort — don't block on failure)
-    if (fileKey) {
-      try { await deleteObject(fileKey); } catch (e) { console.error('[files/delete] spaces error:', e); }
+    if (fileRow.file_key) {
+      try { await deleteObject(fileRow.file_key); } catch (e) { console.error('[files/delete] spaces error:', e); }
     }
     const { error } = await supabase.from('project_files').delete().eq('id', fileId).eq('org_id', orgId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

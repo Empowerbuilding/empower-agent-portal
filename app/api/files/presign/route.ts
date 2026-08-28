@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getUploadUrl, BUCKET } from '@/lib/spaces';
+import { requireOrgMember } from '@/lib/api-auth';
 
 export const runtime = 'nodejs';
 
@@ -16,6 +17,9 @@ export async function POST(req: NextRequest) {
     if (!filename || !planName || !orgId) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
+
+    const auth = await requireOrgMember(orgId);
+    if (!auth.ok) return auth.response;
 
     const slug = planName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
