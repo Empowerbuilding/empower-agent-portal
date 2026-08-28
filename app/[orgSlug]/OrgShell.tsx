@@ -60,11 +60,21 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
 
   // Presence heartbeat — ping every 30s while the portal is open so other
   // team members can see who's currently online (see Settings > Team Members)
+  // Only ping while the tab is actually VISIBLE — an open-but-background tab
+  // (minimized, other app focused, locked screen) must not mark the user active,
+  // otherwise an always-open desktop portal permanently suppresses mobile push.
   useEffect(() => {
-    const ping = () => { fetch('/api/heartbeat', { method: 'POST' }).catch(() => {}); };
+    const ping = () => {
+      if (document.visibilityState !== 'visible') return;
+      fetch('/api/heartbeat', { method: 'POST' }).catch(() => {});
+    };
     ping();
     const interval = setInterval(ping, 30000);
-    return () => clearInterval(interval);
+    document.addEventListener('visibilitychange', ping);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', ping);
+    };
   }, []);
 
   // Clear app icon badge when user is in the portal
