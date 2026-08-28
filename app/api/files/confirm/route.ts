@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireOrgMember } from '@/lib/api-auth';
 
 export const runtime = 'nodejs';
 
@@ -18,6 +19,15 @@ export async function POST(req: NextRequest) {
 
     if (!orgId || !planName || !fileKey) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    }
+
+    const auth = await requireOrgMember(orgId);
+    if (!auth.ok) return auth.response;
+
+    // A confirmed key must live under the caller's own org prefix — stops
+    // claiming/overwriting another org's objects via a crafted fileKey.
+    if (!String(fileKey).startsWith(`${orgId}/`)) {
+      return NextResponse.json({ error: 'Invalid fileKey' }, { status: 400 });
     }
 
     // Archive previous version

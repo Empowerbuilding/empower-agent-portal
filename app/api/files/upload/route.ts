@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSpacesClientDirect, BUCKET } from '@/lib/spaces';
+import { requireOrgMember } from '@/lib/api-auth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,6 +27,9 @@ export async function POST(req: NextRequest) {
     if (!file || !planName || !orgId) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
+
+    const auth = await requireOrgMember(orgId);
+    if (!auth.ok) return auth.response;
 
     const slug = planName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 

@@ -18,6 +18,15 @@ export async function GET(req: NextRequest) {
   const orgId = req.nextUrl.searchParams.get('orgId');
   if (!orgId) return NextResponse.json({ error: 'Missing orgId' }, { status: 400 });
 
+  // Must be a member of the org whose folders are being listed
+  const { data: member } = await supabase
+    .from('portal_users')
+    .select('id')
+    .eq('supabase_auth_id', user.id)
+    .eq('org_id', orgId)
+    .single();
+  if (!member) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   // Design OS projects (active design work — one folder per client project)
   let projects: string[] = [];
   try {
