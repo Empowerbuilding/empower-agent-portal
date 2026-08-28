@@ -15,8 +15,10 @@ const VOCAB_PROMPT =
   'render, Revit, floor plan, elevation, D1, D2, D3 revision, punch list, ' +
   'steel frame, Spring Mountain, study set, design concierge, CRM, lead, deal.';
 
-const GEMINI_MODEL = 'gemini-3-flash-preview';
-const GEMINI_TIMEOUT_MS = 40_000; // hung Gemini calls were locking the mic button client-side
+// gemini-3-flash-preview intermittently stalled 40s+ on audio (verified 2026-08-27) —
+// 2.5-flash transcribes the same clips in ~1s with identical accuracy. Stay on stable.
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_TIMEOUT_MS = 20_000; // per attempt; normal transcription is ~1-3s
 
 export async function POST(req: NextRequest) {
   const supabase = await createPortalClient();
@@ -55,7 +57,7 @@ export async function POST(req: NextRequest) {
         ],
       },
     ],
-    generationConfig: { temperature: 0 },
+    generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } },
   });
 
   // Two attempts with a hard timeout each — the preview model occasionally hangs
