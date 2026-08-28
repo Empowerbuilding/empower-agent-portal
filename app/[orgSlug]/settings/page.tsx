@@ -66,6 +66,19 @@ export default function SettingsPage() {
   const [channelToggling, setChannelToggling] = useState<string | null>(null);
   const [pushDebug, setPushDebug] = useState<PushDebugInfo | null>(null);
   const [showPushDebug, setShowPushDebug] = useState(false);
+  const [adoption, setAdoption] = useState<{
+    id: string; name: string; email: string; role: string; devices: number;
+    lastSend: { status: string; at: string; error: string | null } | null; failures7d: number;
+  }[] | null>(null);
+
+  // Notification adoption report — owner/admin only
+  useEffect(() => {
+    if (!orgId || (currentUserRole !== 'owner' && currentUserRole !== 'admin')) return;
+    fetch(`/api/push/adoption?orgId=${orgId}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d?.members) setAdoption(d.members); })
+      .catch(() => {});
+  }, [orgId, currentUserRole]);
 
   useEffect(() => {
     const ios = isIOS();
@@ -433,8 +446,48 @@ export default function SettingsPage() {
               ⚠️ {notifError}
             </div>
           )}
+          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)', fontSize: '12px' }}>
+            <a href="/notifications" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+              📱 Phone setup guide →
+            </a>
+            <span style={{ color: 'var(--muted)' }}> — step-by-step for iPhone &amp; Android, with a live test</span>
+          </div>
         </div>
       </section>
+
+      {/* Notification Adoption — owner/admin only */}
+      {adoption && (
+        <section style={{ marginBottom: '40px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Team Notification Status</div>
+          <div style={{ background: 'var(--sidebar-bg)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+            {adoption.map((m, i) => (
+              <div key={m.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+                padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)',
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                    {m.devices === 0
+                      ? 'No devices — not receiving notifications'
+                      : `${m.devices} device${m.devices === 1 ? '' : 's'}${m.lastSend ? ` · last push ${m.lastSend.status}` : ''}${m.failures7d > 0 ? ` · ${m.failures7d} failures (7d)` : ''}`}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: '11px', padding: '2px 8px', borderRadius: '12px', fontWeight: 700, flexShrink: 0,
+                  background: m.devices === 0 ? 'rgba(218,54,51,0.15)' : m.failures7d > 0 ? 'rgba(210,153,34,0.15)' : 'rgba(63,185,80,0.15)',
+                  color: m.devices === 0 ? '#da3633' : m.failures7d > 0 ? '#d29922' : '#3fb950',
+                }}>
+                  {m.devices === 0 ? '✗ OFF' : m.failures7d > 0 ? '⚠ ISSUES' : '✓ ON'}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
+            Send anyone showing “OFF” this link: <span style={{ fontFamily: 'monospace' }}>portal.empowerbuilding.ai/notifications</span>
+          </div>
+        </section>
+      )}
 
       {/* Install App */}
       <section style={{ marginBottom: '40px' }}>

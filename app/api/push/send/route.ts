@@ -129,23 +129,41 @@ export async function POST(req: NextRequest) {
     unreadCount: 1, // incremented client-side in sw.js via badge accumulation
   });
 
-  // Send to all subscribed devices, clean up expired ones
+  // Send to all subscribed devices, clean up expired ones, log every outcome
+  const logs: { user_id: string; endpoint_tail: string; title: string; status: string; error: string | null }[] = [];
   const results = await Promise.allSettled(
     subscriptions.map(async (sub: any) => {
+      const tail = String(sub.endpoint).slice(-12);
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           payload
         );
+        logs.push({ user_id: sub.user_id, endpoint_tail: tail, title: notifTitle, status: 'sent', error: null });
       } catch (err: any) {
-        // 410 Gone = subscription expired, remove it
-        if (err.statusCode === 410) {
+        // 410 Gone / 404 = subscription expired, remove it
+        if (err.statusCode === 410 || err.statusCode === 404) {
           await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+          logs.push({ user_id: sub.user_id, endpoint_tail: tail, title: notifTitle, status: 'expired', error: `HTTP ${err.statusCode}` });
+        } else {
+          logs.push({
+            user_id: sub.user_id,
+            endpoint_tail: tail,
+            title: notifTitle,
+            status: 'failed',
+            error: `${err.statusCode ?? ''} ${err.body ?? err.message ?? 'unknown'}`.trim().slice(0, 300),
+          });
         }
       }
     })
   );
 
-  return NextResponse.json({ ok: true, sent: results.length });
+  // Fire-and-forget delivery log — never block or fail the send on logging
+  if (logs.length > 0) {
+    try { await supabase.from('push_send_log').insert(logs); } catch {}
+  }
+
+  const sentCount = logs.filter((l) => l.status === 'sent').length;
+  return NextResponse.json({ ok: true, sent: sentCount, attempted: results.length });
 }
 

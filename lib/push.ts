@@ -237,6 +237,51 @@ export function isIOS(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
+export function isAndroid(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /android/i.test(navigator.userAgent);
+}
+
+/**
+ * Detect in-app webviews (Messages, Gmail, Facebook, Instagram, etc.).
+ * Push can NEVER work inside these, and iOS webviews don't even have
+ * "Add to Home Screen" — users must escape to a real browser first.
+ */
+export function isInAppBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  // Known in-app browser tokens (Facebook, Instagram, Messenger, LinkedIn,
+  // Twitter/X, Snapchat, TikTok, Line, WeChat, Gmail/Google app, Pinterest)
+  if (/(FBAN|FBAV|FB_IAB|Instagram|Messenger|LinkedInApp|Twitter|Snapchat|musical_ly|BytedanceWebview|Line\/|MicroMessenger|GSA\/|Pinterest)/i.test(ua)) {
+    return true;
+  }
+  // Android WebView marker
+  if (/android/i.test(ua) && /; wv\)/i.test(ua)) return true;
+  // iOS: a WebKit browser without "Safari" in the UA is an embedded webview
+  // (real Safari, Chrome iOS "CriOS", Firefox iOS "FxiOS", Edge iOS "EdgiOS" all include Safari)
+  if (/iphone|ipad|ipod/i.test(ua) && /AppleWebKit/i.test(ua) && !/Safari/i.test(ua)) {
+    return true;
+  }
+  return false;
+}
+
+/** Ask the server whether it has a push_subscriptions row for this device's endpoint. */
+export async function checkServerSubscription(userId: string): Promise<{ onServer: boolean; devices: number } | null> {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration('/sw.js');
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    const res = await fetch('/api/push/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, endpoint: sub?.endpoint ?? null }),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export function isInStandaloneMode(): boolean {
   if (typeof window === 'undefined') return false;
   return ('standalone' in window.navigator && (window.navigator as any).standalone === true)
