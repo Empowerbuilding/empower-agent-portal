@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, isIOS, isInStandaloneMode, requestNotificationPermission, getPushDebugInfo, type PushDebugInfo } from '@/lib/push';
+import MySettings from '@/components/ui/MySettings';
 
 interface User {
   id: string;
@@ -66,6 +67,7 @@ export default function SettingsPage() {
   const [channelToggling, setChannelToggling] = useState<string | null>(null);
   const [pushDebug, setPushDebug] = useState<PushDebugInfo | null>(null);
   const [showPushDebug, setShowPushDebug] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'me'>('general');
   const [adoption, setAdoption] = useState<{
     id: string; name: string; email: string; role: string; devices: number;
     lastSend: { status: string; at: string; error: string | null } | null; failures7d: number;
@@ -345,8 +347,34 @@ export default function SettingsPage() {
   return (
     <div className="page-scroll">
     <div style={{ padding: '32px', maxWidth: '560px', margin: '0 auto' }}>
-      <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', marginBottom: '32px' }}>Settings</div>
+      <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', marginBottom: '20px' }}>Settings</div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', marginBottom: '28px' }}>
+        {([['general', 'General'], ['me', 'My Settings']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            style={{
+              padding: '9px 16px', background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: '13px', fontWeight: 600,
+              color: activeTab === key ? 'var(--accent)' : 'var(--muted)',
+              borderBottom: activeTab === key ? '2px solid var(--accent)' : '2px solid transparent',
+              marginBottom: '-1px',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* My Settings tab — per-user signature + briefing time (S7) */}
+      {activeTab === 'me' && orgId && <MySettings orgId={orgId} />}
+      {activeTab === 'me' && !orgId && (
+        <div style={{ color: 'var(--muted)', fontSize: '13px' }}>Loading…</div>
+      )}
+
+      {activeTab === 'general' && (<>
       {/* Notifications */}
       <section style={{ marginBottom: '40px' }}>
         <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Notifications</div>
@@ -756,6 +784,7 @@ export default function SettingsPage() {
           Sign Out
         </button>
       </section>
+      </>)}
     </div>
     </div>
   );
