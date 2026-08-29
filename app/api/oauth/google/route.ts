@@ -53,8 +53,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
-  // Get the Google client ID from the agent's env vars
-  const { data: envVars } = await supabase
+  // Get the Google client ID from the agent's env vars.
+  // agent_env_vars is RLS-locked (service-role only, S10); auth is enforced
+  // above, so use the admin client for the table read.
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+  const { data: envVars } = await admin
     .from('agent_env_vars')
     .select('key, value')
     .eq('agent_id', agentId)

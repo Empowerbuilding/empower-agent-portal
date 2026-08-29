@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getAgent } from '@/lib/agent-router';
 import { syncIntegrationToToolsMd, removeIntegrationFromToolsMd } from '@/lib/tools-md-writer';
 
@@ -30,7 +31,10 @@ export async function GET(
   const auth = await authCheck(agentId);
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: vars } = await auth.supabase
+  // agent_env_vars is RLS-locked (service-role only, S10). Auth is enforced
+  // above via authCheck(owner/admin); use the admin client for the table op.
+  const admin = createAdminClient();
+  const { data: vars } = await admin
     .from('agent_env_vars')
     .select('id, key, value, display_name, integration_id, is_secret, updated_at')
     .eq('agent_id', agentId)
@@ -74,7 +78,8 @@ export async function POST(
 
   if (upserts.length === 0) return NextResponse.json({ success: true, saved: 0 });
 
-  const { error } = await auth.supabase
+  const admin = createAdminClient();
+  const { error } = await admin
     .from('agent_env_vars')
     .upsert(upserts, { onConflict: 'agent_id,key' });
 
@@ -105,7 +110,8 @@ export async function DELETE(
   const { integrationId } = await req.json();
   if (!integrationId) return NextResponse.json({ error: 'Missing integrationId' }, { status: 400 });
 
-  await auth.supabase
+  const admin = createAdminClient();
+  await admin
     .from('agent_env_vars')
     .delete()
     .eq('agent_id', agentId)
