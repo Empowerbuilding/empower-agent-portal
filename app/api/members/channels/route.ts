@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { requireOrgMember } from '@/lib/api-auth';
 
 function adminClient() {
   return createSupabaseClient(
@@ -13,12 +14,15 @@ function adminClient() {
 export const runtime = 'nodejs';
 
 // GET /api/members/channels?userId=xxx&orgId=xxx — get channel memberships for a user
-// No auth required — table has no RLS, reading channel lists is safe
+// Caller must be a member of orgId (admin UI reads any user's memberships within the org).
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('userId');
   const orgId = searchParams.get('orgId');
   if (!userId || !orgId) return NextResponse.json({ error: 'Missing userId or orgId' }, { status: 400 });
+
+  const auth = await requireOrgMember(orgId);
+  if (!auth.ok) return auth.response;
 
   const supabase = adminClient();
   const { data: memberships } = await supabase

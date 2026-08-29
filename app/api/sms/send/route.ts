@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { requireChannelMember } from '@/lib/api-auth';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -10,27 +11,21 @@ const PORTAL_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth check
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const { to, body, channelId, contactName, contactId, userFlag, draftMessageId } = await req.json();
     if (!to || !body || !channelId) return NextResponse.json({ error: 'to, body, channelId required' }, { status: 400 });
 
-    const portal = createServiceClient(PORTAL_URL, PORTAL_SERVICE_KEY, { auth: { persistSession: false } });
+    // Auth: caller must be a member of the org that owns this channel.
+    // (Previously only required *a* session — any rep could send from another
+    // org's Telnyx number / write another org's CRM by passing its channelId.)
+    const chAuth = await requireChannelMember(channelId);
+    if (!chAuth.ok) return chAuth.response;
+    const { orgId, agentId } = chAuth;
 
-    // ── Look up channel → org + agent ────────────────────────────────────────
-    const { data: channel, error: chErr } = await portal
-      .from('portal_channels')
-      .select('org_id, agent_id')
-      .eq('id', channelId)
-      .single();
-    if (chErr || !channel) {
-      console.error('[sms/send] Channel lookup failed:', chErr?.message);
-      return NextResponse.json({ ok: false, error: 'Channel not found' }, { status: 404 });
-    }
-    const { org_id: orgId, agent_id: agentId } = channel;
+    // Throttle outbound sends per user (real SMS spend).
+    const rl = checkRateLimit(chAuth.userId, { key: 'sms:send', limit: 30, windowMs: 60_000 });
+    if (rl) return rl;
+
+    const portal = createServiceClient(PORTAL_URL, PORTAL_SERVICE_KEY, { auth: { persistSession: false } });
 
     // ── Look up agent → carrier + phone credentials ────────────────────────────
     const { data: agent } = await portal
@@ -81,6 +76,11 @@ export async function POST(req: NextRequest) {
             { status: 403 }
           );
         }
+        // NOTE: fails OPEN on lookup error. Cannot fail closed yet — the
+        // sms_opt_out column only exists in Barnhaus CRM; ITS/Showcase/MD/CW
+        // return a 400 (no such column) which would block ALL their sends.
+        // Fail-closed is gated on adding sms_opt_out fleet-wide first
+        // (tracked as an S13 follow-up / open item).
       } catch { /* fail open if CRM column missing or lookup fails */ }
     }
 
