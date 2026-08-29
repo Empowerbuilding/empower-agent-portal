@@ -1,8 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAgent, agentDockerExec } from '@/lib/agent-router';
+import { shellQuote } from '@/lib/ssh';
 
 export const runtime = 'nodejs';
+
+// A cron id is either a scheduler UUID or a host-cron mirror handle.
+// Anything else is rejected before it can reach a shell.
+function isValidCronId(id: unknown): id is string {
+  return typeof id === 'string' && /^(host-cron::)?[A-Za-z0-9_.:-]{1,128}$/.test(id);
+}
+
+// Schedule values are validated by shape per type; then still shell-quoted.
+function validateSchedule(type: string, value: string): string | null {
+  if (type === 'every') {
+    // e.g. "5m", "1h", "30s", "1d" or a plain number (seconds)
+    return /^\d{1,6}\s*(s|m|h|d)?$/.test(value.trim()) ? null : 'Invalid interval (e.g. 5m, 1h, 30s)';
+  }
+  if (type === 'cron') {
+    // 5- or 6-field crontab expression: digits, * , / - and spaces only
+    return /^[\d*,\/\- ]{1,100}$/.test(value.trim()) && value.trim().split(/\s+/).length >= 5
+      ? null : 'Invalid cron expression';
+  }
+  if (type === 'at') {
+    // ISO-ish datetime / time — conservative charset
+    return /^[\dT:\-+ .Zapm]{1,40}$/i.test(value.trim()) ? null : 'Invalid time';
+  }
+  return 'Invalid scheduleType';
+}
 
 // agentDockerExec appends `|| true`, so failures surface only in output text — detect them.
 function execFailed(output: string): string | null {
@@ -33,15 +58,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ age
   if (!name || !scheduleType || !scheduleValue || !message) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
+  if (!['every', 'cron', 'at'].includes(scheduleType)) {
+    return NextResponse.json({ error: 'Invalid scheduleType' }, { status: 400 });
+  }
+  const schedErr = validateSchedule(scheduleType, String(scheduleValue));
+  if (schedErr) return NextResponse.json({ error: schedErr }, { status: 400 });
+  if (sessionKey !== undefined && sessionKey !== null && sessionKey !== '' &&
+      !/^[A-Za-z0-9_.:@\/-]{1,200}$/.test(String(sessionKey))) {
+    return NextResponse.json({ error: 'Invalid sessionKey' }, { status: 400 });
+  }
 
-  // Build the schedule flag
-  let scheduleFlag = '';
-  if (scheduleType === 'every') scheduleFlag = `--every "${scheduleValue}"`;
-  else if (scheduleType === 'cron') scheduleFlag = `--cron "${scheduleValue}"`;
-  else if (scheduleType === 'at') scheduleFlag = `--at "${scheduleValue}"`;
-
-  const targetFlag = sessionKey ? `--session-key "${sessionKey}"` : `--session isolated`;
-  const cmd = `node /app/openclaw.mjs cron add --name "${name.replace(/"/g, '\\"')}" ${scheduleFlag} ${targetFlag} "${message.replace(/"/g, '\\"')}"`;
+  // Every interpolated value is shell-quoted (see lib/ssh.shellQuote) so no
+  // form field can break out of the argument and execute host commands.
+  const flagName = scheduleType === 'every' ? '--every' : scheduleType === 'cron' ? '--cron' : '--at';
+  const scheduleFlag = `${flagName} ${shellQuote(String(scheduleValue).trim())}`;
+  const targetFlag = sessionKey ? `--session-key ${shellQuote(String(sessionKey))}` : `--session isolated`;
+  const cmd = `node /app/openclaw.mjs cron add --name ${shellQuote(String(name))} ${scheduleFlag} ${targetFlag} ${shellQuote(String(message))}`;
 
   try {
     const output = await agentDockerExec(agentId, cmd);
@@ -63,9 +95,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ag
   if (!cronId || !['enable', 'disable'].includes(action)) {
     return NextResponse.json({ error: 'Missing cronId or invalid action' }, { status: 400 });
   }
+  if (!isValidCronId(cronId)) {
+    return NextResponse.json({ error: 'Invalid cronId' }, { status: 400 });
+  }
 
   try {
-    const output = await agentDockerExec(agentId, `node /app/openclaw.mjs cron ${action} ${cronId}`);
+    const output = await agentDockerExec(agentId, `node /app/openclaw.mjs cron ${action} ${shellQuote(cronId)}`);
     const fail = execFailed(output);
     if (fail) return NextResponse.json({ error: `Cron ${action} failed on agent: ${fail}` }, { status: 500 });
     // Update local DB cache only after the agent-side change succeeded
@@ -84,10 +119,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ a
 
   const { cronId } = await req.json();
   if (!cronId) return NextResponse.json({ error: 'Missing cronId' }, { status: 400 });
-
+  if (!isValidCronId(cronId)) return NextResponse.json({ error: 'Invalid cronId' }, { status: 400 });
 
   try {
-    const output = await agentDockerExec(agentId, `node /app/openclaw.mjs cron rm ${cronId}`);
+    const output = await agentDockerExec(agentId, `node /app/openclaw.mjs cron rm ${shellQuote(cronId)}`);
     const fail = execFailed(output);
     // Host-crontab mirror rows aren't in the agent scheduler — still allow removing the row.
     if (fail && !String(cronId).startsWith('host-cron::')) {

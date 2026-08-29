@@ -6,6 +6,17 @@
 
 import { Client } from 'ssh2';
 
+/**
+ * Wrap an arbitrary string as a single, safe POSIX shell argument.
+ * Single-quotes neutralize every metacharacter; the only special case is an
+ * embedded single quote, closed and re-opened as '\''. Bulletproof against
+ * $(), backticks, ;, |, &, newlines, etc. Use this for EVERY value that is
+ * interpolated into a command run via sshExec.
+ */
+export function shellQuote(s: string): string {
+  return `'${String(s).replace(/'/g, `'\\''`)}'`;
+}
+
 export interface SSHConfig {
   host: string;
   port?: number;
