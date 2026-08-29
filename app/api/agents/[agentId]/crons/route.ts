@@ -73,7 +73,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ age
   const flagName = scheduleType === 'every' ? '--every' : scheduleType === 'cron' ? '--cron' : '--at';
   const scheduleFlag = `${flagName} ${shellQuote(String(scheduleValue).trim())}`;
   const targetFlag = sessionKey ? `--session-key ${shellQuote(String(sessionKey))}` : `--session isolated`;
-  const cmd = `node /app/openclaw.mjs cron add --name ${shellQuote(String(name))} ${scheduleFlag} ${targetFlag} ${shellQuote(String(message))}`;
+  // Message must be passed via --message (current CLI rejects a positional payload).
+  const cmd = `node /app/openclaw.mjs cron add --name ${shellQuote(String(name))} ${scheduleFlag} ${targetFlag} --message ${shellQuote(String(message))}`;
 
   try {
     const output = await agentDockerExec(agentId, cmd);
