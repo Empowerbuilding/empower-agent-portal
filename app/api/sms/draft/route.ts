@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { requireChannelMember } from '@/lib/api-auth';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -10,15 +11,19 @@ const GEMINI_KEY = process.env.GOOGLE_AI_STUDIO_KEY!;
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth check
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const { channelId, inboundText, contactName, contactPhone, repName, conversationHistory } = await req.json();
     if (!channelId || !inboundText) {
       return NextResponse.json({ error: 'channelId and inboundText required' }, { status: 400 });
     }
+
+    // Auth: caller must be a member of the org that owns this channel
+    // (was any-session; also burns Gemini quota per call).
+    const chAuth = await requireChannelMember(channelId);
+    if (!chAuth.ok) return chAuth.response;
+
+    // Throttle AI draft generation per user (Gemini spend).
+    const rl = checkRateLimit(chAuth.userId, { key: 'sms:draft', limit: 30, windowMs: 60_000 });
+    if (rl) return rl;
 
     const portal = createServiceClient(PORTAL_URL, PORTAL_SERVICE_KEY, { auth: { persistSession: false } });
 

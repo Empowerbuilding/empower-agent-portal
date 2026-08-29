@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireUser, requireOrgMemberBySlug } from '@/lib/api-auth';
 
 const DEFAULT_CRM_URL = process.env.CRM_SUPABASE_URL;
 // Coolify has it as CRM_SUPABASE_KEY; fall back to the longer name for local dev
@@ -27,6 +28,17 @@ export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get('phone');
   const orgSlug = req.nextUrl.searchParams.get('orgSlug');
   if (!phone) return NextResponse.json({ error: 'phone required' }, { status: 400 });
+
+  // This returns contact PII + deal value by phone; was fully anon.
+  // If an orgSlug is given, require membership of THAT org (stops a rep at org A
+  // from querying org B's CRM). Otherwise just require any login (default CRM).
+  if (orgSlug) {
+    const scoped = await requireOrgMemberBySlug(orgSlug);
+    if (!scoped.ok) return scoped.response;
+  } else {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+  }
 
   let CRM_URL = DEFAULT_CRM_URL;
   let CRM_KEY = DEFAULT_CRM_KEY;
