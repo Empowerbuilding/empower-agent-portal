@@ -5,8 +5,11 @@ import { createClient } from '@supabase/supabase-js';
 
 // Barnhaus Design OS — source of truth for active design projects.
 // Folder names in the File Library stay consistent with project tracking.
-const DESIGNOS_URL = 'https://nvsczfrljlovksrdyaix.supabase.co';
-const DESIGNOS_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52c2N6ZnJsamxvdmtzcmR5YWl4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODYzODQ3MywiZXhwIjoyMDk0MjE0NDczfQ.Rl8IVENc0WSpMm3d7JQzwpPV_ILp2_b6ohn1aWX-cuc';
+const DESIGNOS_URL = process.env.DESIGNOS_URL || 'https://nvsczfrljlovksrdyaix.supabase.co';
+// Moved to env (S3). Literal fallback kept only until the key is rotated in S17,
+// after which the old value is dead and the fallback is a no-op. git history
+// still contains the old key — S17 rotates + scrubs.
+const DESIGNOS_SERVICE_KEY = process.env.DESIGNOS_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52c2N6ZnJsamxvdmtzcmR5YWl4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODYzODQ3MywiZXhwIjoyMDk0MjE0NDczfQ.Rl8IVENc0WSpMm3d7JQzwpPV_ILp2_b6ohn1aWX-cuc';
 
 // GET /api/files/folders?orgId=...
 // Returns { projects: string[], folders: string[] } for the upload/move folder picker.
