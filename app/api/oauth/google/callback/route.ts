@@ -266,8 +266,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
-  // Get client credentials from DB
-  const { data: envVars } = await supabase
+  // Get client credentials from DB. agent_env_vars is RLS-locked (service-role
+  // only, S10); auth is enforced above, so use the admin client.
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const adminEnv = createAdminClient();
+  const { data: envVars } = await adminEnv
     .from('agent_env_vars')
     .select('key, value')
     .eq('agent_id', agentId)
@@ -320,9 +323,9 @@ export async function GET(req: NextRequest) {
 
   await agentWriteFile(agentId, 'google_token.json', tokenJson);
 
-  // Save account email to DB
+  // Save account email to DB (admin client — table is RLS-locked, S10)
   const now = new Date().toISOString();
-  await supabase.from('agent_env_vars').upsert([{
+  await adminEnv.from('agent_env_vars').upsert([{
     agent_id: agentId,
     key: 'GOOGLE_ACCOUNT_EMAIL',
     value: accountEmail,
