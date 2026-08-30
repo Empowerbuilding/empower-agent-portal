@@ -109,9 +109,9 @@ export async function PATCH(
     // Log to agent_file_history (best-effort)
     void auth.supabase.from('agent_file_history').insert({
       agent_id: agentId,
-      file_name: fileName,
+      filename: fileName,
       content,
-      saved_by: auth.portalUser.id,
+      changed_by: auth.portalUser.id,
     });
 
     return NextResponse.json({ success: true, note: restartNote });
