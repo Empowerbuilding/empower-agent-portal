@@ -182,3 +182,11 @@ export function IconLightbulb({ size = 15 }: { size?: number }) {
     </svg>
   );
 }
+
+export function IconShield({ size = 15 }: { size?: number }) {
+  return (
+    <svg style={s} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z" />
+    </svg>
+  );
+}
