@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail, IconHeartbeat, IconCalendarClock, IconBarChart } from '@/components/ui/Icons';
+import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail, IconHeartbeat, IconCalendarClock, IconBarChart, IconShield } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -895,6 +895,9 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             )}
             {org.features?.includes('usage') && (
               <Link href={`/${orgSlug}/usage`} onClick={onClose} title="Usage (directional)" style={{ color: pathname.startsWith(`/${orgSlug}/usage`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconBarChart size={16} /></Link>
+            )}
+            {['owner', 'admin'].includes(currentUser.role) && org.features?.includes('org_admin') && (
+              <Link href={`/${orgSlug}/admin`} onClick={onClose} title="Org Admin" style={{ color: pathname.startsWith(`/${orgSlug}/admin`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconShield size={16} /></Link>
             )}
             {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && org.features?.includes('files') && (
               <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={16} /></Link>
