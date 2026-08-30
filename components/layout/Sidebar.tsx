@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS } from '@/components/ui/Icons';
+import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -883,6 +883,9 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             )}
             {currentUser.role !== 'contractor' && (
               <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={16} /></Link>
+            )}
+            {org.features?.includes('email_log') && (
+              <Link href={`/${orgSlug}/sent`} onClick={onClose} title="Email Log" style={{ color: pathname.startsWith(`/${orgSlug}/sent`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconMail size={16} /></Link>
             )}
             {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && org.features?.includes('files') && (
               <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={16} /></Link>
