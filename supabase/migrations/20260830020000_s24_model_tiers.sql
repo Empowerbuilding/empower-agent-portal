@@ -10,9 +10,9 @@ CREATE TABLE IF NOT EXISTS model_tiers (
 -- Google-only tiers (Mitch, 2026-08-30). 'smart' is also an explicit pin now —
 -- every tiered message pins the session to a Google model.
 INSERT INTO model_tiers (tier,label,emoji,model_id,fallback_model_id,sort) VALUES
-  ('fast','Fast','⚡','google/gemini-2.5-flash','default',1),
-  ('smart','Smart','🧠','google/gemini-3-flash-preview','default',2),
-  ('deep','Deep','🔬','google/gemini-3.1-pro-preview','default',3)
+  ('fast','Fast','⚡','google/gemini-flash-lite-latest','default',1),
+  ('smart','Smart','🧠','google/gemini-flash-latest','default',2),
+  ('deep','Deep','🔬','google/gemini-pro-latest','default',3)
 ON CONFLICT (tier) DO NOTHING;
 ALTER TABLE model_tiers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS model_tiers_read ON model_tiers;
