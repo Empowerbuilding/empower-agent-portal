@@ -146,6 +146,14 @@ export default function MessageBubble({ message, currentUserId, deleteMode, sele
         ) : null}
         <div className={`msg-bubble ${isUser ? 'user' : 'agent'}`} title={!showHeader ? formatDateTime(message.created_at) : undefined}>
           <Markdown content={message.content} />
+          {isUser && message.metadata?.model_tier ? (
+            <span
+              title={`Model tier: ${String(message.metadata.model_tier)}`}
+              style={{ fontSize: '11px', marginLeft: '6px', opacity: 0.8 }}
+            >
+              {({ fast: '⚡', smart: '🧠', deep: '🔬' } as Record<string, string>)[String(message.metadata.model_tier)] ?? '🎛️'}
+            </span>
+          ) : null}
         </div>
         {onReply && hovered && !deleteMode && (
           <button

@@ -73,6 +73,9 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [uploading, setUploading] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<{ file: File; previewUrl: string }[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  // S24: per-message model tier picker (⚡/🧠/🔬)
+  const [modelTiers, setModelTiers] = useState<{ tier: string; label: string; emoji: string; model_id: string }[]>([]);
+  const [activeTier, setActiveTier] = useState('smart');
   const [memberCount] = useState<number | null>(initialMemberCount ?? null);
   const [showMembers, setShowMembers] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
@@ -102,6 +105,18 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const supabase = createClient();
+
+  // S24: load model tiers allowed for this org (picker hidden unless 2+ allowed)
+  useEffect(() => {
+    (async () => {
+      const { data: org } = await supabase.from('organizations').select('allowed_model_tiers').eq('id', orgId).single();
+      const allowed: string[] = org?.allowed_model_tiers ?? [];
+      if (allowed.length < 2) return;
+      const { data: tiers } = await supabase.from('model_tiers').select('tier, label, emoji, model_id').in('tier', allowed).order('sort');
+      if (tiers?.length) setModelTiers(tiers);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
 
   // Summon-only channels: only show typing indicator if agent is explicitly mentioned
   const SUMMON_ONLY_CHANNELS: Record<string, RegExp> = {
@@ -554,6 +569,14 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     unlockAudio();
     playSend();
     setReplyTo(null);
+    // S24: merge reply-quote + model-tier metadata
+    const tierObj = modelTiers.find(t => t.tier === activeTier);
+    const meta: Record<string, unknown> = {};
+    if (replyTo) meta.reply_to = { id: replyTo.id, sender_name: replyTo.sender_name, content: replyTo.content };
+    if (tierObj && tierObj.model_id !== 'default' && !content.startsWith('/')) {
+      meta.model_tier = tierObj.tier;
+      meta.model = tierObj.model_id;
+    }
     await supabase.from('portal_messages').insert({
       channel_id: channel.id,
       org_id: orgId,
@@ -562,10 +585,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       sender_name: currentUser.name,
       content: content || attachments.map(a => a.name).join(', ') || '',
       ...(attachments.length ? { attachments } : {}),
-      ...(replyTo ? {
-        reply_to_id: replyTo.id,
-        metadata: { reply_to: { id: replyTo.id, sender_name: replyTo.sender_name, content: replyTo.content } },
-      } : {}),
+      ...(replyTo ? { reply_to_id: replyTo.id } : {}),
+      ...(Object.keys(meta).length ? { metadata: meta } : {}),
       processed: false,
     });
     setSending(false);
@@ -829,6 +850,20 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
             )}
             {transcribing && (
               <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>Transcribing…</span>
+            )}
+            {modelTiers.length >= 2 && (
+              <button
+                className="circle-btn"
+                onClick={() => {
+                  const idx = modelTiers.findIndex(t => t.tier === activeTier);
+                  const next = modelTiers[(idx + 1) % modelTiers.length];
+                  setActiveTier(next.tier);
+                }}
+                title={`Model: ${modelTiers.find(t => t.tier === activeTier)?.label ?? 'Smart'} — click to switch`}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', width: '30px', height: '34px', minWidth: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '15px', opacity: activeTier === 'smart' ? 0.55 : 1 }}
+              >
+                {modelTiers.find(t => t.tier === activeTier)?.emoji ?? '🧠'}
+              </button>
             )}
             <button className="circle-btn" onClick={toggleVoice} disabled={transcribing}
               title={recording ? 'Stop recording (Space) — Esc to cancel' : 'Record voice message'}
