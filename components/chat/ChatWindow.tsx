@@ -75,7 +75,8 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
   const [dragOver, setDragOver] = useState(false);
   // S24: per-message model tier picker (⚡/🧠/🔬)
   const [modelTiers, setModelTiers] = useState<{ tier: string; label: string; emoji: string; model_id: string }[]>([]);
-  const [activeTier, setActiveTier] = useState('smart');
+  // null = untouched — no model metadata sent, agent uses its configured default
+  const [activeTier, setActiveTier] = useState<string | null>(null);
   const [memberCount] = useState<number | null>(initialMemberCount ?? null);
   const [showMembers, setShowMembers] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
@@ -570,7 +571,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     playSend();
     setReplyTo(null);
     // S24: merge reply-quote + model-tier metadata
-    const tierObj = modelTiers.find(t => t.tier === activeTier);
+    const tierObj = activeTier ? modelTiers.find(t => t.tier === activeTier) : undefined;
     const meta: Record<string, unknown> = {};
     if (replyTo) meta.reply_to = { id: replyTo.id, sender_name: replyTo.sender_name, content: replyTo.content };
     if (tierObj && tierObj.model_id !== 'default' && !content.startsWith('/')) {
@@ -855,14 +856,15 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
               <button
                 className="circle-btn"
                 onClick={() => {
+                  if (activeTier === null) { setActiveTier(modelTiers[0].tier); return; }
                   const idx = modelTiers.findIndex(t => t.tier === activeTier);
-                  const next = modelTiers[(idx + 1) % modelTiers.length];
-                  setActiveTier(next.tier);
+                  const next = idx + 1 >= modelTiers.length ? null : modelTiers[idx + 1];
+                  setActiveTier(next ? next.tier : null); // wraps back to Auto (agent default)
                 }}
-                title={`Model: ${modelTiers.find(t => t.tier === activeTier)?.label ?? 'Smart'} — click to switch`}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', width: '30px', height: '34px', minWidth: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '15px', opacity: activeTier === 'smart' ? 0.55 : 1 }}
+                title={activeTier === null ? 'Model: Auto (agent default) — click to switch' : `Model: ${modelTiers.find(t => t.tier === activeTier)?.label} — click to switch`}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', width: '30px', height: '34px', minWidth: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '15px', opacity: activeTier === null ? 0.45 : 1 }}
               >
-                {modelTiers.find(t => t.tier === activeTier)?.emoji ?? '🧠'}
+                {activeTier === null ? '🎛️' : modelTiers.find(t => t.tier === activeTier)?.emoji}
               </button>
             )}
             <button className="circle-btn" onClick={toggleVoice} disabled={transcribing}
