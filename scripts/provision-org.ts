@@ -17,6 +17,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { generateAllFiles, type WizardAnswers } from '../lib/bootstrap-writer';
+import { assertProvisionPreflight, checkRollbackTargetSafe } from './provision-guards';
 
 const PORTAL_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PORTAL_SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -64,6 +65,9 @@ export interface ProvisionInput {
 }
 
 // ── Rollback state tracker ───────────────────────────────────────────────────
+// S30a INVARIANT: every flag/id here is set ONLY after this job verifiably
+// created the resource (pre-flight proved it didn't exist, then the create
+// command succeeded). Rollback may only ever touch resources tracked here.
 interface RollbackState {
   orgId:           string | null;
   agentId:         string | null;
@@ -72,6 +76,24 @@ interface RollbackState {
   containerStarted: boolean;
   workspaceCreated: boolean;
   sshConnected:    boolean;
+  // Human/machine-readable ledger of everything THIS job created, persisted to
+  // the provision_jobs row via onResource so a dead job leaves an audit trail.
+  resources:       string[];
+}
+
+// Run an SSH command and FAIL on non-zero exit. Before S30a, step-5 clone/rm
+// results were never checked (risk R2) and the docker-run collision error was
+// swallowed (risk R1) — every mutating host command now goes through this.
+async function sshRun(
+  ssh: NodeSSH,
+  cmd: string,
+  label: string,
+): Promise<{ stdout: string; stderr: string }> {
+  const res = await ssh.execCommand(cmd);
+  if (res.code !== 0) {
+    throw new Error(`SSH step "${label}" failed (exit ${res.code}): ${res.stderr || res.stdout || '(no output)'}`);
+  }
+  return { stdout: res.stdout, stderr: res.stderr };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,24 +105,40 @@ async function runRollback(
   containerName: string,
 ): Promise<void> {
   console.error('[rollback] Starting rollback...');
+  console.error('[rollback] Resources tracked as created by THIS job:', JSON.stringify(rollback.resources));
 
   // 1. Stop + remove Docker container (reverse step 7)
+  // containerStarted is only true if pre-flight proved the name was free AND
+  // docker run exited 0 — so this can never be a pre-existing live container.
+  // checkRollbackTargetSafe is defense-in-depth on top of that.
   if (rollback.containerStarted && rollback.sshConnected) {
-    try {
-      await ssh.execCommand(`docker stop ${containerName} && docker rm ${containerName}`);
-      console.error('[rollback] Docker container removed:', containerName);
-    } catch (e) {
-      console.error('[rollback] Failed to remove Docker container:', e);
+    const unsafe = checkRollbackTargetSafe('container', containerName);
+    if (unsafe) {
+      console.error('[rollback] SKIPPING container removal —', unsafe);
+    } else {
+      try {
+        await ssh.execCommand(`docker stop ${containerName} && docker rm ${containerName}`);
+        console.error('[rollback] Docker container removed:', containerName);
+      } catch (e) {
+        console.error('[rollback] Failed to remove Docker container:', e);
+      }
     }
   }
 
   // 2. Remove workspace directory (reverse step 5)
+  // workspaceCreated is only true if pre-flight proved ocPath was absent AND
+  // the clone succeeded — never a pre-existing dir. Same defense-in-depth gate.
   if (rollback.workspaceCreated && rollback.sshConnected) {
-    try {
-      await ssh.execCommand(`rm -rf ${ocPath}`);
-      console.error('[rollback] Workspace directory removed:', ocPath);
-    } catch (e) {
-      console.error('[rollback] Failed to remove workspace directory:', e);
+    const unsafe = checkRollbackTargetSafe('dir', ocPath);
+    if (unsafe) {
+      console.error('[rollback] SKIPPING workspace removal —', unsafe);
+    } else {
+      try {
+        await ssh.execCommand(`rm -rf ${ocPath}`);
+        console.error('[rollback] Workspace directory removed:', ocPath);
+      } catch (e) {
+        console.error('[rollback] Failed to remove workspace directory:', e);
+      }
     }
   }
 
@@ -226,8 +264,15 @@ function buildBootstrapFiles(input: ProvisionInput): Record<string, string> {
 
 
 export type ProgressCallback = (step: string, detail?: string) => void;
+// Called every time this job creates a resource, with the full ledger so far.
+// The API route persists it to provision_jobs.resources_created.
+export type ResourceCallback = (resources: string[]) => void;
 
-export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressCallback): Promise<ProvisionResult> {
+export async function provisionOrg(
+  input: ProvisionInput,
+  onProgress?: ProgressCallback,
+  onResource?: ResourceCallback,
+): Promise<ProvisionResult> {
   const progress = (step: string, detail?: string) => {
     console.log(`[provision] ${step}${detail ? ': ' + detail : ''}`);
     onProgress?.(step, detail);
@@ -248,9 +293,25 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
     containerStarted: false,
     workspaceCreated: false,
     sshConnected:    false,
+    resources:       [],
+  };
+  const trackResource = (res: string) => {
+    rollback.resources.push(res);
+    try { onResource?.([...rollback.resources]); } catch { /* tracking must never break provisioning */ }
   };
 
   try {
+    // ── STEP 0 (S30a): Pre-flight collision guards — BEFORE any side-effect ──
+    // Validates slug format + reserved blocklist, then connects SSH and checks
+    // the live host: container name free (docker ps -a) and ocPath absent.
+    // Throws before a single DB row, dir, container, or purchase is made.
+    progress('preflight', 'Checking for name collisions on the agent server');
+    const sshPrivateKey = getSSHPrivateKey();
+    if (!sshPrivateKey) throw new Error('No SSH key available — set RESET_SSH_KEY env var');
+    await ssh.connect({ host: DO_SERVER, username: 'root', privateKey: sshPrivateKey });
+    rollback.sshConnected = true;
+    await assertProvisionPreflight(ssh, input.orgSlug);
+
     progress('creating_org', input.orgName);
     // ── STEP 1: Create organization ──────────────────────────────────────────
     const { data: org, error: orgErr } = await supabase
@@ -267,6 +328,7 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
       .single();
     if (orgErr) throw new Error(`Create org failed: ${orgErr.message}`);
     rollback.orgId = org.id;
+    trackResource(`db:organizations:${org.id}`);
 
     progress('creating_agent', input.agentDisplayName);
     // ── STEP 2: Create agent row ─────────────────────────────────────────────
@@ -288,6 +350,7 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
       .single();
     if (agentErr) throw new Error(`Create agent failed: ${agentErr.message}`);
     rollback.agentId = agent.id;
+    trackResource(`db:agents:${agent.id}`);
 
     // Write reps to agents.reps column so n8n can look them up for call routing
     // crm_user_id is backfilled after CRM provisioning (see below)
@@ -337,6 +400,7 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
         const telnyx = await provisionTelnyxNumber();
         telnyxPhone = telnyx.phoneNumber;
         rollback.telnyxNumberId = telnyx.telnyxNumberId;
+        trackResource(`telnyx:number:${telnyx.telnyxNumberId}`);
         await supabase.from('agents').update({ 
           telnyx_phone_number: telnyxPhone,
           telnyx_connection_id: '2996679323039040927'  // Empower Shared Voice
@@ -363,6 +427,7 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
         crmServiceRoleKey = crm.serviceRoleKey;
         crmDbPassword     = crm.dbPassword;
         rollback.crmProjectRef = crm.projectRef;
+        trackResource(`supabase:crm-project:${crm.projectRef}`);
         // Update organizations table — sidebar reads crm_supabase_url from org record
         await supabase.from('organizations').update({
           crm_supabase_url: crmSupabaseUrl,
@@ -529,23 +594,24 @@ export async function provisionOrg(input: ProvisionInput, onProgress?: ProgressC
 
     progress('cloning_workspace', 'Setting up agent workspace on server');
     // ── STEP 5: Clone full .openclaw dir from sales-agent ──────────────────
-    const sshPrivateKey = getSSHPrivateKey();
-    if (!sshPrivateKey) throw new Error('No SSH key available — set RESET_SSH_KEY env var');
-    await ssh.connect({ host: DO_SERVER, username: 'root', privateKey: sshPrivateKey });
-    rollback.sshConnected = true;
+    // (SSH already connected in pre-flight; ocPath verified absent there.)
+    // All mutations go through sshRun — a failed cp/rm now aborts the job
+    // instead of continuing on mixed state (risk R2).
 
     // Clone entire sales-agent .openclaw dir (brings plugins, extensions, config, pre-approved device pairing)
-    await ssh.execCommand(`cp -r /root/.sales-agent ${ocPath}`);
+    await sshRun(ssh, `cp -r /root/.sales-agent ${ocPath}`, 'clone .openclaw dir');
+    // From this point the dir exists and was created by us — eligible for rollback.
+    rollback.workspaceCreated = true;
+    trackResource(`host:dir:${ocPath}`);
     // Purge cloned state that must NEVER carry over to a new org:
     // - .env holds the SOURCE org's CRM credentials (caused the ITS↔Barnhaus data leak, Aug 2026)
     // - cron dir carries file-based job cruft (jobs.json.migrated.*) from the source agent
-    await ssh.execCommand(`rm -rf ${ocPath}/.env ${ocPath}/cron`);
+    await sshRun(ssh, `rm -rf ${ocPath}/.env ${ocPath}/cron`, 'purge cloned .env + cron');
 
     // Replace workspace with fresh template
-    await ssh.execCommand(`rm -rf ${workspacePath}`);
-    await ssh.execCommand(`cp -r ${TEMPLATE_PATH} ${workspacePath}`);
-    await ssh.execCommand(`mkdir -p ${workspacePath}/memory ${workspacePath}/drafts ${workspacePath}/reports ${workspacePath}/proposals`);
-    rollback.workspaceCreated = true;
+    await sshRun(ssh, `rm -rf ${workspacePath}`, 'clear cloned workspace');
+    await sshRun(ssh, `cp -r ${TEMPLATE_PATH} ${workspacePath}`, 'copy template workspace');
+    await sshRun(ssh, `mkdir -p ${workspacePath}/memory ${workspacePath}/drafts ${workspacePath}/reports ${workspacePath}/proposals`, 'create workspace subdirs');
     // Patch hardcoded Barnhaus channel IDs in automation scripts to use this org's channels
     await ssh.execCommand(`find ${workspacePath}/automation -name '*.py' | xargs sed -i 's/barnhaus-vanessa/${input.orgSlug}-${agentSlug}/g' 2>/dev/null || true`);
 
@@ -712,15 +778,22 @@ print('cleared')
     progress('starting_container', 'Starting agent container');
     // ── STEP 7: Start Docker container ───────────────────────────────────────
     // Fix ownership to node user (uid 1000) before starting
-    await ssh.execCommand(`chown -R 1000:1000 ${ocPath}`);
+    await sshRun(ssh, `chown -R 1000:1000 ${ocPath}`, 'chown workspace');
 
     const gatewayToken = `${input.orgSlug}-agent-2026`;
     const dockerRun = `docker run -d --name ${containerName} --restart unless-stopped -e OPENCLAW_GATEWAY_TOKEN=${gatewayToken} -v ${ocPath}:/home/node/.openclaw ${AGENT_IMAGE}`;
-    const { stderr: dockerErr } = await ssh.execCommand(dockerRun);
-    if (dockerErr && !dockerErr.includes('already in use')) {
-      console.warn('Docker run warning:', dockerErr);
+    // S30a: docker run failures are FATAL. Before this, the "already in use"
+    // collision error was swallowed, step 8 then docker-exec'd whichever LIVE
+    // container owned the name, and step 9 seeded crons into it (risk R1).
+    // Pre-flight already guarantees the name was free; any error here means
+    // something real went wrong and we must stop.
+    const dockerRes = await ssh.execCommand(dockerRun);
+    if (dockerRes.code !== 0) {
+      throw new Error(`docker run failed for ${containerName} (exit ${dockerRes.code}): ${dockerRes.stderr || dockerRes.stdout || '(no output)'}`);
     }
+    if (dockerRes.stderr) console.warn('Docker run warning:', dockerRes.stderr);
     rollback.containerStarted = true;
+    trackResource(`host:container:${containerName}`);
 
     progress('waiting_ready', 'Waiting for agent to come online');
     // ── STEP 8: Wait for container ready + gateway warmed (max 60s) ───────────
@@ -968,6 +1041,7 @@ print('cleared')
         }
         const created = await createRes.json() as any;
         const newId = created.id;
+        trackResource(`n8n:workflow:${newId}`);
         console.log(`[provision] n8n workflow created: ${newId} — ${newWf.name}`);
 
         // Activate (deactivate first to flush any stale webhook_entity rows, then reactivate)
@@ -1083,6 +1157,7 @@ return [{json: {contact: c, contactName: cn, smsChannel, bare}}];
         }
         const inbCreated = await inbCreateRes.json() as any;
         const inbId = inbCreated.id;
+        trackResource(`n8n:workflow:${inbId}`);
         console.log(`[provision] TextBee inbound workflow created: ${inbId}`);
 
         // Deactivate + reactivate to flush stale webhook_entity rows
