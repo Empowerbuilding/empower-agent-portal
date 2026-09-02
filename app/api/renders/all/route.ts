@@ -7,7 +7,8 @@ import { createClient } from '@supabase/supabase-js';
 const ALLOWED_NAMES = ['Mitchell', 'Michael'];
 
 const RENDER_TOOL_URL = 'https://weqooskgyaeryoekbhzi.supabase.co';
-const RENDER_TOOL_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlcW9vc2tneWFlcnlvZWtiaHppIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzYzNjY4MywiZXhwIjoyMDk5MjEyNjgzfQ.xP3ZoaqYQzmp1WXRf99cioRNQ8R-mJuzxI41aBqdBB8';
+// S17a: key comes from env only — no literal fallback (rotated 2026-09-01)
+const RENDER_TOOL_SERVICE_KEY = process.env.RENDER_TOOL_SERVICE_KEY || '';
 
 export async function GET(req: NextRequest) {
   const supabase = await createPortalClient();
