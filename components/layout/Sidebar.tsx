@@ -34,7 +34,11 @@ function OpsMenu({ items, pathname, onNavigate }: { items: OpsMenuItem[]; pathna
   const toggle = useCallback(() => {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      setPos({ left: Math.max(8, r.left - 4), bottom: window.innerHeight - r.top + 6 });
+      // Clamp so the popover never overflows the right edge of the viewport
+      // (on mobile the gear button sits near the sidebar's right edge).
+      const MENU_WIDTH = 230; // minWidth 190 + padding/border headroom
+      const left = Math.max(8, Math.min(r.left - 4, window.innerWidth - MENU_WIDTH - 8));
+      setPos({ left, bottom: window.innerHeight - r.top + 6 });
     }
     setOpen(o => !o);
   }, [open]);
@@ -75,7 +79,7 @@ function OpsMenu({ items, pathname, onNavigate }: { items: OpsMenuItem[]; pathna
           style={{
             position: 'fixed', left: pos.left, bottom: pos.bottom, zIndex: 300,
             background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
-            padding: '6px', minWidth: 190, boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            padding: '6px', minWidth: 190, maxWidth: 'calc(100vw - 16px)', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
             display: 'flex', flexDirection: 'column', gap: 1,
           }}
         >
