@@ -238,7 +238,11 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
       const lastMsg = data[data.length - 1];
       // Show typing indicator whenever the last message is from a user (no time limit).
       // This handles long-running agent tasks (code changes, deploys) that take >90s.
+      // processed === true on a trailing user message means the agent finished its
+      // turn without posting (NO_REPLY or action-only, e.g. approved email send) —
+      // don't leave the spinner running on completed work.
       const isPendingAgentReply = lastMsg && lastMsg.sender_type === 'user' &&
+        lastMsg.processed !== true &&
         lastMsg.content !== '/reset' &&
         lastMsg.content !== '/stop' &&
         shouldShowTyping(channel.id, lastMsg.content);
