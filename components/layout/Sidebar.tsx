@@ -988,12 +988,14 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             {activeGroup?.slug === 'design' && (
               <Link href={`/${orgSlug}/design-os`} onClick={onClose} title="Design OS" style={{ color: pathname.startsWith(`/${orgSlug}/design-os`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconDesignOS size={16} /></Link>
             )}
-            {/* Ops & Admin menu — owner/admin only. Collapses all internal ops pages into one popover. */}
-            {['owner', 'admin'].includes(currentUser.role) && (
+            {/* Ops & Admin menu. Admins get the full ops list; non-admin roles (rep,
+                contractor) get a reduced menu — currently just Email Log — so they can
+                verify what actually went out without seeing internal ops pages. */}
+            {(
               <OpsMenu
                 pathname={pathname}
                 onNavigate={onClose}
-                items={[
+                items={['owner', 'admin'].includes(currentUser.role) ? [
                   { href: `/${orgSlug}/crons`, label: 'Cron Jobs', icon: <IconClock size={15} /> },
                   ...(org.features?.includes('email_log') ? [{ href: `/${orgSlug}/sent`, label: 'Email Log', icon: <IconMail size={15} /> }] : []),
                   ...(org.features?.includes('health') ? [{ href: `/${orgSlug}/health`, label: 'Integrations Health', icon: <IconHeartbeat size={15} /> }] : []),
@@ -1001,6 +1003,8 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
                   ...(org.features?.includes('usage') ? [{ href: `/${orgSlug}/usage`, label: 'Usage', icon: <IconBarChart size={15} /> }] : []),
                   ...(org.features?.includes('rules') ? [{ href: `/${orgSlug}/rules`, label: 'Rules & Recipes', icon: <IconRules size={15} /> }] : []),
                   ...(org.features?.includes('org_admin') ? [{ href: `/${orgSlug}/admin`, label: 'Org Admin', icon: <IconShield size={15} /> }] : []),
+                ] : [
+                  ...(org.features?.includes('email_log') ? [{ href: `/${orgSlug}/sent`, label: 'Email Log', icon: <IconMail size={15} /> }] : []),
                 ]}
               />
             )}
