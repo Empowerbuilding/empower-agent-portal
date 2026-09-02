@@ -86,6 +86,7 @@ export default function SentPage() {
   };
 
   return (
+    <div className="page-scroll">
     <div style={{ padding: '24px', maxWidth: 980, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>📬 Email Log</h1>
@@ -164,6 +165,7 @@ export default function SentPage() {
           })}
         </div>
       )}
+    </div>
     </div>
   );
 }

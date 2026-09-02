@@ -81,6 +81,7 @@ export default function HealthPage() {
   const problems = agents.flatMap((a) => a.items.filter((i) => i.status === 'needs_reconnect'));
 
   return (
+    <div className="page-scroll">
     <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>🩺 Integrations Health</h1>
       <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
@@ -142,6 +143,7 @@ export default function HealthPage() {
           </div>
         ))
       )}
+    </div>
     </div>
   );
 }
