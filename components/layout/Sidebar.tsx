@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
 import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail, IconHeartbeat, IconCalendarClock, IconBarChart, IconShield, IconRules, IconGear } from '@/components/ui/Icons';
@@ -27,6 +28,7 @@ interface OpsMenuItem {
 function OpsMenu({ items, pathname, onNavigate }: { items: OpsMenuItem[]; pathname: string; onNavigate: () => void }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null);
 
   const anyActive = items.some(it => pathname.startsWith(it.href));
@@ -48,6 +50,7 @@ function OpsMenu({ items, pathname, onNavigate }: { items: OpsMenuItem[]; pathna
     if (!open) return;
     const onDown = (e: MouseEvent) => {
       if (btnRef.current?.contains(e.target as Node)) return;
+      if (menuRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
@@ -74,8 +77,12 @@ function OpsMenu({ items, pathname, onNavigate }: { items: OpsMenuItem[]; pathna
           padding: '7px 5px', display: 'flex', alignItems: 'center',
         }}
       ><IconGear size={16} /></button>
-      {open && pos && (
+      {/* Portal to <body>: the mobile sidebar animates with a CSS transform, which
+          makes it the containing block for position:fixed descendants — the popover
+          would be positioned/clipped relative to the sidebar instead of the viewport. */}
+      {open && pos && createPortal(
         <div
+          ref={menuRef}
           style={{
             position: 'fixed', left: pos.left, bottom: pos.bottom, zIndex: 300,
             background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
@@ -105,7 +112,8 @@ function OpsMenu({ items, pathname, onNavigate }: { items: OpsMenuItem[]; pathna
               </Link>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
