@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail, IconHeartbeat, IconCalendarClock, IconBarChart, IconShield, IconRules } from '@/components/ui/Icons';
+import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail, IconHeartbeat, IconCalendarClock, IconBarChart, IconShield, IconRules, IconGear } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -16,6 +16,95 @@ interface Props {
   orgSlug: string;
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface OpsMenuItem {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+}
+
+function OpsMenu({ items, pathname, onNavigate }: { items: OpsMenuItem[]; pathname: string; onNavigate: () => void }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null);
+
+  const anyActive = items.some(it => pathname.startsWith(it.href));
+
+  const toggle = useCallback(() => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ left: Math.max(8, r.left - 4), bottom: window.innerHeight - r.top + 6 });
+    }
+    setOpen(o => !o);
+  }, [open]);
+
+  // Close on outside click / escape
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (btnRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={toggle}
+        title="Ops & Admin"
+        aria-label="Ops & Admin menu"
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: anyActive || open ? 'var(--accent)' : 'var(--muted)',
+          padding: '7px 5px', display: 'flex', alignItems: 'center',
+        }}
+      ><IconGear size={16} /></button>
+      {open && pos && (
+        <div
+          style={{
+            position: 'fixed', left: pos.left, bottom: pos.bottom, zIndex: 300,
+            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
+            padding: '6px', minWidth: 190, boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            display: 'flex', flexDirection: 'column', gap: 1,
+          }}
+        >
+          {items.map(it => {
+            const active = pathname.startsWith(it.href);
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                onClick={() => { setOpen(false); onNavigate(); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 9,
+                  padding: '7px 9px', borderRadius: 7, textDecoration: 'none',
+                  fontSize: 13, fontWeight: 500,
+                  color: active ? 'var(--accent)' : 'var(--text)',
+                  background: active ? 'rgba(59,130,246,0.1)' : 'transparent',
+                }}
+                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'; }}
+                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', color: active ? 'var(--accent)' : 'var(--muted)' }}>{it.icon}</span>
+                {it.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
 }
 
 function StatusDot({ status }: { status: string }) {
@@ -881,32 +970,27 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && org.features?.includes('gallery') && (
               <Link href={`/${orgSlug}/gallery`} onClick={onClose} title="Render Gallery" style={{ color: pathname.startsWith(`/${orgSlug}/gallery`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRender size={16} /></Link>
             )}
-            {currentUser.role !== 'contractor' && (
-              <Link href={`/${orgSlug}/crons`} onClick={onClose} title="Cron Jobs" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClock size={16} /></Link>
-            )}
-            {org.features?.includes('email_log') && (
-              <Link href={`/${orgSlug}/sent`} onClick={onClose} title="Email Log" style={{ color: pathname.startsWith(`/${orgSlug}/sent`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconMail size={16} /></Link>
-            )}
-            {org.features?.includes('health') && (
-              <Link href={`/${orgSlug}/health`} onClick={onClose} title="Integrations Health" style={{ color: pathname.startsWith(`/${orgSlug}/health`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconHeartbeat size={16} /></Link>
-            )}
-            {org.features?.includes('scheduled_sends') && (
-              <Link href={`/${orgSlug}/scheduled`} onClick={onClose} title="Scheduled Sends" style={{ color: pathname.startsWith(`/${orgSlug}/scheduled`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconCalendarClock size={16} /></Link>
-            )}
-            {org.features?.includes('usage') && (
-              <Link href={`/${orgSlug}/usage`} onClick={onClose} title="Usage (directional)" style={{ color: pathname.startsWith(`/${orgSlug}/usage`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconBarChart size={16} /></Link>
-            )}
-            {['owner', 'admin'].includes(currentUser.role) && org.features?.includes('org_admin') && (
-              <Link href={`/${orgSlug}/admin`} onClick={onClose} title="Org Admin" style={{ color: pathname.startsWith(`/${orgSlug}/admin`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconShield size={16} /></Link>
-            )}
-            {org.features?.includes('rules') && (
-              <Link href={`/${orgSlug}/rules`} onClick={onClose} title="Rules & Recipes" style={{ color: pathname.startsWith(`/${orgSlug}/rules`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconRules size={16} /></Link>
-            )}
             {['studio', 'design', 'operations', 'sales', 'executive'].includes(activeGroup?.slug ?? '') && org.features?.includes('files') && (
               <Link href={`/${orgSlug}/files`} onClick={onClose} title="File Library" style={{ color: pathname.startsWith(`/${orgSlug}/files`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconFolder size={16} /></Link>
             )}
             {activeGroup?.slug === 'design' && (
               <Link href={`/${orgSlug}/design-os`} onClick={onClose} title="Design OS" style={{ color: pathname.startsWith(`/${orgSlug}/design-os`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconDesignOS size={16} /></Link>
+            )}
+            {/* Ops & Admin menu — owner/admin only. Collapses all internal ops pages into one popover. */}
+            {['owner', 'admin'].includes(currentUser.role) && (
+              <OpsMenu
+                pathname={pathname}
+                onNavigate={onClose}
+                items={[
+                  { href: `/${orgSlug}/crons`, label: 'Cron Jobs', icon: <IconClock size={15} /> },
+                  ...(org.features?.includes('email_log') ? [{ href: `/${orgSlug}/sent`, label: 'Email Log', icon: <IconMail size={15} /> }] : []),
+                  ...(org.features?.includes('health') ? [{ href: `/${orgSlug}/health`, label: 'Integrations Health', icon: <IconHeartbeat size={15} /> }] : []),
+                  ...(org.features?.includes('scheduled_sends') ? [{ href: `/${orgSlug}/scheduled`, label: 'Scheduled Sends', icon: <IconCalendarClock size={15} /> }] : []),
+                  ...(org.features?.includes('usage') ? [{ href: `/${orgSlug}/usage`, label: 'Usage', icon: <IconBarChart size={15} /> }] : []),
+                  ...(org.features?.includes('rules') ? [{ href: `/${orgSlug}/rules`, label: 'Rules & Recipes', icon: <IconRules size={15} /> }] : []),
+                  ...(org.features?.includes('org_admin') ? [{ href: `/${orgSlug}/admin`, label: 'Org Admin', icon: <IconShield size={15} /> }] : []),
+                ]}
+              />
             )}
                       </div>
         </div>{/* end sidebar-footer */}
