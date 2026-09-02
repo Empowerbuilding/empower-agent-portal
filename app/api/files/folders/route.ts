@@ -9,7 +9,7 @@ const DESIGNOS_URL = process.env.DESIGNOS_URL || 'https://nvsczfrljlovksrdyaix.s
 // Moved to env (S3). Literal fallback kept only until the key is rotated in S17,
 // after which the old value is dead and the fallback is a no-op. git history
 // still contains the old key — S17 rotates + scrubs.
-const DESIGNOS_SERVICE_KEY = process.env.DESIGNOS_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52c2N6ZnJsamxvdmtzcmR5YWl4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODYzODQ3MywiZXhwIjoyMDk0MjE0NDczfQ.Rl8IVENc0WSpMm3d7JQzwpPV_ILp2_b6ohn1aWX-cuc';
+const DESIGNOS_SERVICE_KEY = process.env.DESIGNOS_SERVICE_KEY || ''; // S17b: env-only, rotated 2026-09-01
 
 // GET /api/files/folders?orgId=...
 // Returns { projects: string[], folders: string[] } for the upload/move folder picker.
