@@ -25,9 +25,20 @@ function OrgShellInner({ org, channels, groups, currentUser, orgSlug, children }
 
   // Register service worker on every load so push infra is always ready.
   // Then re-sync any live browser push subscription back to the server —
-  // recovers from server-side subscription wipes without user action.
+  // recovers from server-side subscription wipes AND dead endpoints (410
+  // pruned) without user action. Also re-runs on app resume: an installed
+  // PWA can live for days without remounting, so mount-only healing misses
+  // tokens that die while the app sits in the background. resync is
+  // internally debounced (1h) so visibility churn stays cheap.
   useEffect(() => {
     registerServiceWorker().then(() => resyncPushSubscription(currentUser.id));
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        resyncPushSubscription(currentUser.id);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [currentUser.id]);
 
   // Dynamic bottom padding — keeps content above Android gesture nav bar (28px),

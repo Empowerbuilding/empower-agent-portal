@@ -153,19 +153,35 @@ export async function subscribeToPush(userId: string): Promise<{ ok: boolean; er
   }
 }
 
+/** Minimum interval between full resync checks (network round-trip involved). */
+const RESYNC_MIN_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+
+function markResynced(): void {
+  try { localStorage.setItem('push-last-resync', String(Date.now())); } catch {}
+}
+
 /**
- * Re-sync an existing browser push subscription to the server.
- * Covers the case where server-side push_subscriptions rows were wiped
- * (e.g. cascade delete) while the browser still holds a live subscription —
- * the UI thinks notifications are enabled but the server has nobody to push to.
- * Idempotent (server upserts on user_id+endpoint) and debounced to once per session.
+ * Re-sync / self-heal the browser push subscription. Handles every known
+ * silent-death mode:
+ *  1. Browser dropped the subscription but user intent flag is set → re-subscribe.
+ *  2. Subscription made with an old VAPID key → replace with fresh one.
+ *  3. Server pruned this endpoint (push service returned 410 Gone on a send,
+ *     e.g. FCM token rotation) while the browser still holds the DEAD
+ *     subscription → blind re-upload would resume the 410 loop, so we
+ *     unsubscribe and mint a completely fresh subscription instead.
+ *  4. Server rows wiped while browser subscription is alive → re-upload.
+ * Idempotent; debounced to once per hour (localStorage timestamp) so it can
+ * safely run on every app-open AND every visibilitychange resume.
  */
-export async function resyncPushSubscription(userId: string): Promise<void> {
+export async function resyncPushSubscription(userId: string, opts?: { force?: boolean }): Promise<void> {
   try {
     if (typeof window === 'undefined') return;
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     if (Notification.permission !== 'granted') return;
-    if (sessionStorage.getItem('push-resynced') === '1') return;
+    if (!opts?.force) {
+      const last = parseInt(localStorage.getItem('push-last-resync') || '0', 10) || 0;
+      if (Date.now() - last < RESYNC_MIN_INTERVAL_MS) return;
+    }
     const reg = await navigator.serviceWorker.getRegistration('/sw.js');
     if (!reg) return;
     const sub = await reg.pushManager.getSubscription();
@@ -177,7 +193,7 @@ export async function resyncPushSubscription(userId: string): Promise<void> {
         logPushEvent('auto-resubscribe', 'browser dropped subscription');
         const r = await subscribeToPush(userId);
         if (r.ok) {
-          sessionStorage.setItem('push-resynced', '1');
+          markResynced();
         } else {
           logPushEvent('auto-resubscribe-FAILED', r.error?.slice(0, 80));
         }
@@ -192,7 +208,7 @@ export async function resyncPushSubscription(userId: string): Promise<void> {
       try { await sub.unsubscribe(); } catch {}
       const r = await subscribeToPush(userId);
       if (r.ok) {
-        sessionStorage.setItem('push-resynced', '1');
+        markResynced();
       } else {
         // We just destroyed the old subscription and could not create a new one —
         // this is the silent "toggle reverted" scenario. Log it loudly.
@@ -201,12 +217,48 @@ export async function resyncPushSubscription(userId: string): Promise<void> {
       }
       return;
     }
+
+    // Ask the server whether it still has a row for THIS endpoint. If the
+    // server pruned it (a send hit 410 Gone — the push service killed the
+    // token), this browser-side subscription is dead: re-uploading it would
+    // just resume the 410→prune loop. Mint a fresh subscription instead.
+    try {
+      const statusRes = await fetch('/api/push/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, endpoint: sub.endpoint }),
+      });
+      if (statusRes.ok) {
+        const { onServer } = await statusRes.json();
+        if (!onServer) {
+          logPushEvent('resync-endpoint-pruned-refresh', sub.endpoint.slice(-12));
+          try { await sub.unsubscribe(); } catch {}
+          const r = await subscribeToPush(userId);
+          if (r.ok) {
+            markResynced();
+          } else {
+            logPushEvent('resync-refresh-FAILED', r.error?.slice(0, 80));
+            console.error('[push] pruned-endpoint refresh FAILED:', r.error);
+          }
+          return;
+        }
+        // Healthy: on server + key matches. Touch intent flag + SW context
+        // (backfills devices subscribed before self-heal existed) and finish.
+        try { localStorage.setItem('push-enabled', '1'); } catch {}
+        await savePushContextForSW(userId);
+        markResynced();
+        return;
+      }
+    } catch {}
+
+    // Status check unavailable (offline / server error) — fall back to the
+    // legacy idempotent re-upload so cascade-wipe recovery still works.
     const res = await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscription: sub.toJSON(), userId }),
     });
-    if (res.ok) sessionStorage.setItem('push-resynced', '1');
+    if (res.ok) markResynced();
     // Backfill intent flag + SW context for devices subscribed before this
     // feature existed — gives them self-heal without re-toggling.
     try { localStorage.setItem('push-enabled', '1'); } catch {}
