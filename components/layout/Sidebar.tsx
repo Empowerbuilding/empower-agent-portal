@@ -701,8 +701,9 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
           if (dx < -60 && dy < Math.abs(dx) * 0.8) onClose();
         }}
       >
-        {/* Group Rail — left icon strip */}
-        {groups.length > 0 && (
+        {/* Group Rail — left icon strip. Always rendered (even with zero groups) so the
+            profile avatar → Settings / workspace switcher stays accessible in group-less orgs. */}
+        {(
           <div style={{
             width: 52,
             flexShrink: 0,
