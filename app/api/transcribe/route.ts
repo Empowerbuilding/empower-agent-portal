@@ -26,9 +26,11 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let audio: File | null = null;
+  let durationSec = 0;
   try {
     const formData = await req.formData();
     audio = formData.get('audio') as File | null;
+    durationSec = parseFloat((formData.get('duration') as string) ?? '') || 0;
   } catch {
     return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
@@ -98,6 +100,21 @@ export async function POST(req: NextRequest) {
     if (!text && finishReason && finishReason !== 'STOP') {
       console.error(`[transcribe] empty result, finishReason=${finishReason} (attempt ${attempt})`);
       continue; // flaky/blocked candidate — retry once
+    }
+
+    // Hallucination guard: speech tops out around ~3 words/sec sustained.
+    // A transcript far denser than the clip could physically contain means
+    // the model invented text from silence/noise (e.g. an accidental mic tap
+    // produced a full fabricated meeting monologue on 2026-09-18).
+    if (text && durationSec > 0) {
+      const words = text.split(/\s+/).filter(Boolean).length;
+      if (words > 12 && words / durationSec > 4.5) {
+        console.warn(
+          `[transcribe] rejected likely hallucination: ${words} words from ${durationSec}s clip ` +
+          `(${(words / durationSec).toFixed(1)} wps): "${text.slice(0, 80)}…"`
+        );
+        return NextResponse.json({ text: '' });
+      }
     }
 
     return NextResponse.json({ text });

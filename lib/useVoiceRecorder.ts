@@ -20,6 +20,14 @@ export function useVoiceRecorder(onText: (text: string) => void) {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cancelledRef = useRef(false);
+  // Silence detection — peak RMS observed during the recording. Speech
+  // (even quiet speech) peaks well above 0.02; an untouched mic with
+  // noiseSuppression on stays under ~0.01. Guards against the accidental
+  // mic tap → silent clip → hallucinated transcript failure mode.
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const peakRmsRef = useRef(0);
+  const meterTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recStartedAtRef = useRef(0);
   const onTextRef = useRef(onText);
   useEffect(() => { onTextRef.current = onText; }, [onText]);
 
@@ -30,6 +38,11 @@ export function useVoiceRecorder(onText: (text: string) => void) {
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
   };
+  const stopMeter = () => {
+    if (meterTimerRef.current) { clearInterval(meterTimerRef.current); meterTimerRef.current = null; }
+    audioCtxRef.current?.close().catch(() => {});
+    audioCtxRef.current = null;
+  };
 
   /** Stop recording. cancel=true discards the clip without transcribing. */
   const stop = useCallback((cancel = false) => {
@@ -38,6 +51,7 @@ export function useVoiceRecorder(onText: (text: string) => void) {
       recorderRef.current.stop(); // onstop handles transcription + cleanup
     } else {
       releaseStream();
+      stopMeter();
     }
     clearTimer();
     setRecording(false);
@@ -59,6 +73,35 @@ export function useVoiceRecorder(onText: (text: string) => void) {
     }
     streamRef.current = stream;
 
+    // Level meter: sample RMS ~10x/sec, remember the peak. Fails open —
+    // if AudioContext is unavailable the peak stays at Infinity sentinel
+    // and the silence check is skipped.
+    peakRmsRef.current = 0;
+    try {
+      type WKWindow = Window & { webkitAudioContext?: typeof AudioContext };
+      const AC = window.AudioContext ?? (window as WKWindow).webkitAudioContext;
+      if (AC) {
+        const ctx = new AC();
+        audioCtxRef.current = ctx;
+        const src = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        src.connect(analyser);
+        const buf = new Float32Array(analyser.fftSize);
+        meterTimerRef.current = setInterval(() => {
+          analyser.getFloatTimeDomainData(buf);
+          let sum = 0;
+          for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+          const rms = Math.sqrt(sum / buf.length);
+          if (rms > peakRmsRef.current) peakRmsRef.current = rms;
+        }, 100);
+      } else {
+        peakRmsRef.current = Infinity;
+      }
+    } catch {
+      peakRmsRef.current = Infinity; // metering unavailable — don't block
+    }
+
     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
       : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4'
       : '';
@@ -69,16 +112,26 @@ export function useVoiceRecorder(onText: (text: string) => void) {
     rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     rec.onstop = async () => {
       releaseStream();
+      const peakRms = peakRmsRef.current;
+      stopMeter();
+      const durationSec = recStartedAtRef.current ? (Date.now() - recStartedAtRef.current) / 1000 : 0;
       const type = rec.mimeType || 'audio/webm';
       const blob = new Blob(chunksRef.current, { type });
       chunksRef.current = [];
       // Discard cancelled or blink-length recordings (<0.3s of opus ≈ <1 KB)
       if (cancelledRef.current || blob.size < 1000) return;
+      // Silence guard: the clip never reached speech-level energy. Skip the
+      // API entirely — transcription models hallucinate text from silence.
+      if (peakRms < 0.015) {
+        alert('No speech detected — try again.');
+        return;
+      }
       setTranscribing(true);
       try {
         const fd = new FormData();
         const ext = type.includes('mp4') ? 'm4a' : 'webm';
         fd.append('audio', blob, `voice.${ext}`);
+        fd.append('duration', durationSec.toFixed(1));
         // Hard client timeout — a hung request used to leave the mic button
         // permanently disabled in the "transcribing" state.
         const r = await fetch('/api/transcribe', {
@@ -106,6 +159,7 @@ export function useVoiceRecorder(onText: (text: string) => void) {
 
     rec.start();
     recorderRef.current = rec;
+    recStartedAtRef.current = Date.now();
     setSeconds(0);
     clearTimer();
     timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
@@ -135,6 +189,7 @@ export function useVoiceRecorder(onText: (text: string) => void) {
     cancelledRef.current = true;
     if (recorderRef.current && recorderRef.current.state !== 'inactive') recorderRef.current.stop();
     releaseStream();
+    stopMeter();
     clearTimer();
   }, []);
 
