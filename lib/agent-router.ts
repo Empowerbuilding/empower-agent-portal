@@ -277,6 +277,16 @@ print('reset ok, deleted:', to_delete)
         { channel_id: channelId, tokens: 0, ctx: 1000000, pct: 0 },
         { onConflict: 'channel_id' }
       );
+      // Post a visible confirmation into the channel so users know the reset happened.
+      // processed: true so the agent doesn't try to respond to it.
+      await sb.from('portal_messages').insert({
+        channel_id: channelId,
+        org_id: agent.org_id,
+        sender_type: 'agent',
+        sender_name: 'System',
+        content: '🔄 Context reset — fresh session started.',
+        processed: true,
+      });
     } catch { /* badge refresh is best-effort; reset itself succeeded */ }
     return true;
   } catch {
