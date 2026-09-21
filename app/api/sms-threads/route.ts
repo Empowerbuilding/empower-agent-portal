@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 // to the browser: this route runs on the server and returns only the merged/derived
 // data the SMS approval view needs.
 const CRM_URL = 'https://ejsnbluvkqocuchifdvp.supabase.co';
-const CRM_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqc25ibHV2a3FvY3VjaGlmZHZwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjgwMTQ5NywiZXhwIjoyMDgyMzc3NDk3fQ.ZUTMAnnrwi7KPYYhkWL4Gexbn7ClrxOkG_CGWl2Q5X8';
+const CRM_SERVICE_KEY = process.env.CRM_SUPABASE_KEY ?? '';
 
 // Default approval channel this data source powers. Callers can override via ?channelId=.
 const DEFAULT_CHANNEL_ID = 'barnhaus-vanessa-sms-drafts';
