@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import CompanyDetailClient from './CompanyDetailClient';
+import { crmProxyUrl, CRM_PROXY_KEY } from '@/lib/crm-proxy';
 
 export default async function CompanyDetailPage({
   params,
@@ -37,8 +38,8 @@ export default async function CompanyDetailPage({
       activities={activities ?? []}
       notes={notes ?? []}
       orgSlug={orgSlug}
-      crmUrl={org.crm_supabase_url}
-      crmKey={org.crm_supabase_key}
+      crmUrl={crmProxyUrl(orgSlug)}
+      crmKey={CRM_PROXY_KEY}
     />
   );
 }

@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import DealDetailClient from './DealDetailClient';
+import { crmProxyUrl, CRM_PROXY_KEY } from '@/lib/crm-proxy';
 
 export default async function DealDetailPage({ params }: { params: Promise<{ orgSlug: string; id: string }> }) {
   const { orgSlug, id } = await params;
@@ -45,8 +46,8 @@ export default async function DealDetailPage({ params }: { params: Promise<{ org
       users={usersRes.data ?? []}
       contacts={contactsRes.data ?? []}
       orgSlug={orgSlug}
-      crmUrl={org.crm_supabase_url}
-      crmKey={org.crm_supabase_key}
+      crmUrl={crmProxyUrl(orgSlug)}
+      crmKey={CRM_PROXY_KEY}
     />
   );
 }

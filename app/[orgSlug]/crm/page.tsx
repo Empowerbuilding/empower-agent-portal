@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import CompaniesClient from './CompaniesClient';
+import { crmProxyUrl, CRM_PROXY_KEY } from '@/lib/crm-proxy';
 
 export default async function CrmPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
@@ -68,8 +69,8 @@ export default async function CrmPage({ params }: { params: Promise<{ orgSlug: s
     <CompaniesClient
       companies={enriched}
       orgSlug={orgSlug}
-      crmUrl={org.crm_supabase_url}
-      crmKey={org.crm_supabase_key}
+      crmUrl={crmProxyUrl(orgSlug)}
+      crmKey={CRM_PROXY_KEY}
     />
   );
 }

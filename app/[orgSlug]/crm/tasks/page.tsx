@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import TasksClient from './TasksClient';
+import { crmProxyUrl, CRM_PROXY_KEY } from '@/lib/crm-proxy';
 
 export default async function TasksPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
@@ -35,8 +36,8 @@ export default async function TasksPage({ params }: { params: Promise<{ orgSlug:
       users={users ?? []}
       deals={deals ?? []}
       orgSlug={orgSlug}
-      crmUrl={org.crm_supabase_url}
-      crmKey={org.crm_supabase_key}
+      crmUrl={crmProxyUrl(orgSlug)}
+      crmKey={CRM_PROXY_KEY}
       currentCrmUserId={currentCrmUser?.id ?? null}
     />
   );
