@@ -598,7 +598,7 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
     if (content !== '/stop' && shouldShowTyping(channel.id, content)) {
       setAgentTyping(true);
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      typingTimerRef.current = setTimeout(() => setAgentTyping(false), 90000);
+      typingTimerRef.current = setTimeout(() => setAgentTyping(false), 10 * 60 * 1000);
     }
   }
 
