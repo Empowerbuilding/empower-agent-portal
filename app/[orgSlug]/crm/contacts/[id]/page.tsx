@@ -46,6 +46,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     allActivitiesRes,
     notesRes,
     allDealsRes,
+    transcriptsRes,
   ] = await Promise.all([
     crm.from('activities').select('*').eq('contact_id', id).order('created_at', { ascending: false }).limit(50),
     crm.from('tasks').select('*').eq('contact_id', id).eq('completed', false).order('due_date', { ascending: true }),
@@ -59,6 +60,8 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     crm.from('notes').select('id, content, created_by, created_at').eq('contact_id', id).order('created_at', { ascending: false }).limit(30),
     // All deals for this contact (for task linking in add-task form)
     crm.from('deals').select('id, title').eq('contact_id', id).order('created_at', { ascending: false }),
+    // Call transcripts (rep calls + Hallie voice AI)
+    crm.from('call_transcripts').select('id, rep, lead_name, duration_str, recording_url, full_text, storage_url, total_words, created_at').eq('contact_id', id).order('created_at', { ascending: false }).limit(20),
   ]);
 
   const allDeals = dealsRaw.data ?? [];
@@ -81,6 +84,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       deals={allDealsRes.data ?? []}
       allDeals={allDeals}
       meetings={(meetingsRes as any).data ?? []}
+      transcripts={(transcriptsRes as any).data ?? []}
       users={usersRes.data ?? []}
       ownerMap={ownerMap}
       orgSlug={orgSlug}

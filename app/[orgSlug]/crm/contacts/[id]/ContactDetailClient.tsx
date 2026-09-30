@@ -73,6 +73,7 @@ interface Props {
   deals?: { id: string; title: string }[];
   allDeals?: any[];
   meetings: any[];
+  transcripts?: any[];
   users: User[];
   ownerMap: Record<string, string>;
   orgSlug: string;
@@ -83,7 +84,7 @@ interface Props {
 
 export default function ContactDetailClient({
   contact, activities: initActivities, allActivities, tasks: initTasks, completedTasks: initCompletedTasks = [], deal: initDeal,
-  deals = [], allDeals = [], meetings, users, ownerMap, orgSlug, crmUrl, crmKey, crmNotes = [],
+  deals = [], allDeals = [], meetings, users, ownerMap, orgSlug, crmUrl, crmKey, crmNotes = [], transcripts = [],
 }: Props) {
   const router = useRouter();
   const crm = createClient(crmUrl, crmKey);
@@ -160,6 +161,8 @@ export default function ContactDetailClient({
   const [attomOpen, setAttomOpen] = useState(false);
   const [pdlOpen, setPdlOpen] = useState(false);
   const [meetingsOpen, setMeetingsOpen] = useState(true);
+  const [transcriptsOpen, setTranscriptsOpen] = useState(true);
+  const [expandedTranscriptId, setExpandedTranscriptId] = useState<string | null>(null);
 
   const fullName = `${contactData.first_name} ${contactData.last_name}`;
   const leadScore = contactData.lead_score?.toLowerCase();
@@ -783,6 +786,53 @@ export default function ContactDetailClient({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Call Transcripts (rep calls + Hallie voice AI) ── */}
+      {transcripts.length > 0 && (
+        <div style={sectionStyle}>
+          <button onClick={() => setTranscriptsOpen(v => !v)}
+            style={{ padding: '10px 14px', borderBottom: transcriptsOpen ? '1px solid var(--border)' : 'none', fontWeight: 600, fontSize: 13, color: 'var(--text)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', border: 'none', cursor: 'pointer', textAlign: 'left' } as React.CSSProperties}>
+            <span>Call Transcripts ({transcripts.length})</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{transcriptsOpen ? '▲' : '▼'}</span>
+          </button>
+          {transcriptsOpen && transcripts.map((t: any, i: number) => {
+            const isExpanded = expandedTranscriptId === t.id;
+            const repColor = t.rep === 'Hallie' ? '#a78bfa' : t.rep === 'Shannon' ? '#38bdf8' : t.rep === 'Larry' ? '#fbbf24' : '#9ca3af';
+            return (
+              <div key={t.id} style={{ borderBottom: i < transcripts.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <button onClick={() => setExpandedTranscriptId(isExpanded ? null : t.id)}
+                  style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: `${repColor}22`, color: repColor, flexShrink: 0 }}>{t.rep ?? 'Call'}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{t.lead_name ?? 'Unknown caller'}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
+                      {t.created_at ? new Date(t.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
+                      {t.duration_str ? ` · ${t.duration_str}` : ''}
+                      {t.total_words ? ` · ${t.total_words} words` : ''}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{isExpanded ? '▲' : '▼'}</span>
+                  </button>
+                {isExpanded && (
+                  <div style={{ borderTop: '1px solid var(--border)' }}>
+                    <div style={{ maxHeight: 360, overflowY: 'auto', padding: '10px 14px', background: 'rgba(0,0,0,0.15)' }}>
+                      <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', color: 'var(--text)', lineHeight: 1.6, margin: 0 }}>{t.full_text}</pre>
+                    </div>
+                    {t.storage_url && (
+                      <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border)' }}>
+                        <a href={t.storage_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Open full transcript ↗</a>
+                      </div>
+                    )}
+                    {t.recording_url && (
+                      <div style={{ padding: '0 14px 10px' }}>
+                        <audio controls src={t.recording_url} preload="none" style={{ height: 32, maxWidth: 280 }} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
