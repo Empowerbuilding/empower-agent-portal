@@ -163,7 +163,7 @@ export default function MonetizationClient({
   const funnelStats = [
     { label: 'Consumer Leads', value: funnel.totalConsumer.toLocaleString(), sub: `${funnel.sinceLaunch} since 10/8` },
     { label: 'Routing Answered', value: funnel.routingAnswered.toLocaleString(), sub: `${funnel.sinceLaunch ? Math.round((funnel.routingAnswered / funnel.sinceLaunch) * 100) : 0}% of new` },
-    { label: 'Consented', value: funnel.anyConsent.toLocaleString(), sub: `any vertical` },
+    { label: 'Consented', value: funnel.anyConsent.toLocaleString(), sub: 'at least one vertical opt-in' },
     { label: 'Eligible Unsold', value: eligible.length.toLocaleString(), sub: 'awaiting partners' },
     { label: 'Delivered', value: funnel.delivered.toLocaleString(), sub: '' },
     { label: 'Closed', value: funnel.closed.toLocaleString(), sub: '' },
@@ -314,7 +314,7 @@ export default function MonetizationClient({
               {eligibleShown.map((l) => {
                 const chips = [
                   l.consent_kit && 'KIT', l.consent_lender && 'LEND', l.consent_realtor && 'RLTR',
-                  l.consent_builder && 'BLDR', l.consent_sms && 'SMS',
+                  l.consent_builder && 'BLDR',
                 ].filter(Boolean) as string[]
                 return (
                   <tr key={l.id}>

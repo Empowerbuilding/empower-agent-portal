@@ -54,7 +54,7 @@ export default async function MonetizationPage({ params }: { params: Promise<{ o
   const { data: eligibleRaw } = await crm
     .from('contacts')
     .select('id, first_name, last_name, phone, email, lead_source, project_type, budget_range, land_status, financing_status, timeline, trestle_city, trestle_state, consent_kit, consent_lender, consent_realtor, consent_builder, consent_sms, created_at')
-    .or('consent_kit.eq.true,consent_lender.eq.true,consent_realtor.eq.true,consent_builder.eq.true,consent_sms.eq.true')
+    .or('consent_kit.eq.true,consent_lender.eq.true,consent_realtor.eq.true,consent_builder.eq.true')
     .order('created_at', { ascending: false })
     .limit(200);
 
