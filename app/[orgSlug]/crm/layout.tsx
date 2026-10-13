@@ -9,10 +9,20 @@ interface Props {
 export default async function CrmLayout({ children, params }: Props) {
   const { orgSlug } = await params;
   const supabase = await createClient();
-  const { data: org } = await supabase.from('organizations').select('slug, crm_mode, cross_sell_enabled').eq('slug', orgSlug).single();
+  const { data: org } = await supabase.from('organizations').select('slug, id, crm_mode, cross_sell_enabled, monetization_enabled').eq('slug', orgSlug).single();
 
   const crmMode = org?.crm_mode ?? 'b2b';
   const crossSellEnabled = org?.cross_sell_enabled ?? false;
+
+  // Monetization cockpit: org flag + owner/admin role (referral economics above the sales floor)
+  let monetizationEnabled = false;
+  if (org?.monetization_enabled && org?.id) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: pu } = await supabase.from('portal_users').select('role').eq('supabase_auth_id', user.id).eq('org_id', org.id).maybeSingle();
+      monetizationEnabled = !!pu && ['owner', 'admin'].includes(pu.role);
+    }
+  }
 
   const b2cTabs = [
     { label: 'Contacts', href: `/${orgSlug}/crm/contacts` },
@@ -21,6 +31,7 @@ export default async function CrmLayout({ children, params }: Props) {
     { label: 'Tasks', href: `/${orgSlug}/crm/tasks` },
     { label: 'Companies', href: `/${orgSlug}/crm/companies` },
     ...(crossSellEnabled ? [{ label: 'Cross-sell', href: `/${orgSlug}/crm/cross-sell` }] : []),
+    ...(monetizationEnabled ? [{ label: 'Monetization', href: `/${orgSlug}/crm/monetization` }] : []),
   ];
 
   const b2bTabs = [
