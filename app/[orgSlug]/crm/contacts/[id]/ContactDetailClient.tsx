@@ -658,7 +658,7 @@ export default function ContactDetailClient({
                     <div key={String(label)}>
                       <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
                       {label === 'LinkedIn' ? (
-                        <a href={String(contactData.linkedin_url)} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: 'var(--accent)', marginTop: 1, display: 'block' }}>View Profile</a>
+                        <a href={/^https?:\/\//i.test(String(contactData.linkedin_url)) ? String(contactData.linkedin_url) : `https://${String(contactData.linkedin_url).replace(/^\/+/, '')}`} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: 'var(--accent)', marginTop: 1, display: 'block' }}>View Profile</a>
                       ) : (
                         <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 1 }}>{String(val)}</div>
                       )}
