@@ -161,10 +161,36 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversations.length === 0]);
 
-  // Scroll to bottom when thread changes
+  // Auto-scroll helpers. Threads must land at the TRUE bottom even when content
+  // renders late: the CRM context strip appears above the list ~100-500ms after
+  // open (shrinks the list, view lands short of bottom), and MMS images load
+  // async (grow the list). isNearSmsBottom guards re-scrolls so we never yank
+  // the view while the user is scrolled up reading history.
+  const scrollSmsToBottom = useCallback(() => {
+    const el = smsListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
+  const isNearSmsBottom = useCallback(() => {
+    const el = smsListRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 250;
+  }, []);
+
+  // Scroll to bottom when thread changes (double rAF catches same-frame layout;
+  // mobileView covers re-entering the same thread on mobile)
   useEffect(() => {
-    if (smsListRef.current) smsListRef.current.scrollTop = smsListRef.current.scrollHeight;
-  }, [activeConv?.messages.length, selectedPhone]);
+    scrollSmsToBottom();
+    const raf = requestAnimationFrame(scrollSmsToBottom);
+    return () => cancelAnimationFrame(raf);
+  }, [activeConv?.messages.length, selectedPhone, mobileView, scrollSmsToBottom]);
+
+  // CRM strip resolves async and renders ABOVE the scroll container — re-pin
+  // to the bottom once it appears (only if we're still near the bottom)
+  useEffect(() => {
+    if (selectedPhone && crmCache[selectedPhone] !== undefined && isNearSmsBottom()) {
+      scrollSmsToBottom();
+    }
+  }, [crmCache, selectedPhone, isNearSmsBottom, scrollSmsToBottom]);
 
   // Mobile toolbar: back button when viewing a thread
   useEffect(() => {
@@ -588,6 +614,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                             key={i}
                             src={a.url}
                             alt={a.name ?? 'MMS Image'}
+                            onLoad={() => { if (isNearSmsBottom()) scrollSmsToBottom(); }}
                             style={{ maxWidth: '220px', maxHeight: '180px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer', display: 'block' }}
                             onClick={() => window.open(a.url, '_blank')}
                           />
@@ -624,6 +651,7 @@ export default function SmsWindow({ channel, initialMessages, currentUser, orgId
                           key={i}
                           src={u}
                           alt="MMS attachment"
+                          onLoad={() => { if (isNearSmsBottom()) scrollSmsToBottom(); }}
                           style={{ maxWidth: '220px', maxHeight: '180px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer', display: 'block' }}
                           onClick={() => window.open(u, '_blank')}
                         />
