@@ -78,6 +78,13 @@ export default function ProductionClient({
   const selected = projects.find((p) => p.id === selectedId) ?? null;
   const selectedItems = selected ? byProject.get(selected.id) ?? [] : [];
 
+  // split by kind: decisions (the drafter's to-do) vs open questions vs deliverables
+  const kindOf = (it: ChecklistItem) => ((it.details as { kind?: string } | null)?.kind ?? 'decision');
+  const decisions = selectedItems.filter((it) => kindOf(it) === 'decision');
+  const opens = selectedItems.filter((it) => kindOf(it) === 'open');
+  const deliverables = selectedItems.filter((it) => kindOf(it) === 'deliverable');
+  const actionable = [...decisions, ...deliverables];
+
   // group projects into phase sections (pipeline order), most-recent first inside each
   const phaseGroups = useMemo(() => {
     const g = new Map<string, DosProject[]>();
@@ -95,7 +102,7 @@ export default function ProductionClient({
 
   const grouped = useMemo(() => {
     const g = new Map<string, ChecklistItem[]>();
-    for (const it of selectedItems) {
+    for (const it of decisions) {
       const k = it.category ?? 'manual';
       if (!g.has(k)) g.set(k, []);
       g.get(k)!.push(it);
@@ -105,7 +112,7 @@ export default function ProductionClient({
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
     });
     return keys.map((k) => [k, g.get(k)!] as const);
-  }, [selectedItems]);
+  }, [decisions]);
 
   async function patchItem(itemId: string, payload: { done?: boolean; status?: string }) {
     setBusy((s) => new Set(s).add(itemId));
@@ -153,8 +160,8 @@ export default function ProductionClient({
     }
   }
 
-  const doneCount = selectedItems.filter((i) => i.done).length;
-  const pct = selectedItems.length ? Math.round((doneCount / selectedItems.length) * 100) : 0;
+  const doneCount = actionable.filter((i) => i.done).length;
+  const pct = actionable.length ? Math.round((doneCount / actionable.length) * 100) : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -242,11 +249,14 @@ export default function ProductionClient({
                 </div>
               ) : (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 6px' }}>
                     <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--surface)', overflow: 'hidden' }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? '#3fb950' : 'var(--accent)', transition: 'width .2s' }} />
                     </div>
-                    <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{doneCount}/{selectedItems.length} done · {pct}%</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{doneCount}/{actionable.length} done · {pct}%</span>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', margin: '0 0 14px' }}>
+                    {decisions.length} decisions · {deliverables.length} deliverables · {opens.length} open questions
                   </div>
                   {error && (
                     <div style={{ color: '#f85149', fontSize: 12, marginBottom: 10 }}>{error}</div>
@@ -295,6 +305,32 @@ export default function ProductionClient({
                       </div>
                     );
                   })}
+
+                  {deliverables.length > 0 && (
+                    <div style={{ marginBottom: 18 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--accent)' }}>Deliverables</span>
+                        <span style={{ fontSize: 11, color: 'var(--muted)' }}>{deliverables.filter((i) => i.done).length}/{deliverables.length}</span>
+                      </div>
+                      {deliverables.map((it) => (
+                        <div key={it.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 8px', borderRadius: 6, background: it.done ? 'transparent' : 'var(--surface)', marginBottom: 3, opacity: busy.has(it.id) ? 0.55 : 1 }}>
+                          <input type="checkbox" checked={!!it.done} onChange={(e) => patchItem(it.id, { done: e.target.checked })} style={{ marginTop: 2, accentColor: 'var(--accent)', width: 15, height: 15, cursor: 'pointer', flexShrink: 0 }} />
+                          <div style={{ fontSize: 13, lineHeight: 1.45, textDecoration: it.done ? 'line-through' : 'none', color: it.done ? 'var(--muted)' : 'inherit' }}>{it.item}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {opens.length > 0 && (
+                    <div style={{ marginBottom: 18, padding: '10px 12px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: '#d29922', marginBottom: 6 }}>
+                        ❓ Open questions ({opens.length}) — undecided, confirm with Michael
+                      </div>
+                      {opens.map((it) => (
+                        <div key={it.id} style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--muted)', padding: '3px 0' }}>• {it.item}</div>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </>
