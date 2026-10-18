@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface DosProject {
   id: string;
@@ -45,6 +45,22 @@ function fmtCat(c: string | null) {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
+function kindOf(it: ChecklistItem) {
+  return ((it.details as { kind?: string } | null)?.kind ?? 'decision');
+}
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  return isMobile;
+}
+
 export default function ProductionClient({
   orgSlug, role, userName, projects, items,
 }: {
@@ -57,7 +73,9 @@ export default function ProductionClient({
   const isContractor = role === 'contractor';
   const isAdmin = ['owner', 'admin'].includes(role);
 
+  const isMobile = useIsMobile();
   const [selectedId, setSelectedId] = useState<string | null>(projects[0]?.id ?? null);
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
   const [itemState, setItemState] = useState<Record<string, Partial<ChecklistItem>>>({});
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +97,6 @@ export default function ProductionClient({
   const selectedItems = selected ? byProject.get(selected.id) ?? [] : [];
 
   // split by kind: decisions (the drafter's to-do) vs open questions vs deliverables
-  const kindOf = (it: ChecklistItem) => ((it.details as { kind?: string } | null)?.kind ?? 'decision');
   const decisions = selectedItems.filter((it) => kindOf(it) === 'decision');
   const opens = selectedItems.filter((it) => kindOf(it) === 'open');
   const deliverables = selectedItems.filter((it) => kindOf(it) === 'deliverable');
@@ -179,7 +196,7 @@ export default function ProductionClient({
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Project list */}
-        <div style={{ width: 280, borderRight: '1px solid var(--border)', overflowY: 'auto', flexShrink: 0, padding: '10px 10px 20px' }}>
+        <div style={{ width: isMobile ? '100%' : 280, display: isMobile && mobileView === 'detail' ? 'none' : 'block', borderRight: '1px solid var(--border)', overflowY: 'auto', flexShrink: 0, padding: '10px 10px 20px' }}>
           {projects.length === 0 && (
             <div style={{ padding: 16, fontSize: 13, color: 'var(--muted)' }}>
               No projects assigned to you yet. Michael assigns them — you&apos;ll see a card here in this channel when one lands.
@@ -192,13 +209,15 @@ export default function ProductionClient({
               </div>
               {phaseProjects.map((p) => {
                 const its = byProject.get(p.id) ?? [];
-                const d = its.filter((i) => i.done).length;
-                const pp = its.length ? Math.round((d / its.length) * 100) : 0;
+                // actionable only (open questions aren't checkable) — must match the detail header count
+                const actionableP = its.filter((i) => kindOf(i) !== 'open');
+                const d = actionableP.filter((i) => i.done).length;
+                const pp = actionableP.length ? Math.round((d / actionableP.length) * 100) : 0;
                 const active = p.id === selectedId;
                 return (
                   <button
                     key={p.id}
-                    onClick={() => setSelectedId(p.id)}
+                    onClick={() => { setSelectedId(p.id); if (isMobile) setMobileView('detail'); }}
                     style={{
                       width: '100%', textAlign: 'left', cursor: 'pointer',
                       background: active ? 'var(--surface-hover)' : 'transparent',
@@ -213,9 +232,9 @@ export default function ProductionClient({
                         <span style={{ fontSize: 10, color: 'var(--accent)', opacity: 0.85, whiteSpace: 'nowrap' }}>◍ {p.upworker}</span>
                       )}
                     </div>
-                    {its.length > 0 ? (
+                    {actionableP.length > 0 ? (
                       <div style={{ marginTop: 6 }}>
-                        <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
+                        <div style={{ height: isMobile ? 6 : 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
                           <div style={{ width: `${pp}%`, height: '100%', background: pp === 100 ? '#3fb950' : 'var(--accent)' }} />
                         </div>
                         <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 3 }}>{d}/{its.length} done</div>
@@ -231,7 +250,15 @@ export default function ProductionClient({
         </div>
 
         {/* Checklist */}
-        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '16px 22px 40px' }}>
+        <div style={{ flex: 1, minWidth: 0, display: isMobile && mobileView === 'list' ? 'none' : 'block', overflowY: 'auto', padding: isMobile ? '12px 16px 40px' : '16px 22px 40px' }}>
+          {isMobile && (
+            <button
+              onClick={() => setMobileView('list')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13.5, fontWeight: 600, padding: '2px 0 10px', cursor: 'pointer' }}
+            >
+              ← All projects
+            </button>
+          )}
           {!selected && (
             <div style={{ color: 'var(--muted)', fontSize: 13 }}>Select a project.</div>
           )}
@@ -250,7 +277,7 @@ export default function ProductionClient({
               ) : (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 6px' }}>
-                    <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--surface)', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? '#3fb950' : 'var(--accent)', transition: 'width .2s' }} />
                     </div>
                     <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{doneCount}/{actionable.length} done · {pct}%</span>
@@ -275,13 +302,13 @@ export default function ProductionClient({
                               type="checkbox"
                               checked={!!it.done}
                               onChange={(e) => patchItem(it.id, { done: e.target.checked })}
-                              style={{ marginTop: 2, accentColor: 'var(--accent)', width: 15, height: 15, cursor: 'pointer', flexShrink: 0 }}
+                              style={{ marginTop: isMobile ? 4 : 2, accentColor: 'var(--accent)', width: isMobile ? 22 : 15, height: isMobile ? 22 : 15, cursor: 'pointer', flexShrink: 0 }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: 13, lineHeight: 1.45, textDecoration: it.done ? 'line-through' : 'none', color: it.done ? 'var(--muted)' : 'inherit' }}>
                                 {it.item}
                               </div>
-                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 2 }}>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
                                 {it.status === 'verified' && <span style={{ fontSize: 10, color: '#3fb950' }}>✓ verified</span>}
                                 {it.status === 'flagged' && <span style={{ fontSize: 10, color: '#d29922' }}>⚠ needs verification</span>}
                                 {it.status === 'dropped' && <span style={{ fontSize: 10, color: 'var(--muted)' }}>dropped</span>}
@@ -289,13 +316,13 @@ export default function ProductionClient({
                                 {isAdmin && it.status !== 'verified' && (
                                   <button
                                     onClick={() => patchItem(it.id, { status: 'verified' })}
-                                    style={{ fontSize: 10, background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4, padding: '0 6px', cursor: 'pointer' }}
+                                    style={{ fontSize: isMobile ? 12 : 10, background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4, padding: isMobile ? '4px 10px' : '0 6px', minHeight: isMobile ? 28 : 0, cursor: 'pointer' }}
                                   >verify</button>
                                 )}
                                 {isAdmin && it.status === 'verified' && (
                                   <button
                                     onClick={() => patchItem(it.id, { status: 'open' })}
-                                    style={{ fontSize: 10, background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4, padding: '0 6px', cursor: 'pointer' }}
+                                    style={{ fontSize: isMobile ? 12 : 10, background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 4, padding: isMobile ? '4px 10px' : '0 6px', minHeight: isMobile ? 28 : 0, cursor: 'pointer' }}
                                   >un-verify</button>
                                 )}
                               </div>
@@ -314,7 +341,7 @@ export default function ProductionClient({
                       </div>
                       {deliverables.map((it) => (
                         <div key={it.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 8px', borderRadius: 6, background: it.done ? 'transparent' : 'var(--surface)', marginBottom: 3, opacity: busy.has(it.id) ? 0.55 : 1 }}>
-                          <input type="checkbox" checked={!!it.done} onChange={(e) => patchItem(it.id, { done: e.target.checked })} style={{ marginTop: 2, accentColor: 'var(--accent)', width: 15, height: 15, cursor: 'pointer', flexShrink: 0 }} />
+                          <input type="checkbox" checked={!!it.done} onChange={(e) => patchItem(it.id, { done: e.target.checked })} style={{ marginTop: isMobile ? 4 : 2, accentColor: 'var(--accent)', width: isMobile ? 22 : 15, height: isMobile ? 22 : 15, cursor: 'pointer', flexShrink: 0 }} />
                           <div style={{ fontSize: 13, lineHeight: 1.45, textDecoration: it.done ? 'line-through' : 'none', color: it.done ? 'var(--muted)' : 'inherit' }}>{it.item}</div>
                         </div>
                       ))}
