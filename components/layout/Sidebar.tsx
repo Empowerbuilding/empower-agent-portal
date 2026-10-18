@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail, IconHeartbeat, IconCalendarClock, IconBarChart, IconShield, IconRules, IconGear } from '@/components/ui/Icons';
+import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail, IconHeartbeat, IconCalendarClock, IconBarChart, IconShield, IconRules, IconGear, IconClipboardCheck } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -988,6 +988,9 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             )}
             {activeGroup?.slug === 'design' && (
               <Link href={`/${orgSlug}/design-os`} onClick={onClose} title="Design OS" style={{ color: pathname.startsWith(`/${orgSlug}/design-os`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconDesignOS size={16} /></Link>
+            )}
+            {(currentUser.role === 'contractor' || (['owner', 'admin'].includes(currentUser.role) && activeGroup?.slug === 'design')) && (
+              <Link href={`/${orgSlug}/production`} onClick={onClose} title="Production — my projects & checklists" style={{ color: pathname.startsWith(`/${orgSlug}/production`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClipboardCheck size={16} /></Link>
             )}
             {/* Ops & Admin menu. Admins get the full ops list; non-admin roles (rep,
                 contractor) get a reduced menu — currently just Email Log — so they can
