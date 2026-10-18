@@ -15,18 +15,11 @@ interface DosProject {
   updated_at: string | null;
 }
 
-interface ChecklistItem {
-  id: string;
-  design_os_project_id: string | null;
-  project_name: string | null;
-  item: string;
-  category: string | null;
-  status: string | null;
-  done: boolean;
-  done_by: string | null;
-  done_at: string | null;
-  source: string | null;
-  details: Record<string, unknown> | null;
+interface SummaryRow {
+  project_id: string;
+  actionable: number | null;
+  done_n: number | null;
+  meetings: number | null;
 }
 
 export default async function ProductionPage({ params }: { params: Promise<{ orgSlug: string }> }) {
@@ -67,19 +60,23 @@ export default async function ProductionPage({ params }: { params: Promise<{ org
   const { data: projects } = await projectsQuery;
   const projectRows = (projects ?? []) as DosProject[];
 
-  // Pull checklist items for those projects (Portal DB, service-role read).
+  // Per-project checklist summary (lightweight view — no bulk item load).
+  // Items are fetched per selected project via /api/production/items.
   const projectIds = projectRows.map((p) => p.id);
   const admin = createAdminClient();
-  let items: ChecklistItem[] = [];
+  const summary: Record<string, { actionable: number; done_n: number; meetings: number }> = {};
   if (projectIds.length > 0) {
-    const { data: itemRows } = await admin
-      .from('design_intent_items')
-      .select('id, design_os_project_id, project_name, item, category, status, done, done_by, done_at, source, details')
-      .in('design_os_project_id', projectIds)
-      .order('category', { ascending: true })
-      .order('created_at', { ascending: true })
-      .limit(5000);
-    items = (itemRows ?? []) as ChecklistItem[];
+    const { data: sumRows } = await admin
+      .from('v_production_summary')
+      .select('project_id, actionable, done_n, meetings')
+      .in('project_id', projectIds);
+    for (const r of (sumRows ?? []) as SummaryRow[]) {
+      summary[r.project_id] = {
+        actionable: r.actionable ?? 0,
+        done_n: r.done_n ?? 0,
+        meetings: r.meetings ?? 0,
+      };
+    }
   }
 
   return (
@@ -88,7 +85,7 @@ export default async function ProductionPage({ params }: { params: Promise<{ org
       role={portalUser.role}
       userName={portalUser.name ?? ''}
       projects={projectRows}
-      items={items}
+      summary={summary}
     />
   );
 }
