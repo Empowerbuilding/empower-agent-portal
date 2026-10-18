@@ -33,6 +33,7 @@ const PHASE_LABEL: Record<string, string> = {
   draft_3: 'Draft 3',
   final_polish: 'Final Polish',
 };
+const PHASE_ORDER = ['draft_1', 'draft_2', 'draft_3', 'final_polish', 'conceptual_design'];
 
 function fmtPhase(p: string | null) {
   if (!p) return '—';
@@ -76,6 +77,21 @@ export default function ProductionClient({
 
   const selected = projects.find((p) => p.id === selectedId) ?? null;
   const selectedItems = selected ? byProject.get(selected.id) ?? [] : [];
+
+  // group projects into phase sections (pipeline order), most-recent first inside each
+  const phaseGroups = useMemo(() => {
+    const g = new Map<string, DosProject[]>();
+    for (const p of projects) {
+      const k = p.current_phase ?? 'other';
+      if (!g.has(k)) g.set(k, []);
+      g.get(k)!.push(p);
+    }
+    const keys = [...g.keys()].sort((a, b) => {
+      const ia = PHASE_ORDER.indexOf(a), ib = PHASE_ORDER.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+    return keys.map((k) => [k, g.get(k)!] as const);
+  }, [projects]);
 
   const grouped = useMemo(() => {
     const g = new Map<string, ChecklistItem[]>();
@@ -162,45 +178,49 @@ export default function ProductionClient({
               No projects assigned to you yet. Michael assigns them — you&apos;ll see a card here in this channel when one lands.
             </div>
           )}
-          {projects.map((p) => {
-            const its = byProject.get(p.id) ?? [];
-            const d = its.filter((i) => i.done).length;
-            const pp = its.length ? Math.round((d / its.length) * 100) : 0;
-            const active = p.id === selectedId;
-            return (
-              <button
-                key={p.id}
-                onClick={() => setSelectedId(p.id)}
-                style={{
-                  width: '100%', textAlign: 'left', cursor: 'pointer',
-                  background: active ? 'var(--surface-hover)' : 'transparent',
-                  border: `1px solid ${active ? 'var(--accent)' : 'transparent'}`,
-                  borderRadius: 8, padding: '10px 12px', marginBottom: 6,
-                  color: 'inherit', display: 'block',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13.5 }}>{p.client_name}</span>
-                  <span style={{ fontSize: 10.5, color: 'var(--muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '1px 8px', whiteSpace: 'nowrap' }}>
-                    {fmtPhase(p.current_phase)}
-                  </span>
-                </div>
-                {isAdmin && (
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-                    {p.upworker ? `↳ ${p.upworker}` : '↳ unassigned'}
-                  </div>
-                )}
-                {its.length > 0 && (
-                  <div style={{ marginTop: 7 }}>
-                    <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
-                      <div style={{ width: `${pp}%`, height: '100%', background: pp === 100 ? '#3fb950' : 'var(--accent)' }} />
+          {phaseGroups.map(([phase, phaseProjects]) => (
+            <div key={phase} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted)', padding: '6px 4px 4px' }}>
+                {fmtPhase(phase)} <span style={{ opacity: 0.7 }}>({phaseProjects.length})</span>
+              </div>
+              {phaseProjects.map((p) => {
+                const its = byProject.get(p.id) ?? [];
+                const d = its.filter((i) => i.done).length;
+                const pp = its.length ? Math.round((d / its.length) * 100) : 0;
+                const active = p.id === selectedId;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedId(p.id)}
+                    style={{
+                      width: '100%', textAlign: 'left', cursor: 'pointer',
+                      background: active ? 'var(--surface-hover)' : 'transparent',
+                      border: `1px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                      borderRadius: 8, padding: '8px 12px', marginBottom: 4,
+                      color: 'inherit', display: 'block',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13.5 }}>{p.client_name}</span>
+                      {isAdmin && p.upworker && (
+                        <span style={{ fontSize: 10, color: 'var(--accent)', opacity: 0.85, whiteSpace: 'nowrap' }}>◍ {p.upworker}</span>
+                      )}
                     </div>
-                    <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 3 }}>{d}/{its.length} checklist done</div>
-                  </div>
-                )}
-              </button>
-            );
-          })}
+                    {its.length > 0 ? (
+                      <div style={{ marginTop: 6 }}>
+                        <div style={{ height: 4, borderRadius: 2, background: 'var(--surface)', overflow: 'hidden' }}>
+                          <div style={{ width: `${pp}%`, height: '100%', background: pp === 100 ? '#3fb950' : 'var(--accent)' }} />
+                        </div>
+                        <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 3 }}>{d}/{its.length} done</div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 5, opacity: 0.75 }}>no checklist yet</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         {/* Checklist */}
