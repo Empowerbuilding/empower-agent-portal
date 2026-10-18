@@ -54,9 +54,11 @@ export default async function ProductionPage({ params }: { params: Promise<{ org
   const dos = createSupabaseClient(org.design_os_url, org.design_os_key);
 
   // Contractors see only their own projects; admins see the full drafting board.
+  // Archived projects are excluded for everyone.
   let projectsQuery = dos
     .from('projects')
     .select('id, client_name, current_phase, current_hand, upworker, updated_at')
+    .neq('current_phase', 'archived')
     .order('updated_at', { ascending: false })
     .limit(100);
   if (isContractor) {
