@@ -84,7 +84,12 @@ function meetingDateOf(source: string): number {
 }
 
 function meetingLabel(source: string): string {
-  return source.replace(/^design-brain v2\s*[—–-]\s*/i, '').replace(/_/g, ' ');
+  return source
+    .replace(/^design-brain v2\s*[—–-]\s*/i, '')
+    // strip ops-noise parentheticals like "(deployed Ollama, recovered post-crash)"
+    .replace(/\s*\([^()]*(?:deployed|recovered|crash|ollama|backfill)[^()]*\)\s*$/i, '')
+    .replace(/_/g, ' ')
+    .trim();
 }
 
 export default function ProductionClient({
@@ -102,7 +107,9 @@ export default function ProductionClient({
 
   const [selectedId, setSelectedId] = useState<string | null>(projects[0]?.id ?? null);
   const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
-  const [scope, setScope] = useState<'latest' | 'all'>('latest');
+  const [activeSource, setActiveSource] = useState<string | null>(null); // null = latest meeting (default tab)
+  const [q, setQ] = useState('');
+  const [hideDone, setHideDone] = useState(false);
   const [items, setItems] = useState<ChecklistItem[] | null>(null); // null = loading
   const [loadError, setLoadError] = useState<string | null>(null);
   const [itemState, setItemState] = useState<Record<string, Partial<ChecklistItem>>>({});
@@ -119,6 +126,8 @@ export default function ProductionClient({
     setLoadError(null);
     setItemState({});
     setError(null);
+    setActiveSource(null);
+    setQ('');
     fetch(`/api/production/items?org=${encodeURIComponent(orgSlug)}&projectId=${encodeURIComponent(selectedId)}`)
       .then((r) => (r.ok
         ? r.json()
@@ -155,13 +164,34 @@ export default function ProductionClient({
     return best;
   }, [sources]);
 
-  // drafters default to the latest meeting's checklist; "all" shows full history
-  const scoped = scope === 'latest' && latestSource ? effItems.filter((it) => it.source === latestSource) : effItems;
+  // meetings in this project, newest first (tiebreak: latest insert)
+  const meetings = useMemo(() => {
+    const arr = [...sources.entries()].map(([s, v]) => ({ source: s, date: v.date, created: v.created }));
+    arr.sort((a, b) => (b.date - a.date) || b.created.localeCompare(a.created));
+    return arr;
+  }, [sources]);
 
-  const decisions = scoped.filter((it) => kindOf(it) === 'decision');
-  const opens = scoped.filter((it) => kindOf(it) === 'open');
-  const deliverables = scoped.filter((it) => kindOf(it) === 'deliverable');
-  const actionable = [...decisions, ...deliverables];
+  // active meeting tab — defaults to latest until the user picks another
+  const currentSource = activeSource && sources.has(activeSource) ? activeSource : latestSource;
+  const scoped = currentSource ? effItems.filter((it) => it.source === currentSource) : effItems;
+
+  // tab-level totals drive the progress bar; visible lists also apply search / hide-done
+  const tabDecisions = scoped.filter((it) => kindOf(it) === 'decision');
+  const tabOpens = scoped.filter((it) => kindOf(it) === 'open');
+  const tabDeliverables = scoped.filter((it) => kindOf(it) === 'deliverable');
+  const actionable = [...tabDecisions, ...tabDeliverables];
+
+  const query = q.trim().toLowerCase();
+  const matches = (it: ChecklistItem) => {
+    if (query && !it.item.toLowerCase().includes(query)) return false;
+    if (hideDone && it.done) return false;
+    return true;
+  };
+  const decisions = tabDecisions.filter(matches);
+  const opens = tabOpens.filter(matches);
+  const deliverables = tabDeliverables.filter(matches);
+  const visibleCount = decisions.length + deliverables.length + opens.length;
+  const totalCount = actionable.length + tabOpens.length;
 
   // group projects into phase sections (pipeline order), most-recent first inside each
   const phaseGroups = useMemo(() => {
@@ -357,14 +387,47 @@ export default function ProductionClient({
                 </div>
               </div>
 
-              {/* meeting scope toggle */}
+              {/* meeting tabs — one per meeting, newest first */}
               <div style={{ display: 'flex', gap: 6, margin: '10px 0 4px', flexWrap: 'wrap' }}>
-                <button style={segBtn(scope === 'latest')} onClick={() => setScope('latest')}>Latest meeting</button>
-                <button style={segBtn(scope === 'all')} onClick={() => setScope('all')}>All meetings ({sources.size})</button>
+                {meetings.map((m) => {
+                  const label = meetingLabel(m.source);
+                  return (
+                    <button
+                      key={m.source}
+                      style={{ ...segBtn(m.source === currentSource), maxWidth: isMobile ? 170 : 240, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      title={label}
+                      onClick={() => setActiveSource(m.source)}
+                    >
+                      {label || 'Other'}
+                    </button>
+                  );
+                })}
               </div>
-              {scope === 'latest' && latestSource && (
-                <div style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 8px' }}>Viewing: {meetingLabel(latestSource)}</div>
-              )}
+
+              {/* search + hide-done */}
+              <div style={{ display: 'flex', gap: 10, margin: '8px 0 2px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Escape') setQ(''); }}
+                  placeholder="Search items in this meeting…"
+                  style={{
+                    flex: 1, minWidth: isMobile ? '100%' : 200, maxWidth: 420,
+                    background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
+                    padding: isMobile ? '9px 12px' : '6px 10px',
+                    fontSize: isMobile ? 16 : 13, color: 'inherit', outline: 'none',
+                  }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={hideDone}
+                    onChange={(e) => setHideDone(e.target.checked)}
+                    style={{ accentColor: 'var(--accent)', width: isMobile ? 20 : 14, height: isMobile ? 20 : 14, cursor: 'pointer' }}
+                  />
+                  hide done
+                </label>
+              </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 6px' }}>
                 <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
@@ -373,10 +436,21 @@ export default function ProductionClient({
                 <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{doneCount}/{actionable.length} done · {pct}%</span>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', margin: '0 0 14px' }}>
-                {decisions.length} decisions · {deliverables.length} deliverables · {opens.length} open questions
+                {query
+                  ? `${visibleCount} of ${totalCount} items match “${q.trim()}”${hideDone ? ' (done hidden)' : ''}`
+                  : `${tabDecisions.length} decisions · ${tabDeliverables.length} deliverables · ${tabOpens.length} open questions`}
               </div>
               {error && (
                 <div style={{ color: '#f85149', fontSize: 12, marginBottom: 10 }}>{error}</div>
+              )}
+              {visibleCount === 0 && (
+                <div style={{ color: 'var(--muted)', fontSize: 13, padding: 14, background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)', marginBottom: 14 }}>
+                  {query
+                    ? `No items match “${q.trim()}”${hideDone ? ' with done items hidden' : ''}.`
+                    : hideDone && doneCount === actionable.length && actionable.length > 0
+                      ? 'Everything in this meeting is done 🎉'
+                      : 'Nothing to show.'}
+                </div>
               )}
               {grouped.map(([cat, catItems]) => {
                 const cd = catItems.filter((i) => i.done).length;
