@@ -214,6 +214,24 @@ export default function ChatWindow({ channel, initialMessages, currentUser, orgI
         scrollToBottom(true);
       });
       isInitialLoad.current = false;
+      // Settle loop: markdown, fonts, and embeds keep growing scrollHeight
+      // for a beat after the initial snap, leaving the view parked slightly
+      // above the latest message. For 2s after first render, keep re-pinning
+      // whenever content height changes (stops immediately if the user
+      // scrolls up — isAtBottom goes false).
+      const list = listRef.current;
+      if (list) {
+        let lastHeight = -1;
+        const t0 = Date.now();
+        const settle = setInterval(() => {
+          if (Date.now() - t0 > 2000) { clearInterval(settle); return; }
+          if (!isAtBottom.current) return;
+          if (list.scrollHeight !== lastHeight) {
+            lastHeight = list.scrollHeight;
+            list.scrollTop = list.scrollHeight;
+          }
+        }, 100);
+      }
     } else {
       // Only scroll if user is already at the bottom
       scrollToBottom();
