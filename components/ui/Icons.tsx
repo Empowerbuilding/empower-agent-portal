@@ -188,6 +188,15 @@ export function IconDesignOS({ size = 15 }: { size?: number }) {
   );
 }
 
+export function IconIntent({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v3m0 12v3M3 12h3m12 0h3" />
+      <circle cx="12" cy="12" r="4" />
+    </svg>
+  );
+}
+
 export function IconMail({ size = 15 }: { size?: number }) {
   return (
     <svg style={s} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

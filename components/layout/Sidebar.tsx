@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { Organization, PortalChannel, Agent, PortalUser, AgentGroup } from '@/lib/types';
-import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail, IconHeartbeat, IconCalendarClock, IconBarChart, IconShield, IconRules, IconGear, IconClipboardCheck } from '@/components/ui/Icons';
+import { IconClock, IconDatabase, IconRender, IconFolder, IconGallery, IconDesignOS, IconMail, IconHeartbeat, IconCalendarClock, IconBarChart, IconShield, IconRules, IconGear, IconClipboardCheck, IconIntent } from '@/components/ui/Icons';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -988,6 +988,9 @@ export default function Sidebar({ org, channels: initialChannels, groups, curren
             )}
             {activeGroup?.slug === 'design' && (
               <Link href={`/${orgSlug}/design-os`} onClick={onClose} title="Design OS" style={{ color: pathname.startsWith(`/${orgSlug}/design-os`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconDesignOS size={16} /></Link>
+            )}
+            {activeGroup?.slug === 'design' && (
+              <a href="https://intent.barnhaussteelbuilders.com" target="_blank" rel="noopener noreferrer" onClick={onClose} title="Design Intent — work order contracts" style={{ color: 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconIntent size={16} /></a>
             )}
             {(currentUser.role === 'contractor' || (['owner', 'admin'].includes(currentUser.role) && activeGroup?.slug === 'design')) && (
               <Link href={`/${orgSlug}/production`} onClick={onClose} title="Production — my projects & checklists" style={{ color: pathname.startsWith(`/${orgSlug}/production`) ? 'var(--accent)' : 'var(--muted)', padding: '7px 5px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}><IconClipboardCheck size={16} /></Link>
